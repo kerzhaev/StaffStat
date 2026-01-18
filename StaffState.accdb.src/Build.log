@@ -1,0 +1,140 @@
+﻿-------------------------------------
+Beginning build from Source
+StaffState.accdb
+VCS Version 4.1.2
+Full Path: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb
+Export Folder: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb.src\
+19.01.2026 01:59:39
+-------------------------------------
+Saving backup of original database...
+Saved as StaffState_VCSBackup3.accdb.
+Created blank database for import. (v12)
+Removing non built-in references...
+  Removed DAO
+  Removed stdole
+Scanning source files...
+No db connections source files found.
+No vbe forms source files found.
+No proj properties source files found.
+No saved specs source files found.
+No commandbars source files found.
+No shared images source files found.
+No imex specs source files found.
+No queries source files found.
+No macros source files found.
+No reports source files found.
+No table data source files found.
+No table data macros source files found.
+No relations source files found.
+No hidden attributes source files found.
+-------------------------------------
+-------------------------------------
+Importing project...          
+  project.json
+[1]
+-------------------------------------
+Importing vb project...       
+  vbe-project.json
+[1]
+-------------------------------------
+Importing vbe references...   
+  vbe-references.json
+[1]
+-------------------------------------
+Importing modules...          
+  mod_Analysis_Logic.bas
+  mod_App_Init.bas
+  mod_Import_Logic.bas
+[3]
+-------------------------------------
+Importing themes...           
+  Тема Office.thmx
+[1]
+-------------------------------------
+Importing db properties...    
+  dbs-properties.json
+[1]
+-------------------------------------
+Importing tables...           
+  tbl_History_Log.xml
+  tbl_Import_Buffer.xml
+  tbl_Personnel_Master.xml
+[3]
+-------------------------------------
+Importing forms...            
+  uf_Dashboard.bas
+
+-------------------------------------
+ERROR: Import issue with 'uf_Dashboard'
+Error 2128: Во время импорта ''uf_Dashboard'' в приложении ''Microsoft Access'' возникли ошибки. Source: modVCSUtility.LoadComponentFromText
+-------------------------------------
+
+-------------------------------------
+ERROR: Unhandled error, likely before `On Error` directive
+Error 2128: Во время импорта ''uf_Dashboard'' в приложении ''Microsoft Access'' возникли ошибки. Source: .Unknown.LogUnhandledErrors
+-------------------------------------
+
+-------------------------------------
+CRITICAL: Aborted build.
+Source: modVCSUtility.LoadComponentFromText
+-------------------------------------
+
+
+--------------------------------------------------
+                PERFORMANCE REPORTS
+--------------------------------------------------
+Category                      Count     Seconds
+--------------------------------------------------
+DB Properties                 1         0,06
+Modules                       3         0,04
+Themes                        1         0,04
+Tables                        3         0,03
+Forms                         0         0,03
+VBE References                1         0,01
+Project                       1         0,01
+VB Project                    1         0,01
+--------------------------------------------------
+TOTALS:                       11        0,22
+--------------------------------------------------
+
+--------------------------------------------------
+Operations                    Count     Seconds
+--------------------------------------------------
+Create new database           1         0,19
+Increment Progress            12        0,04
+Console Updates               8         0,03
+Convert to JSON               171       0,03
+Parse JSON ISO Date           30        0,02
+Get File List                 18        0,01
+Scan Source Files             1         0,01
+Parse JSON                    6         0,01
+Import VBE Module             3         0,00
+App.LoadFromText()            1         0,00
+Get File Property Hash        11        0,00
+Create MSysResources Table    1         0,00
+modVCSUtility.LoadComponentFr 
+omText                        0         0,00
+Compute SHA256                22        0,00
+Read File                     10        0,00
+Delete File                   6         0,00
+Write File                    3         0,00
+Parse VBA Module              3         0,00
+Get Modified Date             20        0,00
+Add GUID References           2         0,00
+Get VBA Hash                  3         0,00
+App.SaveAsText()              1         0,00
+Read File Bytes               5         0,00
+Check for linked table        1         0,00
+Save Stream to File           1         0,00
+modFileAccess.VerifyPath      6         0,00
+Write Binary File             1         0,00
+modFileAccess.GetUncPath      1         0,00
+Clear References              1         0,00
+Load Stream from File         1         0,00
+Enc. utf-8 as utf-16          1         0,00
+Copy Stream                   1         0,00
+--------------------------------------------------
+Other Operations                        0,19
+--------------------------------------------------
+
+

@@ -1,0 +1,24 @@
+﻿{
+  "Info": {
+    "Class": "clsDbNavPaneGroup",
+    "Description": "Navigation Pane Custom Groups"
+  },
+  "Items": {
+    "Categories": [
+      {
+        "Name": "Другие",
+        "Flags": 0,
+        "Position": 3,
+        "Groups": [
+          {
+            "Name": "Настраиваемая группа 1",
+            "Flags": 0,
+            "Position": 2,
+            "Objects": [
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
