@@ -1,0 +1,217 @@
+﻿Version =20
+VersionRequired =20
+Begin Form
+    DividingLines = NotDefault
+    AllowDesignChanges = NotDefault
+    DefaultView =0
+    TabularCharSet =204
+    PictureAlignment =2
+    DatasheetGridlinesBehavior =3
+    GridY =10
+    Width =9807
+    DatasheetFontHeight =11
+    ItemSuffix =6
+    Right =17430
+    Bottom =11985
+    RecSrcDt = Begin
+        0xeb61691d3d7be640
+    End
+    DatasheetFontName ="Calibri"
+    FilterOnLoad =0
+    ShowPageMargins =0
+    DisplayOnSharePointSite =1
+    DatasheetAlternateBackColor =15921906
+    DatasheetGridlinesColor12 =0
+    FitToScreen =1
+    DatasheetBackThemeColorIndex =1
+    BorderThemeColorIndex =3
+    ThemeFontIndex =1
+    ForeThemeColorIndex =0
+    AlternateBackThemeColorIndex =1
+    AlternateBackShade =95.0
+    Begin
+        Begin Label
+            BackStyle =0
+            TextFontCharSet =204
+            FontSize =11
+            FontName ="Calibri"
+            ThemeFontIndex =1
+            BackThemeColorIndex =1
+            BorderThemeColorIndex =0
+            BorderTint =50.0
+            ForeThemeColorIndex =0
+            ForeTint =60.0
+            GridlineThemeColorIndex =1
+            GridlineShade =65.0
+        End
+        Begin CommandButton
+            TextFontCharSet =204
+            Width =1701
+            Height =283
+            FontSize =11
+            FontWeight =400
+            FontName ="Calibri"
+            ForeThemeColorIndex =0
+            ForeTint =75.0
+            GridlineThemeColorIndex =1
+            GridlineShade =65.0
+            UseTheme =1
+            Shape =1
+            Gradient =12
+            BackThemeColorIndex =4
+            BackTint =60.0
+            BorderLineStyle =0
+            BorderThemeColorIndex =4
+            BorderTint =60.0
+            ThemeFontIndex =1
+            HoverThemeColorIndex =4
+            HoverTint =40.0
+            PressedThemeColorIndex =4
+            PressedShade =75.0
+            HoverForeThemeColorIndex =0
+            HoverForeTint =75.0
+            PressedForeThemeColorIndex =0
+            PressedForeTint =75.0
+        End
+        Begin TextBox
+            AddColon = NotDefault
+            FELineBreak = NotDefault
+            TextFontCharSet =204
+            BorderLineStyle =0
+            Width =1701
+            LabelX =-1701
+            FontSize =11
+            FontName ="Calibri"
+            AsianLineBreak =1
+            BackThemeColorIndex =1
+            BorderThemeColorIndex =1
+            BorderShade =65.0
+            ThemeFontIndex =1
+            ForeThemeColorIndex =0
+            ForeTint =75.0
+            GridlineThemeColorIndex =1
+            GridlineShade =65.0
+        End
+        Begin ListBox
+            TextFontCharSet =204
+            BorderLineStyle =0
+            Width =1701
+            Height =1417
+            LabelX =-1701
+            FontSize =11
+            FontName ="Calibri"
+            AllowValueListEdits =1
+            InheritValueList =1
+            ThemeFontIndex =1
+            BackThemeColorIndex =1
+            BorderThemeColorIndex =1
+            BorderShade =65.0
+            ForeThemeColorIndex =0
+            ForeTint =75.0
+            GridlineThemeColorIndex =1
+            GridlineShade =65.0
+        End
+        Begin Section
+            Height =7540
+            Name ="ОбластьДанных"
+            AlternateBackThemeColorIndex =1
+            AlternateBackShade =95.0
+            BackThemeColorIndex =1
+            Begin
+                Begin TextBox
+                    OverlapFlags =93
+                    IMESentenceMode =3
+                    Left =566
+                    Top =737
+                    Width =8278
+                    Height =1125
+                    Name ="txtFilter"
+                    OnKeyDown ="[Event Procedure]"
+
+                    LayoutCachedLeft =566
+                    LayoutCachedTop =737
+                    LayoutCachedWidth =8844
+                    LayoutCachedHeight =1862
+                End
+                Begin Label
+                    OverlapFlags =247
+                    Top =737
+                    Width =675
+                    Height =315
+                    Name ="Надпись1"
+                    Caption ="Поле0"
+                    LayoutCachedTop =737
+                    LayoutCachedWidth =675
+                    LayoutCachedHeight =1052
+                End
+                Begin CommandButton
+                    OverlapFlags =85
+                    Left =680
+                    Top =6462
+                    Width =2438
+                    Height =681
+                    TabIndex =1
+                    Name ="btnSearch"
+                    Caption ="Кнопка2"
+                    OnClick ="[Event Procedure]"
+
+                    LayoutCachedLeft =680
+                    LayoutCachedTop =6462
+                    LayoutCachedWidth =3118
+                    LayoutCachedHeight =7143
+                End
+                Begin CommandButton
+                    OverlapFlags =85
+                    Left =5045
+                    Top =6406
+                    Width =3062
+                    Height =680
+                    TabIndex =2
+                    Name ="btnClear"
+                    Caption ="Кнопка3"
+                    OnClick ="[Event Procedure]"
+
+                    LayoutCachedLeft =5045
+                    LayoutCachedTop =6406
+                    LayoutCachedWidth =8107
+                    LayoutCachedHeight =7086
+                End
+                Begin ListBox
+                    ColumnHeads = NotDefault
+                    OverlapFlags =215
+                    IMESentenceMode =3
+                    ColumnCount =4
+                    Left =566
+                    Top =2211
+                    Width =8108
+                    Height =3004
+                    TabIndex =3
+                    Name ="lstResults"
+                    RowSourceType ="Table/Query"
+                    ColumnWidths ="0;2835;1701;2835"
+                    OnDblClick ="[Event Procedure]"
+
+                    LayoutCachedLeft =566
+                    LayoutCachedTop =2211
+                    LayoutCachedWidth =8674
+                    LayoutCachedHeight =5215
+                    Begin
+                        Begin Label
+                            OverlapFlags =93
+                            Top =2211
+                            Width =915
+                            Height =315
+                            Name ="Надпись5"
+                            Caption ="Список4:"
+                            LayoutCachedTop =2211
+                            LayoutCachedWidth =915
+                            LayoutCachedHeight =2526
+                        End
+                    End
+                End
+            End
+        End
+    End
+End
+CodeBehindForm
+' See "uf_Search.cls"

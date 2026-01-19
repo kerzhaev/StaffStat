@@ -4,10 +4,10 @@ StaffState.accdb
 VCS Version 4.1.2
 Full Path: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb
 Export Folder: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb.src\
-19.01.2026 01:59:39
+19.01.2026 21:48:20
 -------------------------------------
 Saving backup of original database...
-Saved as StaffState_VCSBackup3.accdb.
+Saved as StaffState_VCSBackup1.accdb.
 Created blank database for import. (v12)
 Removing non built-in references...
   Removed DAO
@@ -63,15 +63,16 @@ Importing tables...
 -------------------------------------
 Importing forms...            
   uf_Dashboard.bas
+  uf_Search.bas
 
 -------------------------------------
-ERROR: Import issue with 'uf_Dashboard'
-Error 2128: Во время импорта ''uf_Dashboard'' в приложении ''Microsoft Access'' возникли ошибки. Source: modVCSUtility.LoadComponentFromText
+ERROR: Import issue with 'uf_Search'
+Error 2128: Во время импорта ''uf_Search'' в приложении ''Microsoft Access'' возникли ошибки. Source: modVCSUtility.LoadComponentFromText
 -------------------------------------
 
 -------------------------------------
 ERROR: Unhandled error, likely before `On Error` directive
-Error 2128: Во время импорта ''uf_Dashboard'' в приложении ''Microsoft Access'' возникли ошибки. Source: .Unknown.LogUnhandledErrors
+Error 2128: Во время импорта ''uf_Search'' в приложении ''Microsoft Access'' возникли ошибки. Source: .Unknown.LogUnhandledErrors
 -------------------------------------
 
 -------------------------------------
@@ -86,55 +87,54 @@ Source: modVCSUtility.LoadComponentFromText
 Category                      Count     Seconds
 --------------------------------------------------
 DB Properties                 1         0,06
-Modules                       3         0,04
-Themes                        1         0,04
+Forms                         0         0,04
 Tables                        3         0,03
-Forms                         0         0,03
-VBE References                1         0,01
+Themes                        1         0,03
+Modules                       3         0,03
 Project                       1         0,01
+VBE References                1         0,01
 VB Project                    1         0,01
 --------------------------------------------------
-TOTALS:                       11        0,22
+TOTALS:                       11        0,21
 --------------------------------------------------
 
 --------------------------------------------------
 Operations                    Count     Seconds
 --------------------------------------------------
-Create new database           1         0,19
-Increment Progress            12        0,04
-Console Updates               8         0,03
+Create new database           1         0,18
+Increment Progress            13        0,04
 Convert to JSON               171       0,03
-Parse JSON ISO Date           30        0,02
+Console Updates               8         0,03
+App.LoadFromText()            2         0,02
 Get File List                 18        0,01
 Scan Source Files             1         0,01
 Parse JSON                    6         0,01
+Clear References              1         0,01
+Get File Property Hash        12        0,00
 Import VBE Module             3         0,00
-App.LoadFromText()            1         0,00
-Get File Property Hash        11        0,00
 Create MSysResources Table    1         0,00
+Delete File                   8         0,00
+Write File                    4         0,00
 modVCSUtility.LoadComponentFr 
-omText                        0         0,00
-Compute SHA256                22        0,00
-Read File                     10        0,00
-Delete File                   6         0,00
-Write File                    3         0,00
+omText                        1         0,00
+Read File                     12        0,00
+Compute SHA256                24        0,00
 Parse VBA Module              3         0,00
-Get Modified Date             20        0,00
-Add GUID References           2         0,00
-Get VBA Hash                  3         0,00
-App.SaveAsText()              1         0,00
+Get VBA Hash                  4         0,00
+Parse JSON ISO Date           31        0,00
+Get Modified Date             22        0,00
 Read File Bytes               5         0,00
+Save Stream to File           2         0,00
+modFileAccess.VerifyPath      9         0,00
 Check for linked table        1         0,00
-Save Stream to File           1         0,00
-modFileAccess.VerifyPath      6         0,00
+Add GUID References           2         0,00
 Write Binary File             1         0,00
+Load Stream from File         2         0,00
 modFileAccess.GetUncPath      1         0,00
-Clear References              1         0,00
-Load Stream from File         1         0,00
-Enc. utf-8 as utf-16          1         0,00
-Copy Stream                   1         0,00
+Copy Stream                   2         0,00
+Enc. utf-8 as utf-16          2         0,00
 --------------------------------------------------
-Other Operations                        0,19
+Other Operations                        0,17
 --------------------------------------------------
 
 

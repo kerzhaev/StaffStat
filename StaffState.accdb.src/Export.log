@@ -4,32 +4,50 @@ StaffState.accdb
 VCS Version 4.1.2
 Full Path: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb
 Export Folder: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb.src\
-Using Fast Save
-19.01.2026 02:13:12
+Performing Full Export
+19.01.2026 22:24:31
 -------------------------------------
-Scanning for changes...
-No modified db connections found in this database.
-No modified project found in this database.
-No modified vb project found in this database.
-No modified vbe references found in this database.
-No modified vbe forms found in this database.
-No modified proj properties found in this database.
-No modified saved specs found in this database.
-No modified modules found in this database.
-No modified commandbars found in this database.
-No modified shared images found in this database.
-No modified themes found in this database.
-No modified db properties found in this database.
-No modified imex specs found in this database.
-No modified queries found in this database.
-No modified macros found in this database.
-No modified reports found in this database.
-No modified table data found in this database.
-No modified table data macros found in this database.
-No modified relations found in this database.
-No modified doc properties found in this database.
-No modified nav pane groups found in this database.
-No modified hidden attributes found in this database.
+Scanning source files...
+No db connections found in this database.
+No vbe forms found in this database.
+No proj properties found in this database.
+No saved specs found in this database.
+No commandbars found in this database.
+No shared images found in this database.
+No imex specs found in this database.
+No queries found in this database.
+No macros found in this database.
+No reports found in this database.
+No table data found in this database.
+No table data macros found in this database.
+No relations found in this database.
+No hidden attributes found in this database.
+-------------------------------------
+Exporting project...          
+  StaffState.accdb
+[1] project processed.
+-------------------------------------
+Exporting vb project...       
+  StaffState
+[1] vb project processed.
+-------------------------------------
+Exporting vbe references...   
+  stdole
+[2] vbe references processed.
+-------------------------------------
+Exporting modules...          
+  mod_App_Init
+  mod_Analysis_Logic
+  mod_Import_Logic
+[3] modules processed.
+-------------------------------------
+Exporting themes...           
+  Тема Office
+[1] themes processed.
+-------------------------------------
+Exporting db properties...    
+  Database Properties (DAO)
+[51] db properties processed.
 -------------------------------------
 Exporting tables...           
   tbl_History_Log
@@ -41,82 +59,98 @@ Exporting tables...
   tbl_Personnel_Master
     Sanitized in 0,001 seconds.
   tbl_Personnel_Master (SQL)
-[3]
+[3] tables processed.
 -------------------------------------
 Exporting forms...            
   uf_Dashboard
+Loading Printer info for: 'PDF-XChange 5.0 for ABBYY'.
     Sanitized in 0,002 seconds.
-[1]
+  uf_Search
+    Sanitized in 0,003 seconds.
+  uf_PersonCard
+    Sanitized in 0,002 seconds.
+[3] forms processed.
 -------------------------------------
-Done. (8,02 seconds)
+Exporting doc properties...   
+  Database Documents
+[2] doc properties processed.
+-------------------------------------
+Exporting nav pane groups...  
+  Groups
+[1] nav pane groups processed.
+-------------------------------------
+Done. (0,77 seconds)
 
 --------------------------------------------------
                 PERFORMANCE REPORTS
 --------------------------------------------------
 Category                      Count     Seconds
 --------------------------------------------------
-DB Properties                 0         0,07
-Tables                        3         0,04
-Forms                         1         0,04
-Nav Pane Groups               0         0,01
-Modules                       0         0,01
-Doc Properties                0         0,01
-VBE References                0         0,01
-DB Connections                0         0,01
-Hidden Attributes             0         0,01
+Tables                        3         0,12
+Forms                         3         0,12
+DB Properties                 51        0,09
+Modules                       3         0,09
+Doc Properties                2         0,05
+Themes                        1         0,05
+Nav Pane Groups               1         0,04
+Project                       1         0,03
+VBE References                2         0,03
+VB Project                    1         0,02
+Hidden Attributes             0         0,00
+DB Connections                0         0,00
 Proj Properties               0         0,00
-Themes                        0         0,00
-VB Project                    0         0,00
-Project                       0         0,00
 Table Data Macros             0         0,00
 Shared Images                 0         0,00
-Relations                     0         0,00
 IMEX Specs                    0         0,00
+Queries                       0         0,00
+CommandBars                   0         0,00
 VBE Forms                     0         0,00
+Macros                        0         0,00
+Relations                     0         0,00
 Table Data                    0         0,00
 Saved Specs                   0         0,00
 Reports                       0         0,00
-Queries                       0         0,00
-Macros                        0         0,00
-CommandBars                   0         0,00
 --------------------------------------------------
-TOTALS:                       4         0,23
+TOTALS:                       68        0,67
 --------------------------------------------------
 
 --------------------------------------------------
 Operations                    Count     Seconds
 --------------------------------------------------
-Close Open Objects            1         7,71
-Convert to JSON               508       0,10
-Console Updates               3         0,04
-Increment Progress            19        0,03
-Scan DB Objects               1         0,03
-Parse JSON ISO Date           30        0,02
-Clear Orphaned Files          13        0,02
-App.SaveAsText()              1         0,01
+Increment Progress            46        0,42
+Convert to JSON               511       0,10
+Scan DB Objects               1         0,04
+Console Updates               2         0,03
+Parse JSON ISO Date           31        0,02
+Close Open Objects            1         0,02
+Get File Property Hash        31        0,01
+App.SaveAsText()              3         0,01
 App.ExportXML()               3         0,01
+Sanitize File                 3         0,01
+Clear Orphaned Files          13        0,01
+Write File                    21        0,01
+Export VBE Module             3         0,01
+Clear Files by Ext            6         0,01
+Compute SHA256                66        0,00
 Parse JSON                    1         0,00
-Get File Property Hash        8         0,00
-Write File                    8         0,00
-Check for linked table        6         0,00
-Compute SHA256                36        0,00
+Read File DevMode             3         0,00
+Delete File                   13        0,00
 Save Table SQL                3         0,00
-Sanitize File                 1         0,00
 Format XML                    3         0,00
-Delete File                   6         0,00
-Sanitize XML                  3         0,00
+Check for linked table        3         0,00
+Read File Bytes               10        0,00
+modFileAccess.VerifyPath      28        0,00
+Read File                     10        0,00
 Quick Count Files             1         0,00
-Get VBA Hash                  4         0,00
-modFileAccess.VerifyPath      12        0,00
+Get Modified Date             28        0,00
+Sanitize XML                  3         0,00
+Get VBA Hash                  6         0,00
+Sanitize VBA Code             6         0,00
 Quick Count Objects           1         0,00
-Read File Bytes               4         0,00
-Read File                     5         0,00
-Get Modified Date             13        0,00
-Sanitize VBA Code             1         0,00
-Read File DevMode             1         0,00
+Export Theme                  1         0,00
 modFileAccess.GetUncPath      2         0,00
 --------------------------------------------------
-Other Operations                        0,03
+Other Operations                        0,04
 --------------------------------------------------
 
 
