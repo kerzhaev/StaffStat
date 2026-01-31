@@ -1,4 +1,4 @@
-Version =20
+﻿Version =20
 VersionRequired =20
 Begin Form
     DividingLines = NotDefault
@@ -11,8 +11,8 @@ Begin Form
     Width =13039
     DatasheetFontHeight =11
     ItemSuffix =21
-    Right =17430
-    Bottom =11985
+    Right =25320
+    Bottom =12120
     RecSrcDt = Begin
         0x385c834f3d7be640
     End
@@ -147,7 +147,10 @@ Begin Form
                     Height =1125
                     FontSize =14
                     FontWeight =800
+                    BorderColor =10921638
+                    ForeColor =4210752
                     Name ="txtFullName"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =680
                     LayoutCachedTop =340
@@ -162,7 +165,10 @@ Begin Form
                     Width =4139
                     Height =855
                     TabIndex =1
+                    BorderColor =10921638
+                    ForeColor =4210752
                     Name ="txtPersonUID"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =793
                     LayoutCachedTop =1870
@@ -177,7 +183,10 @@ Begin Form
                     Width =3968
                     Height =1125
                     TabIndex =2
+                    BorderColor =10921638
+                    ForeColor =4210752
                     Name ="txtRank"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =907
                     LayoutCachedTop =2948
@@ -192,7 +201,10 @@ Begin Form
                     Width =3685
                     Height =1125
                     TabIndex =3
+                    BorderColor =10921638
+                    ForeColor =4210752
                     Name ="txtPosition"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =1020
                     LayoutCachedTop =4365
@@ -207,7 +219,10 @@ Begin Form
                     Width =3459
                     Height =1125
                     TabIndex =4
+                    BorderColor =10921638
+                    ForeColor =4210752
                     Name ="txtStatus"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =6803
                     LayoutCachedTop =4762
@@ -224,9 +239,12 @@ Begin Form
                     Width =12131
                     Height =4197
                     TabIndex =5
+                    ForeColor =4210752
+                    BorderColor =10921638
                     Name ="lstHistory"
                     RowSourceType ="Table/Query"
                     ColumnWidths ="0;1701;10430"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =328
                     LayoutCachedTop =6234
@@ -241,9 +259,12 @@ Begin Form
                     Width =2324
                     Height =585
                     TabIndex =6
+                    BorderColor =10921638
+                    ForeColor =4210752
                     Name ="txtDateFrom"
                     Format ="Short Date"
                     AfterUpdate ="[Event Procedure]"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =6803
                     LayoutCachedTop =2097
@@ -258,9 +279,12 @@ Begin Form
                     Width =2324
                     Height =585
                     TabIndex =7
+                    BorderColor =10921638
+                    ForeColor =4210752
                     Name ="txtDateTo"
                     Format ="Short Date"
                     AfterUpdate ="[Event Procedure]"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =9524
                     LayoutCachedTop =2154
@@ -274,14 +298,22 @@ Begin Form
                     Width =737
                     Height =510
                     TabIndex =8
+                    ForeColor =4210752
                     Name ="btnResetDates"
                     Caption ="Х"
                     OnClick ="[Event Procedure]"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =12075
                     LayoutCachedTop =2211
                     LayoutCachedWidth =12812
                     LayoutCachedHeight =2721
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
                 End
                 Begin ComboBox
                     LimitToList = NotDefault
@@ -292,11 +324,14 @@ Begin Form
                     Width =5102
                     Height =1395
                     TabIndex =9
+                    BorderColor =10921638
+                    ForeColor =3484194
                     Name ="cboFilterHistory"
-                    RowSourceType ="Value List"
+                    RowSourceType ="Table/Query"
                     RowSource ="\"Все\";\"RankName\";\"PosName\";\"WorkStatus\";\"Размер_Сапог\";\"Охват_головы\""
-                    OnChange ="[Event Procedure]"
                     AfterUpdate ="[Event Procedure]"
+                    OnChange ="[Event Procedure]"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =6803
                     LayoutCachedTop =3231

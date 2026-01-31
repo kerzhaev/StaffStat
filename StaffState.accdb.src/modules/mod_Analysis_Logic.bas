@@ -1,4 +1,4 @@
-Attribute VB_Name = "mod_Analysis_Logic"
+﻿Attribute VB_Name = "mod_Analysis_Logic"
 Option Explicit
 
 ' =============================================
@@ -167,7 +167,7 @@ Private Sub CopyAllFields(rsSource As DAO.Recordset, rsDest As DAO.Recordset)
                 Case Else: strDestFieldName = Left(fldSource.Name, Len(fldSource.Name) - 4) ' General case
             End Select
         Else
-            ' 2. If field doesn't end with _Raw (e.g., "Размер_Сапог"),
+            ' 2. If field doesn't end with _Raw (e.g., "??????_?????"),
             '    look for it in Master with the same name.
             strDestFieldName = fldSource.Name
         End If
@@ -194,13 +194,13 @@ End Function
 
 Private Sub LogChange(strUID As String, strField As String, strOld As String, strNew As String, dtDate As Date)
     On Error GoTo ErrorHandler
-    
+
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
-    
+
     Set db = CurrentDb
     Set rs = db.OpenRecordset("tbl_History_Log", dbOpenDynaset, dbAppendOnly)
-    
+
     rs.AddNew
     rs!PersonUID = strUID
     rs!FieldName = strField
@@ -208,12 +208,12 @@ Private Sub LogChange(strUID As String, strField As String, strOld As String, st
     rs!NewValue = Left(strNew, 255)
     rs!ChangeDate = dtDate
     rs.Update
-    
+
     rs.Close
     Set rs = Nothing
     Set db = Nothing
     Exit Sub
-    
+
 ErrorHandler:
     Debug.Print "LogChange error: " & Err.Description & " (" & Err.Number & ")"
     If Not rs Is Nothing Then

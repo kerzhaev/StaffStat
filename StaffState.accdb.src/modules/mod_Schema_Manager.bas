@@ -8,7 +8,7 @@ Option Explicit
 ' =============================================
 
 ' =============================================
-' @description Converts "Дата рожд." to "Дата_рожд" (Access doesn't like spaces and dots in SQL)
+' @description Converts "???? ????." to "????_????" (Access doesn't like spaces and dots in SQL)
 ' =============================================
 Public Function SanitizeFieldName(ByVal strName As String) As String
     Dim s As String
@@ -61,7 +61,7 @@ Public Sub EnsureFieldExists(strTableName As String, strFieldName As String, Opt
         Dim strSQL As String
         strSQL = "ALTER TABLE [" & strTableName & "] ADD COLUMN [" & strFieldName & "] " & strType & ";"
         db.Execute strSQL, dbFailOnError
-        Debug.Print "?? Добавлено новое поле в " & strTableName & ": " & strFieldName
+        Debug.Print "?? ????????? ????? ???? ? " & strTableName & ": " & strFieldName
     End If
 End Sub
 
@@ -96,7 +96,7 @@ Public Sub SyncMasterStructure()
              strTargetName = fld.Name
 
              ' If these are our "standard" fields with _Raw suffix, we already processed them manually in CREATE TABLE.
-             ' But "Размер_Сапог" doesn't have a suffix.
+             ' But "??????_?????" doesn't have a suffix.
 
              EnsureFieldExists "tbl_Personnel_Master", strTargetName, "TEXT(255)"
         End If

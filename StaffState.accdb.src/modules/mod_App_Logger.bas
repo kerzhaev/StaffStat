@@ -1,16 +1,16 @@
-Attribute VB_Name = "mod_App_Logger"
+﻿Attribute VB_Name = "mod_App_Logger"
 Option Explicit
 
 ' =============================================
 ' @module mod_App_Logger
-' @author Кержаев Евгений
+' @author ??????? ???????
 ' @description Centralized error and event logging system
 ' =============================================
 
 Private Const cstrTableName As String = "tbl_System_Logs"
 
 ' =============================================
-' @author Кержаев Евгений
+' @author ??????? ???????
 ' @description Checks for tbl_System_Logs table and creates it if necessary
 ' =============================================
 Public Sub InitLogger()
@@ -72,7 +72,7 @@ Public Sub InitLogger()
         ' Add table to database
         db.TableDefs.Append tdf
 
-        Debug.Print "?? Таблица " & cstrTableName & " успешно создана"
+        Debug.Print "?? ??????? " & cstrTableName & " ??????? ???????"
     End If
 
     Set idx = Nothing
@@ -82,7 +82,7 @@ Public Sub InitLogger()
     Exit Sub
 
 ErrorHandler:
-    Debug.Print "ОШИБКА InitLogger: " & Err.Description & " (" & Err.Number & ")"
+    Debug.Print "?????? InitLogger: " & Err.Description & " (" & Err.Number & ")"
     If Not idx Is Nothing Then Set idx = Nothing
     If Not fld Is Nothing Then Set fld = Nothing
     If Not tdf Is Nothing Then Set tdf = Nothing
@@ -90,7 +90,7 @@ ErrorHandler:
 End Sub
 
 ' =============================================
-' @author Кержаев Евгений
+' @author ??????? ???????
 ' @description Writes error to logging table
 ' @param sSource [String] Error source (module/procedure name)
 ' @param sMsg [String] Error message text
@@ -144,14 +144,14 @@ Public Sub LogError(ByVal sSource As String, ByVal sMsg As String, Optional ByVa
 
 ErrorHandler:
     ' Fallback: if failed to write to DB, at least output to Debug
-    Debug.Print "КРИТИЧЕСКАЯ ОШИБКА LogError: " & Err.Description & " (" & Err.Number & ")"
-    Debug.Print "Исходная ошибка [" & sSource & "]: " & sMsg
+    Debug.Print "??????????? ?????? LogError: " & Err.Description & " (" & Err.Number & ")"
+    Debug.Print "???????? ?????? [" & sSource & "]: " & sMsg
     If Not db Is Nothing Then Set db = Nothing
     If Not objNetwork Is Nothing Then Set objNetwork = Nothing
 End Sub
 
 ' =============================================
-' @author Кержаев Евгений
+' @author ??????? ???????
 ' @description Writes informational message to logging table
 ' @param sMsg [String] Informational message text
 ' @param sSource [String] Message source (default "General")
@@ -197,8 +197,8 @@ Public Sub LogInfo(ByVal sMsg As String, Optional ByVal sSource As String = "Gen
 
 ErrorHandler:
     ' Fallback: if failed to write to DB, at least output to Debug
-    Debug.Print "ОШИБКА LogInfo: " & Err.Description & " (" & Err.Number & ")"
-    Debug.Print "Исходное сообщение [" & sSource & "]: " & sMsg
+    Debug.Print "?????? LogInfo: " & Err.Description & " (" & Err.Number & ")"
+    Debug.Print "???????? ????????? [" & sSource & "]: " & sMsg
     If Not db Is Nothing Then Set db = Nothing
     If Not objNetwork Is Nothing Then Set objNetwork = Nothing
 End Sub

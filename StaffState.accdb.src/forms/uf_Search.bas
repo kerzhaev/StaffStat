@@ -1,4 +1,4 @@
-Version =20
+﻿Version =20
 VersionRequired =20
 Begin Form
     DividingLines = NotDefault
@@ -10,9 +10,9 @@ Begin Form
     GridY =10
     Width =9807
     DatasheetFontHeight =11
-    ItemSuffix =6
-    Right =17430
-    Bottom =11985
+    ItemSuffix =7
+    Right =25320
+    Bottom =12120
     RecSrcDt = Begin
         0xeb61691d3d7be640
     End
@@ -113,7 +113,7 @@ Begin Form
         End
         Begin Section
             Height =7540
-            Name ="ОбластьДанных"
+            Name ="Detail"
             AlternateBackThemeColorIndex =1
             AlternateBackShade =95.0
             BackThemeColorIndex =1
@@ -125,10 +125,13 @@ Begin Form
                     Top =737
                     Width =8278
                     Height =1125
+                    BorderColor =10921638
+                    ForeColor =4210752
                     Name ="txtFilter"
-                    OnChange ="[Event Procedure]"
                     OnKeyDown ="[Event Procedure]"
                     OnKeyUp ="[Event Procedure]"
+                    OnChange ="[Event Procedure]"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =566
                     LayoutCachedTop =737
@@ -140,8 +143,11 @@ Begin Form
                     Top =737
                     Width =675
                     Height =315
-                    Name ="Надпись1"
-                    Caption ="Поле0"
+                    BorderColor =8355711
+                    ForeColor =6710886
+                    Name ="Label1"
+                    Caption ="Search:"
+                    GridlineColor =10921638
                     LayoutCachedTop =737
                     LayoutCachedWidth =675
                     LayoutCachedHeight =1052
@@ -153,14 +159,22 @@ Begin Form
                     Width =2438
                     Height =681
                     TabIndex =1
+                    ForeColor =4210752
                     Name ="btnSearch"
-                    Caption ="Кнопка2"
+                    Caption ="Search"
                     OnClick ="[Event Procedure]"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =680
                     LayoutCachedTop =6462
                     LayoutCachedWidth =3118
                     LayoutCachedHeight =7143
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
                 End
                 Begin CommandButton
                     OverlapFlags =85
@@ -169,14 +183,45 @@ Begin Form
                     Width =3062
                     Height =680
                     TabIndex =2
+                    ForeColor =4210752
                     Name ="btnClear"
-                    Caption ="Кнопка3"
+                    Caption ="Clear"
                     OnClick ="[Event Procedure]"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =5045
                     LayoutCachedTop =6406
                     LayoutCachedWidth =8107
                     LayoutCachedHeight =7086
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
+                End
+                Begin CommandButton
+                    OverlapFlags =85
+                    Left =3168
+                    Top =6462
+                    Height =681
+                    TabIndex =4
+                    ForeColor =4210752
+                    Name ="btnExportExcel"
+                    Caption ="Export to Excel"
+                    OnClick ="[Event Procedure]"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =3168
+                    LayoutCachedTop =6462
+                    LayoutCachedWidth =4869
+                    LayoutCachedHeight =7143
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
                 End
                 Begin ListBox
                     ColumnHeads = NotDefault
@@ -188,10 +233,13 @@ Begin Form
                     Width =8108
                     Height =3004
                     TabIndex =3
+                    ForeColor =4210752
+                    BorderColor =10921638
                     Name ="lstResults"
                     RowSourceType ="Table/Query"
                     ColumnWidths ="0;2835;1701;2835"
                     OnDblClick ="[Event Procedure]"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =566
                     LayoutCachedTop =2211
@@ -203,8 +251,11 @@ Begin Form
                             Top =2211
                             Width =915
                             Height =315
-                            Name ="Надпись5"
-                            Caption ="Список4:"
+                            BorderColor =8355711
+                            ForeColor =6710886
+                            Name ="Label5"
+                            Caption ="Results:"
+                            GridlineColor =10921638
                             LayoutCachedTop =2211
                             LayoutCachedWidth =915
                             LayoutCachedHeight =2526

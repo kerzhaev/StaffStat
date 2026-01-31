@@ -1,4 +1,4 @@
-Attribute VB_GlobalNameSpace = False
+﻿Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
@@ -69,15 +69,15 @@ End Sub
 ' --- КНОПКА 4: СОЗДАТЬ ИНДЕКСЫ (Phase 7) ---
 Private Sub btnCreateIndexes_Click()
     On Error GoTo ErrorHandler
-    
+
     Me.lblStatus.Caption = "Создание индексов производительности..."
     DoEvents
-    
+
     ' Call index creation routine
     mod_App_Init.CreatePerformanceIndexes
-    
+
     Me.lblStatus.Caption = "Индексы созданы. Система работает быстрее."
-    
+
     Exit Sub
 ErrorHandler:
     MsgBox "Index creation error: " & Err.Description, vbCritical

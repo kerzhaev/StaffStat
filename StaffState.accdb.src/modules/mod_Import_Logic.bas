@@ -1,4 +1,4 @@
-Attribute VB_Name = "mod_Import_Logic"
+﻿Attribute VB_Name = "mod_Import_Logic"
 Option Explicit
 
 ' =============================================
@@ -60,19 +60,19 @@ Private Function RunDynamicImport() As Boolean
     ' Field lists for SQL
     Dim strSelectPart As String
     Dim strInsertPart As String
-    
+
     ' PersonUID field detection (original Excel name)
     Dim strPersonUIDExcelName As String
     strPersonUIDExcelName = ""
-    
+
     ' Debug: collect all column names
     Dim strAllColumns As String
     strAllColumns = ""
-    
+
     ' Track destination fields to prevent duplicates in INSERT
     Dim colUsedFields As Collection
     Set colUsedFields = New Collection
-    
+
     ' Track duplicate counters for base field names
     Dim colDupCounts As Collection
     Set colDupCounts = New Collection
@@ -83,14 +83,14 @@ Private Function RunDynamicImport() As Boolean
     ' --- LOOP THROUGH ALL EXCEL COLUMNS ---
     For Each fld In tdfLink.Fields
         strExcelField = fld.Name
-        
+
         ' Collect column names for debug
         If Len(strAllColumns) > 0 Then strAllColumns = strAllColumns & ", "
         strAllColumns = strAllColumns & "[" & strExcelField & "]"
 
         ' 1. NAME MAPPING using fuzzy match (encoding-independent)
         strAccessField = MapFieldName(strExcelField)
-        
+
         ' 2. Detect PersonUID column (fuzzy match)
         If Len(strPersonUIDExcelName) = 0 Then
             If IsPersonUIDColumn(strExcelField) Then
@@ -114,7 +114,7 @@ Private Function RunDynamicImport() As Boolean
         strInsertPart = strInsertPart & "[" & strAccessField & "]"
 
     Next fld
-    
+
     Debug.Print "All Excel columns: " & strAllColumns
 
     ' --- VALIDATE: PersonUID field must exist ---
@@ -174,19 +174,19 @@ Private Function MakeUniqueDestField(colUsed As Collection, colCounts As Collect
                                      ByVal strBaseField As String, ByVal strExcelField As String) As String
     Dim strCandidate As String
     Dim iDup As Long
-    
+
     strCandidate = strBaseField
-    
+
     If RegisterDestField(colUsed, strCandidate) Then
         MakeUniqueDestField = strCandidate
         Exit Function
     End If
-    
+
     Do
         iDup = NextDuplicateIndex(colCounts, strBaseField)
         strCandidate = strBaseField & "_" & iDup
     Loop While Not RegisterDestField(colUsed, strCandidate)
-    
+
     Debug.Print "Duplicate mapped: " & strExcelField & " -> " & strCandidate
     MakeUniqueDestField = strCandidate
 End Function
@@ -200,7 +200,7 @@ End Function
 Private Function NextDuplicateIndex(colCounts As Collection, ByVal strBaseField As String) As Long
     Dim key As String
     Dim count As Long
-    
+
     key = UCase(strBaseField)
     On Error Resume Next
     count = colCounts.Item(key)
@@ -211,12 +211,12 @@ Private Function NextDuplicateIndex(colCounts As Collection, ByVal strBaseField 
         count = count + 1
     End If
     On Error GoTo 0
-    
+
     On Error Resume Next
     colCounts.Remove key
     On Error GoTo 0
     colCounts.Add count, key
-    
+
     NextDuplicateIndex = count
 End Function
 
@@ -228,25 +228,25 @@ End Function
 Private Function IsPersonUIDColumn(strFieldName As String) As Boolean
     Dim s As String
     s = LCase(strFieldName)
-    
+
     ' English patterns
     If InStr(s, "personuid") > 0 Then IsPersonUIDColumn = True: Exit Function
     If InStr(s, "uid") > 0 And Len(s) < 10 Then IsPersonUIDColumn = True: Exit Function
-    
+
     ' Russian patterns (works regardless of encoding)
     ' Check for Cyrillic by looking at byte values
     If ContainsCyrillic(strFieldName) Then
-        ' Look for patterns like "личн" + "номер" or just "номер"
+        ' Look for patterns like "????" + "?????" or just "?????"
         If InStr(s, ChrW(1085) & ChrW(1086) & ChrW(1084) & ChrW(1077) & ChrW(1088)) > 0 Then
-            ' Contains "номер" (Unicode)
+            ' Contains "?????" (Unicode)
             IsPersonUIDColumn = True: Exit Function
         End If
         If InStr(s, Chr(237) & Chr(238) & Chr(236) & Chr(229) & Chr(240)) > 0 Then
-            ' Contains "номер" (CP1251)
+            ' Contains "?????" (CP1251)
             IsPersonUIDColumn = True: Exit Function
         End If
     End If
-    
+
     IsPersonUIDColumn = False
 End Function
 
@@ -256,7 +256,7 @@ End Function
 Private Function ContainsCyrillic(s As String) As Boolean
     Dim i As Long
     Dim c As Long
-    
+
     For i = 1 To Len(s)
         c = AscW(Mid(s, i, 1))
         ' Cyrillic Unicode range: U+0400 to U+04FF
@@ -270,7 +270,7 @@ Private Function ContainsCyrillic(s As String) As Boolean
             Exit Function
         End If
     Next i
-    
+
     ContainsCyrillic = False
 End Function
 
@@ -282,7 +282,7 @@ End Function
 Private Function MapFieldName(strExcelField As String) As String
     Dim s As String
     s = LCase(strExcelField)
-    
+
     ' --- ENGLISH MAPPINGS ---
     If s = "personuid" Or s = "uid" Then MapFieldName = "PersonUID_Raw": Exit Function
     If s = "sourceid" Then MapFieldName = "SourceID_Raw": Exit Function
@@ -294,52 +294,52 @@ Private Function MapFieldName(strExcelField As String) As String
     If s = "posname" Then MapFieldName = "PosName_Raw": Exit Function
     If s = "orderdate" Then MapFieldName = "OrderDate_Raw": Exit Function
     If s = "ordernum" Then MapFieldName = "OrderNum_Raw": Exit Function
-    
+
     ' --- RUSSIAN MAPPINGS (fuzzy by patterns) ---
     If ContainsCyrillic(strExcelField) Then
-        ' SourceID: "Лицо" (not "Лицо1")
+        ' SourceID: "????" (not "????1")
         If MatchCyrPattern(s, Array(1083, 1080, 1094, 1086)) And Len(s) < 6 Then
             MapFieldName = "SourceID_Raw": Exit Function
         End If
-        ' FullName: "ФИО" or "Лицо1"
+        ' FullName: "???" or "????1"
         If MatchCyrPattern(s, Array(1092, 1080, 1086)) Then
             MapFieldName = "FullName_Raw": Exit Function
         End If
-        If MatchCyrPattern(s, Array(1083, 1080, 1094, 1086, 49)) Then  ' Лицо1
+        If MatchCyrPattern(s, Array(1083, 1080, 1094, 1086, 49)) Then  ' ????1
             MapFieldName = "FullName_Raw": Exit Function
         End If
-        ' Rank: "звание"
+        ' Rank: "??????"
         If MatchCyrPattern(s, Array(1079, 1074, 1072, 1085, 1080, 1077)) Then
             MapFieldName = "Rank_Raw": Exit Function
         End If
-        ' BirthDate: "рождения"
+        ' BirthDate: "????????"
         If MatchCyrPattern(s, Array(1088, 1086, 1078, 1076, 1077, 1085, 1080, 1103)) Then
             MapFieldName = "BirthDate_Raw": Exit Function
         End If
-        ' WorkStatus: "статус" and "занятости"
+        ' WorkStatus: "??????" and "?????????"
         If MatchCyrPattern(s, Array(1089, 1090, 1072, 1090, 1091, 1089)) Then
             If MatchCyrPattern(s, Array(1079, 1072, 1085, 1103, 1090)) Then
                 MapFieldName = "WorkStatus_Raw": Exit Function
             End If
         End If
-        ' PosCode: "штатная"
+        ' PosCode: "???????"
         If MatchCyrPattern(s, Array(1096, 1090, 1072, 1090, 1085)) Then
             MapFieldName = "PosCode_Raw": Exit Function
         End If
-        ' PosName: "должность"
+        ' PosName: "?????????"
         If MatchCyrPattern(s, Array(1076, 1086, 1083, 1078, 1085, 1086, 1089, 1090, 1100)) Then
             MapFieldName = "PosName_Raw": Exit Function
         End If
-        ' OrderDate: "дата приказа"
+        ' OrderDate: "???? ???????"
         If MatchCyrPattern(s, Array(1076, 1072, 1090, 1072)) And MatchCyrPattern(s, Array(1087, 1088, 1080, 1082, 1072, 1079)) Then
             MapFieldName = "OrderDate_Raw": Exit Function
         End If
-        ' OrderNum: "номер приказа"
+        ' OrderNum: "????? ???????"
         If MatchCyrPattern(s, Array(1085, 1086, 1084, 1077, 1088)) And MatchCyrPattern(s, Array(1087, 1088, 1080, 1082, 1072, 1079)) Then
             MapFieldName = "OrderNum_Raw": Exit Function
         End If
     End If
-    
+
     ' Default: sanitize field name
     MapFieldName = mod_Schema_Manager.SanitizeFieldName(strExcelField)
 End Function
@@ -353,12 +353,12 @@ End Function
 Private Function MatchCyrPattern(s As String, pattern As Variant) As Boolean
     Dim patternStr As String
     Dim i As Long
-    
+
     patternStr = ""
     For i = LBound(pattern) To UBound(pattern)
         patternStr = patternStr & ChrW(pattern(i))
     Next i
-    
+
     MatchCyrPattern = (InStr(LCase(s), LCase(patternStr)) > 0)
 End Function
 

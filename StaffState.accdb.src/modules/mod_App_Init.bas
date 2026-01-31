@@ -1,10 +1,10 @@
-Attribute VB_Name = "mod_App_Init"
+﻿Attribute VB_Name = "mod_App_Init"
 Option Compare Database
 
 Option Explicit
 
 ' =============================================
-' @author Кержаев Евгений (ФКУ "95 ФЭС" МО РФ)
+' @author ??????? ??????? (??? "95 ???" ?? ??)
 ' @description Database structure initialization module.
 '              Creates Buffer and Master tables from scratch or updates them.
 ' =============================================
@@ -19,7 +19,7 @@ Public Sub InitDatabaseStructure()
     Dim db As DAO.Database
     Set db = CurrentDb
 
-    Debug.Print "--- Начало инициализации структуры ---"
+    Debug.Print "--- ?????? ????????????? ????????? ---"
 
     ' 1. Create BUFFER table (Raw import)
     ' Delete if exists to clear structure
@@ -32,7 +32,7 @@ Public Sub InitDatabaseStructure()
     If Not TableExists("tbl_Personnel_Master") Then
         CreateMasterTable db
     Else
-        Debug.Print "Таблица 'tbl_Personnel_Master' уже существует. Пропуск."
+        Debug.Print "??????? 'tbl_Personnel_Master' ??? ??????????. ???????."
     End If
 
     ' 3. Create HISTORY table
@@ -45,7 +45,7 @@ Public Sub InitDatabaseStructure()
         CreateImportMetaTable db
     End If
 
-    Debug.Print "--- Инициализация успешно завершена ---"
+    Debug.Print "--- ????????????? ??????? ????????? ---"
     MsgBox "Database structure created successfully!", vbInformation, "StaffState Init"
 
     Set db = Nothing
@@ -64,20 +64,20 @@ End Sub
 ' =============================================
 Public Sub CreatePerformanceIndexes()
     On Error GoTo ErrorHandler
-    
+
     Dim db As DAO.Database
     Dim tdf As DAO.TableDef
     Dim idx As DAO.Index
     Dim fld As DAO.Field
     Dim iCreated As Long
     Dim iSkipped As Long
-    
+
     Set db = CurrentDb
     iCreated = 0
     iSkipped = 0
-    
+
     Debug.Print "--- Creating Performance Indexes ---"
-    
+
     ' ===== INDEX 1: tbl_Personnel_Master.PersonUID (UNIQUE) =====
     If Not IndexExists("tbl_Personnel_Master", "idx_PersonUID") Then
         Set tdf = db.TableDefs("tbl_Personnel_Master")
@@ -90,13 +90,13 @@ Public Sub CreatePerformanceIndexes()
         On Error GoTo IndexAppendError
         tdf.Indexes.Append idx
         On Error GoTo ErrorHandler
-        Debug.Print "✓ Created: idx_PersonUID on tbl_Personnel_Master (UNIQUE)"
+        Debug.Print "? Created: idx_PersonUID on tbl_Personnel_Master (UNIQUE)"
         iCreated = iCreated + 1
     Else
-        Debug.Print "○ Skipped: idx_PersonUID already exists"
+        Debug.Print "? Skipped: idx_PersonUID already exists"
         iSkipped = iSkipped + 1
     End If
-    
+
     ' ===== INDEX 2: tbl_Personnel_Master.FullName =====
     If Not IndexExists("tbl_Personnel_Master", "idx_FullName") Then
         Set tdf = db.TableDefs("tbl_Personnel_Master")
@@ -108,13 +108,13 @@ Public Sub CreatePerformanceIndexes()
         On Error GoTo IndexAppendError
         tdf.Indexes.Append idx
         On Error GoTo ErrorHandler
-        Debug.Print "✓ Created: idx_FullName on tbl_Personnel_Master"
+        Debug.Print "? Created: idx_FullName on tbl_Personnel_Master"
         iCreated = iCreated + 1
     Else
-        Debug.Print "○ Skipped: idx_FullName already exists"
+        Debug.Print "? Skipped: idx_FullName already exists"
         iSkipped = iSkipped + 1
     End If
-    
+
     ' ===== INDEX 3: tbl_History_Log.PersonUID =====
     If Not IndexExists("tbl_History_Log", "idx_History_PersonUID") Then
         Set tdf = db.TableDefs("tbl_History_Log")
@@ -126,13 +126,13 @@ Public Sub CreatePerformanceIndexes()
         On Error GoTo IndexAppendError
         tdf.Indexes.Append idx
         On Error GoTo ErrorHandler
-        Debug.Print "✓ Created: idx_History_PersonUID on tbl_History_Log"
+        Debug.Print "? Created: idx_History_PersonUID on tbl_History_Log"
         iCreated = iCreated + 1
     Else
-        Debug.Print "○ Skipped: idx_History_PersonUID already exists"
+        Debug.Print "? Skipped: idx_History_PersonUID already exists"
         iSkipped = iSkipped + 1
     End If
-    
+
     ' ===== INDEX 4: tbl_History_Log.ChangeDate =====
     If Not IndexExists("tbl_History_Log", "idx_History_ChangeDate") Then
         Set tdf = db.TableDefs("tbl_History_Log")
@@ -144,27 +144,27 @@ Public Sub CreatePerformanceIndexes()
         On Error GoTo IndexAppendError
         tdf.Indexes.Append idx
         On Error GoTo ErrorHandler
-        Debug.Print "✓ Created: idx_History_ChangeDate on tbl_History_Log"
+        Debug.Print "? Created: idx_History_ChangeDate on tbl_History_Log"
         iCreated = iCreated + 1
     Else
-        Debug.Print "○ Skipped: idx_History_ChangeDate already exists"
+        Debug.Print "? Skipped: idx_History_ChangeDate already exists"
         iSkipped = iSkipped + 1
     End If
-    
+
     Debug.Print "--- Index Creation Complete ---"
     Debug.Print "Created: " & iCreated & " | Skipped: " & iSkipped
-    
+
     MsgBox "Performance indexes created!" & vbCrLf & vbCrLf & _
            "Created: " & iCreated & vbCrLf & _
            "Skipped (already exist): " & iSkipped & vbCrLf & vbCrLf & _
            "Search and import should run faster now.", vbInformation, "Indexes"
-    
+
     Set fld = Nothing
     Set idx = Nothing
     Set tdf = Nothing
     Set db = Nothing
     Exit Sub
-    
+
 ErrorHandler:
     Debug.Print "ERROR: " & Err.Description
     MsgBox "Index creation error: " & Err.Description & vbCrLf & _
@@ -177,7 +177,7 @@ ErrorHandler:
 
 IndexAppendError:
     If Err.Number = 3284 Then
-        Debug.Print "○ Skipped: index already exists (" & idx.Name & ")"
+        Debug.Print "? Skipped: index already exists (" & idx.Name & ")"
         iSkipped = iSkipped + 1
         Err.Clear
         On Error GoTo ErrorHandler
@@ -196,13 +196,13 @@ Private Function IndexExists(strTableName As String, strIndexName As String) As 
     On Error Resume Next
     Dim tdf As DAO.TableDef
     Dim idx As DAO.Index
-    
+
     Set tdf = CurrentDb.TableDefs(strTableName)
     Set idx = tdf.Indexes(strIndexName)
-    
+
     IndexExists = (Err.Number = 0)
     Err.Clear
-    
+
     Set idx = Nothing
     Set tdf = Nothing
 End Function
@@ -230,7 +230,7 @@ Private Sub CreateBufferTable(db As DAO.Database)
            ");"
 
     db.Execute sSQL, dbFailOnError
-    Debug.Print "Создана таблица: tbl_Import_Buffer"
+    Debug.Print "??????? ???????: tbl_Import_Buffer"
 End Sub
 
 ' =============================================
@@ -256,7 +256,7 @@ Private Sub CreateMasterTable(db As DAO.Database)
            ");"
 
     db.Execute sSQL, dbFailOnError
-    Debug.Print "Создана таблица: tbl_Personnel_Master"
+    Debug.Print "??????? ???????: tbl_Personnel_Master"
 End Sub
 
 ' =============================================
@@ -282,7 +282,7 @@ Private Sub CreateHistoryTable(db As DAO.Database)
     ' Note: Indexes are now created centrally via CreatePerformanceIndexes()
     ' (removed old idx_Log_Person to avoid conflicts)
 
-    Debug.Print "Создана таблица: tbl_History_Log"
+    Debug.Print "??????? ???????: tbl_History_Log"
 End Sub
 
 ' =============================================
@@ -300,7 +300,7 @@ Private Sub CreateImportMetaTable(db As DAO.Database)
            ");"
 
     db.Execute sSQL, dbFailOnError
-    Debug.Print "Создана таблица: tbl_Import_Meta"
+    Debug.Print "??????? ???????: tbl_Import_Meta"
 End Sub
 
 ' =============================================
@@ -320,6 +320,6 @@ End Function
 Private Sub DeleteTableIfExists(strTableName As String)
     If TableExists(strTableName) Then
         CurrentDb.Execute "DROP TABLE [" & strTableName & "];"
-        Debug.Print "Удалена таблица: " & strTableName
+        Debug.Print "??????? ???????: " & strTableName
     End If
 End Sub

@@ -43,5 +43,9 @@
   [Получатель] VARCHAR (255),
   [Ключ_банка] VARCHAR (255),
   [Размер_Сапог] VARCHAR (255),
-  [Охват_головы] VARCHAR (255)
+  [Охват_головы] VARCHAR (255),
+  [PosCode_Raw_2] VARCHAR (255),
+  [OrderDate_Raw_2] VARCHAR (255),
+  [OrderNum_Raw_2] VARCHAR (255),
+  [PosName_Raw_2] VARCHAR (255)
 )

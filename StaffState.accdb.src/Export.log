@@ -2,26 +2,26 @@
 Beginning Export of Source Files
 StaffState.accdb
 VCS Version 4.1.2
-Full Path: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb
-Export Folder: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb.src\
-Performing Full Export
-22.01.2026 23:57:36
+Full Path: C:\Users\Nachfin\Desktop\Projets\StaffState\StaffState.accdb
+Export Folder: C:\Users\Nachfin\Desktop\Projets\StaffState\StaffState.accdb.src\
+Using Fast Save
+01/02/2026 00:49:13
 -------------------------------------
-Scanning source files...
-No db connections found in this database.
-No vbe forms found in this database.
-No proj properties found in this database.
-No saved specs found in this database.
-No commandbars found in this database.
-No shared images found in this database.
-No imex specs found in this database.
-No queries found in this database.
-No macros found in this database.
-No reports found in this database.
-No table data found in this database.
-No table data macros found in this database.
-No relations found in this database.
-No hidden attributes found in this database.
+Scanning for changes...
+No modified db connections found in this database.
+No modified vbe forms found in this database.
+No modified proj properties found in this database.
+No modified saved specs found in this database.
+No modified commandbars found in this database.
+No modified shared images found in this database.
+No modified imex specs found in this database.
+No modified queries found in this database.
+No modified macros found in this database.
+No modified reports found in this database.
+No modified table data found in this database.
+No modified table data macros found in this database.
+No modified relations found in this database.
+No modified hidden attributes found in this database.
 -------------------------------------
 Exporting project...          
   StaffState.accdb
@@ -38,10 +38,13 @@ Exporting vbe references...
 Exporting modules...          
   mod_App_Init
   mod_Analysis_Logic
+  mod_Fix_Startup
   mod_App_Logger
+  mod_UI_Helpers
   mod_Import_Logic
+  mod_Export_Logic
   mod_Schema_Manager
-[5]
+[8]
 -------------------------------------
 Exporting themes...           
   Тема Office
@@ -49,30 +52,30 @@ Exporting themes...
 -------------------------------------
 Exporting db properties...    
   Database Properties (DAO)
-[51]
+[52]
 -------------------------------------
 Exporting tables...           
   tbl_History_Log
-    Sanitized in 0,002 seconds.
+    Sanitized in 0.001 seconds.
   tbl_History_Log (SQL)
   tbl_Import_Buffer
-    Sanitized in 0,002 seconds.
+    Sanitized in 0.002 seconds.
   tbl_Import_Buffer (SQL)
   tbl_Import_Meta
-    Sanitized in 0,001 seconds.
+    Sanitized in 0.001 seconds.
   tbl_Import_Meta (SQL)
   tbl_Personnel_Master
-    Sanitized in 0,008 seconds.
+    Sanitized in 0.005 seconds.
   tbl_Personnel_Master (SQL)
 [4]
 -------------------------------------
 Exporting forms...            
   uf_Dashboard
-    Sanitized in 0,003 seconds.
+    Sanitized in 0.003 seconds.
   uf_PersonCard
-    Sanitized in 0,004 seconds.
+    Sanitized in 0.004 seconds.
   uf_Search
-    Sanitized in 0,002 seconds.
+    Sanitized in 0.004 seconds.
 [3]
 -------------------------------------
 Exporting doc properties...   
@@ -83,79 +86,78 @@ Exporting nav pane groups...
   Groups
 [1]
 -------------------------------------
-Done. (0,86 seconds)
+Done. (0.77 seconds)
 
 --------------------------------------------------
                 PERFORMANCE REPORTS
 --------------------------------------------------
 Category                      Count     Seconds
 --------------------------------------------------
-Forms                         3         0,19
-Tables                        4         0,11
-DB Properties                 51        0,10
-Modules                       5         0,05
-Nav Pane Groups               1         0,03
-Doc Properties                2         0,03
-Project                       1         0,02
-VBE References                2         0,02
-Themes                        1         0,02
-VB Project                    1         0,02
-CommandBars                   0         0,02
-Hidden Attributes             0         0,01
-DB Connections                0         0,00
-Proj Properties               0         0,00
-Table Data Macros             0         0,00
-Shared Images                 0         0,00
-Relations                     0         0,00
-IMEX Specs                    0         0,00
-VBE Forms                     0         0,00
-Table Data                    0         0,00
-Saved Specs                   0         0,00
-Reports                       0         0,00
-Queries                       0         0,00
-Macros                        0         0,00
+Forms                         3         0.16
+DB Properties                 52        0.12
+Tables                        4         0.11
+Modules                       8         0.08
+Nav Pane Groups               1         0.03
+Doc Properties                2         0.03
+Project                       1         0.03
+VBE References                2         0.02
+Themes                        1         0.02
+VB Project                    1         0.02
+CommandBars                   0         0.01
+DB Connections                0         0.01
+Hidden Attributes             0         0.01
+Proj Properties               0         0.01
+Table Data Macros             0         0.00
+Shared Images                 0         0.00
+Relations                     0         0.00
+IMEX Specs                    0         0.00
+Table Data                    0         0.00
+VBE Forms                     0         0.00
+Saved Specs                   0         0.00
+Reports                       0         0.00
+Queries                       0         0.00
+Macros                        0         0.00
 --------------------------------------------------
-TOTALS:                       71        0,64
+TOTALS:                       75        0.65
 --------------------------------------------------
 
 --------------------------------------------------
 Operations                    Count     Seconds
 --------------------------------------------------
-Convert to JSON               511       0,14
-Close Open Objects            1         0,12
-Increment Progress            56        0,11
-Scan DB Objects               1         0,07
-App.ExportXML()               4         0,05
-Console Updates               2         0,04
-Parse JSON ISO Date           19        0,02
-App.SaveAsText()              3         0,02
-Export VBE Module             5         0,02
-Get File Property Hash        37        0,02
-Write File                    25        0,01
-Clear Orphaned Files          13        0,01
-Sanitize File                 3         0,01
-Clear Files by Ext            6         0,01
-Save Table SQL                4         0,01
-modFileAccess.VerifyPath      33        0,01
-Compute SHA256                77        0,01
-Sanitize XML                  4         0,00
-Delete File                   17        0,00
-Parse JSON                    1         0,00
-Format XML (alt)              1         0,00
-Read File DevMode             3         0,00
-Read File                     13        0,00
-Format XML                    3         0,00
-Get VBA Hash                  8         0,00
-Read File Bytes               13        0,00
-Get Modified Date             35        0,00
-Sanitize VBA Code             8         0,00
-Check for linked table        4         0,00
-Quick Count Files             1         0,00
-Quick Count Objects           1         0,00
-Export Theme                  1         0,00
-modFileAccess.GetUncPath      2         0,00
+Convert to JSON               747       0.15
+Increment Progress            67        0.13
+Scan DB Objects               1         0.07
+Parse JSON ISO Date           46        0.05
+App.ExportXML()               4         0.04
+App.SaveAsText()              3         0.03
+Console Updates               2         0.02
+Clear Orphaned Files          13        0.02
+Export VBE Module             8         0.02
+Get File Property Hash        44        0.02
+Close Open Objects            1         0.01
+Write File                    28        0.01
+Sanitize File                 3         0.01
+Save Table SQL                4         0.01
+Get VBA Hash                  19        0.01
+Delete File                   20        0.00
+Parse JSON                    1         0.00
+Compute SHA256                108       0.00
+Sanitize XML                  4         0.00
+modFileAccess.VerifyPath      36        0.00
+Check for linked table        8         0.00
+Sanitize VBA Code             11        0.00
+Read File                     16        0.00
+Format XML (alt)              1         0.00
+Read File Bytes               16        0.00
+Quick Count Objects           1         0.00
+Format XML                    3         0.00
+Get Modified Date             43        0.00
+Read File DevMode             3         0.00
+Quick Count Files             1         0.00
+Export Theme                  1         0.00
+modFileAccess.GetUncPath      3         0.00
 --------------------------------------------------
-Other Operations                        0,18
+Other Operations                        0.13
 --------------------------------------------------
 
 

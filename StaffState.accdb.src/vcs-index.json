@@ -5,8 +5,8 @@
   },
   "Items": {
     "MergeBuildDate": null,
-    "FullBuildDate": "2026-01-31T20:12:02.000Z",
-    "ExportDate": "2026-01-22T20:57:37.000Z",
+    "FullBuildDate": "2026-01-31T21:53:30.000Z",
+    "ExportDate": "2026-01-31T21:49:14.000Z",
     "FullExportDate": "2026-01-22T20:57:37.000Z",
     "OptionsHash": "e599266",
     "LastMergedCommit": "",
@@ -18,42 +18,42 @@
       "DB Properties": {
         "dbs-properties.json": {
           "FileHash": "135b465",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "8d1513c",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "e8c3ae5",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         }
       },
       "Doc Properties": {
         "documents.json": {
           "FileHash": "25f3809",
-          "ImportDate": "2026-01-31T20:12:00.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "aa074f5",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "472eb9d",
+          "ExportDate": "2026-01-31T21:49:14.000Z"
         }
       },
       "Forms": {
         "uf_Dashboard.bas": {
-          "FileHash": "2e15da3",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "1613172",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "d4c9a21",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "421aa19",
+          "ExportDate": "2026-01-31T21:49:14.000Z"
         },
         "uf_PersonCard.bas": {
-          "FileHash": "2173088",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "9578203",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "7ef1974",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "76d0a6f",
+          "ExportDate": "2026-01-31T21:49:14.000Z"
         },
         "uf_Search.bas": {
-          "FileHash": "85edbf0",
-          "ImportDate": "2026-01-31T20:12:00.000Z",
+          "FileHash": "f309182",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "b0335c7",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "7549c3a",
+          "ExportDate": "2026-01-31T21:49:14.000Z"
         }
       },
       "Hidden Attributes": {
@@ -62,60 +62,69 @@
       },
       "Modules": {
         "mod_Analysis_Logic.bas": {
-          "FileHash": "19a675c",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "a78ad77",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "ef08dc0",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "2abc410",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         },
         "mod_App_Init.bas": {
-          "FileHash": "4aa2f9b",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "e150a12",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "4cb6176",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "da17170",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         },
         "mod_App_Logger.bas": {
           "FileHash": "9236d35",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "c8207ea",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "808ee18",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
+        },
+        "mod_Export_Logic.bas": {
+          "FileHash": "8cda2a5",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
+          "SourceModified": null,
+          "FilePropertiesHash": "d01f167",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         },
         "mod_Fix_Startup.bas": {
-          "FileHash": "a45f92c",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "b92fcfa",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "ac904bd"
+          "FilePropertiesHash": "36ac375",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         },
         "mod_Import_Logic.bas": {
-          "FileHash": "05ad732",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "5dc3a64",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "071198b",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "6ca2fa8",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         },
         "mod_Schema_Manager.bas": {
           "FileHash": "11e87c5",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "cb8c5ed",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "fad3504",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         },
         "mod_UI_Helpers.bas": {
-          "FileHash": "a2ed8d8",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "d6a3c7a",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "532d9c3"
+          "FilePropertiesHash": "1fb6993",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         }
       },
       "Nav Pane Groups": {
         "nav-pane-groups.json": {
           "FileHash": "b595139",
-          "ImportDate": "2026-01-31T20:12:00.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "76907d3",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "dd48315",
+          "ExportDate": "2026-01-31T21:49:14.000Z"
         }
       },
       "Proj Properties": {
@@ -125,67 +134,67 @@
       "Project": {
         "project.json": {
           "FileHash": "19c3478",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "746876a",
-          "ExportDate": "2026-01-22T20:57:36.000Z"
+          "FilePropertiesHash": "1e6b7ef",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         }
       },
       "Tables": {
         "tbl_History_Log.xml": {
-          "FileHash": "488cb14",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "e21bbc7",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "03ec8e8",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "7684aa8",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         },
         "tbl_Import_Buffer.xml": {
-          "FileHash": "4998c5e",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "288e068",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "474f848",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "963e545",
+          "ExportDate": "2026-01-31T21:49:14.000Z"
         },
         "tbl_Import_Meta.xml": {
-          "FileHash": "556df4f",
-          "ExportDate": "2026-01-22T20:57:37.000Z",
+          "FileHash": "6cedcbf",
+          "ExportDate": "2026-01-31T21:49:14.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "d2d827f",
-          "ImportDate": "2026-01-31T20:11:59.000Z"
+          "FilePropertiesHash": "08eb5bd",
+          "ImportDate": "2026-01-31T21:53:28.000Z"
         },
         "tbl_Personnel_Master.xml": {
-          "FileHash": "5c8b740",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "FileHash": "93c0af3",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "b4d4c56",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "06e95ac",
+          "ExportDate": "2026-01-31T21:49:14.000Z"
         }
       },
       "Themes": {
         "Тема Office.thmx": {
           "FileHash": "a3fdc32",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "5665ee1",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "9e906b3",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         }
       },
       "VB Project": {
         "vbe-project.json": {
           "FileHash": "ec80e6e",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "d68efa5",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "c6a21cf",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         }
       },
       "VBE References": {
         "vbe-references.json": {
           "FileHash": "9521cdc",
-          "ImportDate": "2026-01-31T20:11:59.000Z",
+          "ImportDate": "2026-01-31T21:53:28.000Z",
           "SourceModified": null,
-          "FilePropertiesHash": "c5cd7ec",
-          "ExportDate": "2026-01-22T20:57:37.000Z"
+          "FilePropertiesHash": "eefee2b",
+          "ExportDate": "2026-01-31T21:49:13.000Z"
         }
       }
     }

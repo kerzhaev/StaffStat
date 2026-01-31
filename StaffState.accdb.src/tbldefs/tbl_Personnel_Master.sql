@@ -1,5 +1,5 @@
 ﻿CREATE TABLE [tbl_Personnel_Master] (
-  [PersonUID] VARCHAR (50) CONSTRAINT [PK_Person] PRIMARY KEY UNIQUE NOT NULL,
+  [PersonUID] VARCHAR (50) CONSTRAINT [idx_PersonUID] UNIQUE CONSTRAINT [PK_Person] PRIMARY KEY UNIQUE NOT NULL,
   [SourceID] LONG,
   [FullName] VARCHAR (150),
   [RankName] VARCHAR (100),
@@ -62,5 +62,9 @@
   [Ключ_банка] VARCHAR (255),
   [Размер_Сапог] VARCHAR (255),
   [F44] VARCHAR (255),
-  [Охват_головы] VARCHAR (255)
+  [Охват_головы] VARCHAR (255),
+  [PosCode_Raw_2] VARCHAR (255),
+  [OrderDate_Raw_2] VARCHAR (255),
+  [OrderNum_Raw_2] VARCHAR (255),
+  [PosName_Raw_2] VARCHAR (255)
 )

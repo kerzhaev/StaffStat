@@ -1,4 +1,4 @@
-Version =20
+﻿Version =20
 VersionRequired =20
 Begin Form
     DividingLines = NotDefault
@@ -11,8 +11,8 @@ Begin Form
     Width =9467
     DatasheetFontHeight =11
     ItemSuffix =8
-    Right =17685
-    Bottom =11985
+    Right =25320
+    Bottom =12120
     RecSrcDt = Begin
         0x71deebbc227be640
     End
@@ -92,15 +92,23 @@ Begin Form
                     Top =510
                     Width =3756
                     Height =576
+                    ForeColor =4210752
                     Name ="btnImport"
                     Caption ="Загрузить"
                     OnClick ="[Event Procedure]"
                     ControlTipText ="Найти далее"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =340
                     LayoutCachedTop =510
                     LayoutCachedWidth =4096
                     LayoutCachedHeight =1086
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
                     Overlaps =1
                 End
                 Begin CommandButton
@@ -110,33 +118,49 @@ Begin Form
                     Width =3756
                     Height =576
                     TabIndex =1
+                    ForeColor =4210752
                     Name ="btnOpenLog"
                     Caption ="Журнал"
                     OnClick ="[Event Procedure]"
                     ControlTipText ="Найти далее"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =283
                     LayoutCachedTop =2494
                     LayoutCachedWidth =4039
                     LayoutCachedHeight =3070
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
                     Overlaps =1
                 End
                 Begin CommandButton
-                    OverlapFlags =85
+                    OverlapFlags =93
                     Left =5100
                     Top =510
                     Width =3756
                     Height =576
                     TabIndex =3
+                    ForeColor =4210752
                     Name ="btnCreateIndexes"
                     Caption ="Создать индексы"
                     OnClick ="[Event Procedure]"
                     ControlTipText ="Create performance indexes (one-time operation)"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =5100
                     LayoutCachedTop =510
                     LayoutCachedWidth =8856
                     LayoutCachedHeight =1086
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
                     Overlaps =1
                 End
                 Begin CommandButton
@@ -146,25 +170,36 @@ Begin Form
                     Width =3756
                     Height =576
                     TabIndex =2
+                    ForeColor =4210752
                     Name ="btnAnalyze"
                     Caption ="Анализ"
                     OnClick ="[Event Procedure]"
                     ControlTipText ="Найти далее"
+                    GridlineColor =10921638
 
                     LayoutCachedLeft =226
                     LayoutCachedTop =1474
                     LayoutCachedWidth =3982
                     LayoutCachedHeight =2050
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
                     Overlaps =1
                 End
                 Begin Label
-                    OverlapFlags =85
+                    OverlapFlags =87
                     Left =5612
                     Top =1077
                     Width =3855
                     Height =1757
+                    BorderColor =8355711
+                    ForeColor =6710886
                     Name ="lblStatus"
                     Caption ="в"
+                    GridlineColor =10921638
                     LayoutCachedLeft =5612
                     LayoutCachedTop =1077
                     LayoutCachedWidth =9467
@@ -177,9 +212,12 @@ Begin Form
                     Top =360
                     Width =1005
                     Height =210
+                    BorderColor =8355711
+                    ForeColor =6710886
                     Name ="Надпись5"
                     Caption =" "
                     GroupTable =1
+                    GridlineColor =10921638
                     LayoutCachedLeft =360
                     LayoutCachedTop =360
                     LayoutCachedWidth =1365

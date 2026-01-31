@@ -1,4 +1,4 @@
-Attribute VB_Name = "mod_UI_Helpers"
+﻿Attribute VB_Name = "mod_UI_Helpers"
 Option Compare Database
 Option Explicit
 
@@ -156,4 +156,3 @@ Public Function BuildHistoryDescription(ByVal strInternalName As String, ByVal v
 ErrorHandler:
     BuildHistoryDescription = "[*] " & Trim$(Nz(strInternalName, "")) & ": " & Trim$(Nz(vOld, "")) & " -> " & Trim$(Nz(vNew, ""))
 End Function
-

@@ -1,4 +1,4 @@
-Attribute VB_GlobalNameSpace = False
+﻿Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
@@ -18,173 +18,173 @@ Private m_strUID As String ' Form-level variable to store ID
 ' =============================================
 Private Function TranslateFieldName(ByVal strUserInput As String) As String
     Dim strLower As String
-    
+
     ' Convert to lowercase for case-insensitive comparison
     strLower = LCase(Trim(strUserInput))
-    
+
     ' Return "Все" as-is (special case)
     If strLower = "все" Or strLower = "" Then
         TranslateFieldName = strUserInput
         Exit Function
     End If
-    
+
     ' === COMPREHENSIVE FIELD NAME MAPPING ===
     Select Case strLower
         ' --- CORE FIELDS ---
         Case "фио", "имя", "полное имя"
             TranslateFieldName = "FullName"
-        
+
         Case "звание", "воинское", "воинское звание", "ранг"
             TranslateFieldName = "RankName"
-        
+
         Case "должность", "позиция", "пост"
             TranslateFieldName = "PosName"
-        
+
         Case "код должности", "код"
             TranslateFieldName = "PosCode"
-        
+
         Case "статус", "состояние", "рабочий статус"
             TranslateFieldName = "WorkStatus"
-        
+
         Case "личный", "личный номер", "uid", "номер"
             TranslateFieldName = "PersonUID"
-        
+
         Case "активный", "активен"
             TranslateFieldName = "IsActive"
-        
+
         ' --- DATES ---
         Case "дата рождения", "рождение", "др"
             TranslateFieldName = "Дата_рождения"
-        
+
         Case "дата приказа", "приказ дата"
             TranslateFieldName = "Дата_приказа"
-        
+
         Case "номер приказа", "приказ номер"
             TranslateFieldName = "Номер_приказа"
-        
+
         Case "дата увольнения", "увольнение"
             TranslateFieldName = "Дата_увольнения"
-        
+
         Case "начало контракта", "дата начала контракта"
             TranslateFieldName = "Дата_начала_контракта"
-        
+
         Case "конец контракта", "окончание контракта", "дата окончания контракта"
             TranslateFieldName = "Дата_окончания_контракта"
-        
+
         Case "начало срока", "начало срока действия"
             TranslateFieldName = "Начало_срока_действия"
-        
+
         Case "конец срока", "конец срока действия"
             TranslateFieldName = "Конец_срока_действия"
-        
+
         ' --- PERSONAL INFO ---
         Case "возраст"
             TranslateFieldName = "Возраст_сотрудника"
-        
+
         Case "пол"
             TranslateFieldName = "Пол"
-        
+
         Case "семья", "семейное", "семейное положение", "брак"
             TranslateFieldName = "Семейное_положение"
-        
+
         Case "дети", "количество детей"
             TranslateFieldName = "Количество_детей"
-        
+
         Case "национальность", "нация"
             TranslateFieldName = "Национальность"
-        
+
         Case "гражданство"
             TranslateFieldName = "Гражданство"
-        
+
         ' --- CONTRACT INFO ---
         Case "вид контракта", "контракт вид"
             TranslateFieldName = "Вид_контракта"
-        
+
         Case "тип контракта", "контракт тип"
             TranslateFieldName = "Тип_контракта"
-        
+
         Case "срок договора год", "договор год"
             TranslateFieldName = "Срок_договора_год"
-        
+
         Case "срок договора месяц", "договор месяц"
             TranslateFieldName = "Срок_договора_месяц"
-        
+
         Case "группа сотрудников", "группа"
             TranslateFieldName = "Группа_сотрудников"
-        
+
         ' --- EVENT INFO ---
         Case "вид мероприятия", "мероприятие"
             TranslateFieldName = "Вид_мероприятия"
-        
+
         Case "причина мероприятия", "причина"
             TranslateFieldName = "Причина_мероприятия"
-        
+
         ' --- POSITION DETAILS ---
         Case "штатная должность", "штатка"
             TranslateFieldName = "Штатная_должность"
-        
+
         Case "вус", "военно-учетная специальность"
             TranslateFieldName = "ВУС"
-        
+
         Case "тарифный разряд", "разряд"
             TranslateFieldName = "Тарифный_разряд"
-        
+
         Case "раздел персонала", "раздел"
             TranslateFieldName = "Раздел_персонала"
-        
+
         Case "статус занятости", "занятость"
             TranslateFieldName = "Статус_занятости"
-        
+
         Case "единица расчета"
             TranslateFieldName = "Единица_расчета"
-        
+
         Case "рассчитано по"
             TranslateFieldName = "Рассчитано_по"
-        
+
         ' --- BANK INFO ---
         Case "банк", "банковский счет", "счет в банке", "номер счета"
             TranslateFieldName = "Номер_счета_в_банке"
-        
+
         Case "ключ банка", "банковский ключ"
             TranslateFieldName = "Ключ_банка"
-        
+
         Case "контрольный ключ", "контрольный банковский ключ"
             TranslateFieldName = "Контрольный_банковский_ключ"
-        
+
         Case "получатель"
             TranslateFieldName = "Получатель"
-        
+
         ' --- CLOTHING SIZES ---
         Case "сапоги", "размер сапог", "обувь", "размер обуви"
             TranslateFieldName = "Размер_Сапог"
-        
+
         Case "голова", "охват головы", "размер головы", "головной убор"
             TranslateFieldName = "Охват_головы"
-        
+
         Case "куртка", "размер куртки"
             TranslateFieldName = "Размер_Куртки"
-        
+
         Case "брюки", "размер брюк", "штаны"
             TranslateFieldName = "Размер_Брюк"
-        
+
         Case "рост", "размер по росту"
             TranslateFieldName = "Размер_по_Росту"
-        
+
         ' --- RAW FIELDS (for technical users) ---
         Case "sourceid", "ид источника"
             TranslateFieldName = "SourceID"
-        
+
         Case "orderdate", "дата приказа ориг"
             TranslateFieldName = "OrderDate"
-        
+
         Case "ordernum", "номер приказа ориг"
             TranslateFieldName = "OrderNum"
-        
+
         ' --- EXACT TECHNICAL NAMES (pass through as-is) ---
         Case "rankname", "posname", "workstatus", "fullname", "personuid", _
              "poscode", "birthdate", "isactive", "lastupdated"
             TranslateFieldName = strUserInput
-        
+
         ' --- DEFAULT: Return original input (for partial matches or unrecognized) ---
         Case Else
             TranslateFieldName = strUserInput
@@ -296,16 +296,16 @@ Private Sub ApplyHistoryFilter()
     ' Try multiple methods to get current text
     On Error Resume Next
     strFieldFilter = ""
-    
+
     ' Method 1: Try .Text (works during typing if cursor is in the field)
     strFieldFilter = Me.cboFilterHistory.Text
-    
+
     ' Method 2: If failed, try .Value (works after selection or update)
     If Err.Number <> 0 Or IsNull(strFieldFilter) Or strFieldFilter = "" Then
         Err.Clear
         strFieldFilter = Nz(Me.cboFilterHistory.Value, "")
     End If
-    
+
     ' Method 3: Check if control has focus and try Screen.ActiveControl
     If strFieldFilter = "" And Not Me.cboFilterHistory Is Nothing Then
         If TypeName(Screen.ActiveControl) = "ComboBox" Then
@@ -314,18 +314,18 @@ Private Sub ApplyHistoryFilter()
             End If
         End If
     End If
-    
+
     On Error GoTo ErrorHandler
-    
+
     strFieldFilter = Trim(strFieldFilter)
-    
+
     ' TRANSLATE USER INPUT: Convert user-friendly names to technical names
     ' E.g., "Rank" -> "RankName", "Position" -> "PosName"
     strFieldFilter = TranslateFieldName(strFieldFilter)
-    
+
     ' Escape single quotes for SQL safety
     strFieldFilter = Replace(strFieldFilter, "'", "''")
-    
+
     ' Use LIKE for partial matching (e.g., "семе" will find "Семейное_положение")
     If strFieldFilter <> "" And strFieldFilter <> "Все" Then
         strWhere = strWhere & " AND FieldName LIKE '*" & strFieldFilter & "*'"
@@ -348,7 +348,7 @@ Private Sub ApplyHistoryFilter()
 
     ' Apply to list
     Me.lstHistory.RowSource = strSQL
-    
+
     ' Force refresh (fix for Access caching)
     Me.lstHistory.Requery
 
