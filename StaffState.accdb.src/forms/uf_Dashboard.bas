@@ -1,4 +1,4 @@
-﻿Version =20
+Version =20
 VersionRequired =20
 Begin Form
     DividingLines = NotDefault
@@ -8,10 +8,10 @@ Begin Form
     PictureAlignment =2
     DatasheetGridlinesBehavior =3
     GridY =10
-    Width =9807
+    Width =9467
     DatasheetFontHeight =11
-    ItemSuffix =5
-    Right =25575
+    ItemSuffix =8
+    Right =17685
     Bottom =11985
     RecSrcDt = Begin
         0x71deebbc227be640
@@ -73,8 +73,13 @@ Begin Form
             PressedForeThemeColorIndex =0
             PressedForeTint =75.0
         End
+        Begin EmptyCell
+            Height =240
+            GridlineThemeColorIndex =1
+            GridlineShade =65.0
+        End
         Begin Section
-            Height =5952
+            Height =3070
             Name ="ОбластьДанных"
             AutoHeight =1
             AlternateBackThemeColorIndex =1
@@ -82,13 +87,13 @@ Begin Form
             BackThemeColorIndex =1
             Begin
                 Begin CommandButton
-                    OverlapFlags =85
+                    OverlapFlags =93
                     Left =340
                     Top =510
                     Width =3756
                     Height =576
                     Name ="btnImport"
-                    Caption ="Кнопка0"
+                    Caption ="Загрузить"
                     OnClick ="[Event Procedure]"
                     ControlTipText ="Найти далее"
 
@@ -96,6 +101,7 @@ Begin Form
                     LayoutCachedTop =510
                     LayoutCachedWidth =4096
                     LayoutCachedHeight =1086
+                    Overlaps =1
                 End
                 Begin CommandButton
                     OverlapFlags =85
@@ -105,7 +111,7 @@ Begin Form
                     Height =576
                     TabIndex =1
                     Name ="btnOpenLog"
-                    Caption ="Кнопка0"
+                    Caption ="Журнал"
                     OnClick ="[Event Procedure]"
                     ControlTipText ="Найти далее"
 
@@ -113,6 +119,25 @@ Begin Form
                     LayoutCachedTop =2494
                     LayoutCachedWidth =4039
                     LayoutCachedHeight =3070
+                    Overlaps =1
+                End
+                Begin CommandButton
+                    OverlapFlags =85
+                    Left =5100
+                    Top =510
+                    Width =3756
+                    Height =576
+                    TabIndex =3
+                    Name ="btnCreateIndexes"
+                    Caption ="Создать индексы"
+                    OnClick ="[Event Procedure]"
+                    ControlTipText ="Create performance indexes (one-time operation)"
+
+                    LayoutCachedLeft =5100
+                    LayoutCachedTop =510
+                    LayoutCachedWidth =8856
+                    LayoutCachedHeight =1086
+                    Overlaps =1
                 End
                 Begin CommandButton
                     OverlapFlags =85
@@ -122,7 +147,7 @@ Begin Form
                     Height =576
                     TabIndex =2
                     Name ="btnAnalyze"
-                    Caption ="Кнопка0"
+                    Caption ="Анализ"
                     OnClick ="[Event Procedure]"
                     ControlTipText ="Найти далее"
 
@@ -130,6 +155,7 @@ Begin Form
                     LayoutCachedTop =1474
                     LayoutCachedWidth =3982
                     LayoutCachedHeight =2050
+                    Overlaps =1
                 End
                 Begin Label
                     OverlapFlags =85
@@ -143,6 +169,23 @@ Begin Form
                     LayoutCachedTop =1077
                     LayoutCachedWidth =9467
                     LayoutCachedHeight =2834
+                End
+                Begin Label
+                    OverlapFlags =215
+                    TextAlign =1
+                    Left =360
+                    Top =360
+                    Width =1005
+                    Height =210
+                    Name ="Надпись5"
+                    Caption =" "
+                    GroupTable =1
+                    LayoutCachedLeft =360
+                    LayoutCachedTop =360
+                    LayoutCachedWidth =1365
+                    LayoutCachedHeight =570
+                    LayoutGroup =1
+                    GroupTable =1
                 End
             End
         End

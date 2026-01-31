@@ -1,4 +1,4 @@
-﻿Version =20
+Version =20
 VersionRequired =20
 Begin Form
     DividingLines = NotDefault
@@ -10,7 +10,7 @@ Begin Form
     GridY =10
     Width =13039
     DatasheetFontHeight =11
-    ItemSuffix =14
+    ItemSuffix =21
     Right =17430
     Bottom =11985
     RecSrcDt = Begin
@@ -44,6 +44,35 @@ Begin Form
             ForeTint =60.0
             GridlineThemeColorIndex =1
             GridlineShade =65.0
+        End
+        Begin CommandButton
+            TextFontCharSet =204
+            Width =1701
+            Height =283
+            FontSize =11
+            FontWeight =400
+            FontName ="Calibri"
+            ForeThemeColorIndex =0
+            ForeTint =75.0
+            GridlineThemeColorIndex =1
+            GridlineShade =65.0
+            UseTheme =1
+            Shape =1
+            Gradient =12
+            BackThemeColorIndex =4
+            BackTint =60.0
+            BorderLineStyle =0
+            BorderThemeColorIndex =4
+            BorderTint =60.0
+            ThemeFontIndex =1
+            HoverThemeColorIndex =4
+            HoverTint =40.0
+            PressedThemeColorIndex =4
+            PressedShade =75.0
+            HoverForeThemeColorIndex =0
+            HoverForeTint =75.0
+            PressedForeThemeColorIndex =0
+            PressedForeTint =75.0
         End
         Begin TextBox
             AddColon = NotDefault
@@ -83,15 +112,34 @@ Begin Form
             GridlineThemeColorIndex =1
             GridlineShade =65.0
         End
+        Begin ComboBox
+            AddColon = NotDefault
+            TextFontCharSet =204
+            BorderLineStyle =0
+            Width =1701
+            LabelX =-1701
+            FontSize =11
+            FontName ="Calibri"
+            AllowValueListEdits =1
+            InheritValueList =1
+            ThemeFontIndex =1
+            BackThemeColorIndex =1
+            BorderThemeColorIndex =1
+            BorderShade =65.0
+            ForeThemeColorIndex =2
+            ForeShade =50.0
+            GridlineThemeColorIndex =1
+            GridlineShade =65.0
+        End
         Begin Section
-            Height =8163
+            Height =10488
             Name ="ОбластьДанных"
             AlternateBackThemeColorIndex =1
             AlternateBackShade =95.0
             BackThemeColorIndex =1
             Begin
                 Begin TextBox
-                    OverlapFlags =87
+                    OverlapFlags =85
                     IMESentenceMode =3
                     Left =680
                     Top =340
@@ -105,19 +153,6 @@ Begin Form
                     LayoutCachedTop =340
                     LayoutCachedWidth =9807
                     LayoutCachedHeight =1465
-                    Begin
-                        Begin Label
-                            OverlapFlags =93
-                            Top =340
-                            Width =675
-                            Height =315
-                            Name ="Надпись1"
-                            Caption ="Поле0"
-                            LayoutCachedTop =340
-                            LayoutCachedWidth =675
-                            LayoutCachedHeight =655
-                        End
-                    End
                 End
                 Begin TextBox
                     OverlapFlags =85
@@ -133,19 +168,6 @@ Begin Form
                     LayoutCachedTop =1870
                     LayoutCachedWidth =4932
                     LayoutCachedHeight =2725
-                    Begin
-                        Begin Label
-                            OverlapFlags =85
-                            Top =1870
-                            Width =675
-                            Height =315
-                            Name ="Надпись5"
-                            Caption ="Поле4"
-                            LayoutCachedTop =1870
-                            LayoutCachedWidth =675
-                            LayoutCachedHeight =2185
-                        End
-                    End
                 End
                 Begin TextBox
                     OverlapFlags =85
@@ -161,19 +183,6 @@ Begin Form
                     LayoutCachedTop =2948
                     LayoutCachedWidth =4875
                     LayoutCachedHeight =4073
-                    Begin
-                        Begin Label
-                            OverlapFlags =85
-                            Top =2948
-                            Width =675
-                            Height =315
-                            Name ="Надпись7"
-                            Caption ="Поле6"
-                            LayoutCachedTop =2948
-                            LayoutCachedWidth =675
-                            LayoutCachedHeight =3263
-                        End
-                    End
                 End
                 Begin TextBox
                     OverlapFlags =85
@@ -189,81 +198,110 @@ Begin Form
                     LayoutCachedTop =4365
                     LayoutCachedWidth =4705
                     LayoutCachedHeight =5490
-                    Begin
-                        Begin Label
-                            OverlapFlags =85
-                            Top =4365
-                            Width =675
-                            Height =315
-                            Name ="Надпись9"
-                            Caption ="Поле8"
-                            LayoutCachedTop =4365
-                            LayoutCachedWidth =675
-                            LayoutCachedHeight =4680
-                        End
-                    End
                 End
                 Begin TextBox
                     OverlapFlags =85
                     IMESentenceMode =3
-                    Left =1133
-                    Top =5839
+                    Left =6803
+                    Top =4762
                     Width =3459
                     Height =1125
                     TabIndex =4
                     Name ="txtStatus"
 
-                    LayoutCachedLeft =1133
-                    LayoutCachedTop =5839
-                    LayoutCachedWidth =4592
-                    LayoutCachedHeight =6964
-                    Begin
-                        Begin Label
-                            OverlapFlags =85
-                            Top =5839
-                            Width =780
-                            Height =315
-                            Name ="Надпись11"
-                            Caption ="Поле10"
-                            LayoutCachedTop =5839
-                            LayoutCachedWidth =780
-                            LayoutCachedHeight =6154
-                        End
-                    End
+                    LayoutCachedLeft =6803
+                    LayoutCachedTop =4762
+                    LayoutCachedWidth =10262
+                    LayoutCachedHeight =5887
                 End
                 Begin ListBox
                     ColumnHeads = NotDefault
                     OverlapFlags =85
                     IMESentenceMode =3
                     ColumnCount =4
-                    Left =6746
-                    Top =2154
-                    Width =5216
-                    Height =4932
+                    Left =328
+                    Top =6234
+                    Width =12131
+                    Height =4197
                     TabIndex =5
                     Name ="lstHistory"
                     RowSourceType ="Table/Query"
                     ColumnWidths ="1701;1701;2268;2268"
 
-                    LayoutCachedLeft =6746
+                    LayoutCachedLeft =328
+                    LayoutCachedTop =6234
+                    LayoutCachedWidth =12459
+                    LayoutCachedHeight =10431
+                End
+                Begin TextBox
+                    OverlapFlags =85
+                    IMESentenceMode =3
+                    Left =6803
+                    Top =2097
+                    Width =2324
+                    Height =585
+                    TabIndex =6
+                    Name ="txtDateFrom"
+                    Format ="Short Date"
+                    AfterUpdate ="[Event Procedure]"
+
+                    LayoutCachedLeft =6803
+                    LayoutCachedTop =2097
+                    LayoutCachedWidth =9127
+                    LayoutCachedHeight =2682
+                End
+                Begin TextBox
+                    OverlapFlags =85
+                    IMESentenceMode =3
+                    Left =9524
+                    Top =2154
+                    Width =2324
+                    Height =585
+                    TabIndex =7
+                    Name ="txtDateTo"
+                    Format ="Short Date"
+                    AfterUpdate ="[Event Procedure]"
+
+                    LayoutCachedLeft =9524
                     LayoutCachedTop =2154
-                    LayoutCachedWidth =11962
-                    LayoutCachedHeight =7086
-                    Begin
-                        Begin Label
-                            OverlapFlags =85
-                            Left =5045
-                            Top =2154
-                            Width =1020
-                            Height =315
-                            Name ="Надпись13"
-                            Caption ="Список12:"
-                            LayoutCachedLeft =5045
-                            LayoutCachedTop =2154
-                            LayoutCachedWidth =6065
-                            LayoutCachedHeight =2469
-                        End
-                    End
+                    LayoutCachedWidth =11848
+                    LayoutCachedHeight =2739
+                End
+                Begin CommandButton
+                    OverlapFlags =85
+                    Left =12075
+                    Top =2211
+                    Width =737
+                    Height =510
+                    TabIndex =8
+                    Name ="btnResetDates"
+                    Caption ="Х"
+                    OnClick ="[Event Procedure]"
+
+                    LayoutCachedLeft =12075
+                    LayoutCachedTop =2211
+                    LayoutCachedWidth =12812
+                    LayoutCachedHeight =2721
+                End
+                Begin ComboBox
+                    LimitToList = NotDefault
+                    OverlapFlags =85
+                    IMESentenceMode =3
+                    Left =6803
+                    Top =3231
+                    Width =5102
+                    Height =1395
+                    TabIndex =9
+                    Name ="cboFilterHistory"
+                    RowSourceType ="Value List"
+                    RowSource ="\"Все\";\"RankName\";\"PosName\";\"WorkStatus\";\"Размер_Сапог\";\"Охват_головы\""
+                    OnChange ="[Event Procedure]"
+                    AfterUpdate ="[Event Procedure]"
+
+                    LayoutCachedLeft =6803
+                    LayoutCachedTop =3231
+                    LayoutCachedWidth =11905
+                    LayoutCachedHeight =4626
                 End
             End
         End

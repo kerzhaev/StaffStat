@@ -12,18 +12,12 @@
     <xsd:annotation>
       <xsd:appinfo>
         <od:index index-name="PK_Buffer" index-key="ID " primary="yes" unique="yes" clustered="no" order="asc"></od:index>
-        <od:tableProperty name="Orientation" type="2" value="0"></od:tableProperty>
       </xsd:appinfo>
     </xsd:annotation>
     <xsd:complexType>
       <xsd:sequence>
         <xsd:element name="ID" minOccurs="1" od:jetType="autonumber" od:sqlSType="int" od:autoUnique="yes" od:nonNullable="yes" type="xsd:int"></xsd:element>
         <xsd:element name="SourceID_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>
@@ -31,11 +25,6 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="PersonUID_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>
@@ -43,11 +32,6 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="Rank_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>
@@ -55,11 +39,6 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="FullName_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>
@@ -67,11 +46,6 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="BirthDate_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>
@@ -79,11 +53,6 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="WorkStatus_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>
@@ -91,11 +60,6 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="PosCode_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>
@@ -103,11 +67,6 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="PosName_Raw" minOccurs="0" od:jetType="memo" od:sqlSType="ntext">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="536870910"></xsd:maxLength>
@@ -115,11 +74,6 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="OrderDate_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>
@@ -127,11 +81,244 @@
           </xsd:simpleType>
         </xsd:element>
         <xsd:element name="OrderNum_Raw" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Возраст_сотрудника" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Пол" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Семейное_положение" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Количество_детей" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Национальность" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Гражданство" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Дата_увольнения" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Группа_сотрудников" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Вид_контракта" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Тип_контракта" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Дата_начала_контракта" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Дата_окончания_контракта" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Срок_договора_год" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Срок_договора_месяц" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Вид_мероприятия" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Причина_мероприятия" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Начало_срока_действия" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Конец_срока_действия" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Единица_расчета" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Рассчитано_по" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Штатная_должность1" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="ВУС" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Тарифный_разряд" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Дата_приказа_Л_С" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Номер_приказа1" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Чей_приказ_должность" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Раздел_персонала" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Раздел_персонала1" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Контрольный_банковский_ключ" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Номер_счета_в_банке" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Получатель" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Ключ_банка" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Размер_Сапог" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
+        </xsd:element>
+        <xsd:element name="Охват_головы" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
               <xsd:maxLength value="255"></xsd:maxLength>

@@ -1,4 +1,4 @@
-﻿Version =20
+Version =20
 VersionRequired =20
 Begin Form
     DividingLines = NotDefault
@@ -126,7 +126,9 @@ Begin Form
                     Width =8278
                     Height =1125
                     Name ="txtFilter"
+                    OnChange ="[Event Procedure]"
                     OnKeyDown ="[Event Procedure]"
+                    OnKeyUp ="[Event Procedure]"
 
                     LayoutCachedLeft =566
                     LayoutCachedTop =737

@@ -1,17 +1,17 @@
-﻿Attribute VB_Name = "mod_App_Init"
+Attribute VB_Name = "mod_App_Init"
 Option Compare Database
 
 Option Explicit
 
 ' =============================================
 ' @author Кержаев Евгений (ФКУ "95 ФЭС" МО РФ)
-' @description Модуль инициализации структуры БД.
-'              Создает таблицы Buffer и Master с нуля или обновляет их.
+' @description Database structure initialization module.
+'              Creates Buffer and Master tables from scratch or updates them.
 ' =============================================
 
 ' =============================================
-' @description Главная процедура первичной настройки.
-'              Запускать один раз при развертывании или для сброса структуры.
+' @description Main initial setup procedure.
+'              Run once during deployment or to reset structure.
 ' =============================================
 Public Sub InitDatabaseStructure()
     On Error GoTo ErrorHandler
@@ -21,44 +21,200 @@ Public Sub InitDatabaseStructure()
 
     Debug.Print "--- Начало инициализации структуры ---"
 
-    ' 1. Создаем таблицу БУФЕРА (Сырой импорт)
-    ' Удаляем, если есть, чтобы очистить структуру
+    ' 1. Create BUFFER table (Raw import)
+    ' Delete if exists to clear structure
     DeleteTableIfExists "tbl_Import_Buffer"
     CreateBufferTable db
 
-    ' 2. Создаем таблицу МАСТЕРА (Реестр)
-    ' Удаляем только для теста! В боевом режиме тут будет логика Alter Table.
-    ' Сейчас для старта создаем с нуля.
+    ' 2. Create MASTER table (Registry)
+    ' Delete only for testing! In production mode there will be Alter Table logic here.
+    ' For now we create from scratch to start.
     If Not TableExists("tbl_Personnel_Master") Then
         CreateMasterTable db
     Else
         Debug.Print "Таблица 'tbl_Personnel_Master' уже существует. Пропуск."
     End If
 
-    ' 3. Создаем таблицу ИСТОРИИ
+    ' 3. Create HISTORY table
     If Not TableExists("tbl_History_Log") Then
         CreateHistoryTable db
     End If
 
+    ' 4. Create IMPORT METADATA table
+    If Not TableExists("tbl_Import_Meta") Then
+        CreateImportMetaTable db
+    End If
+
     Debug.Print "--- Инициализация успешно завершена ---"
-    MsgBox "Структура базы данных успешно создана!", vbInformation, "StaffState Init"
+    MsgBox "Database structure created successfully!", vbInformation, "StaffState Init"
 
     Set db = Nothing
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Ошибка при инициализации: " & Err.Description, vbCritical, "Error " & Err.Number
+    MsgBox "Initialization error: " & Err.Description, vbCritical, "Error " & Err.Number
     Set db = Nothing
 End Sub
 
 ' =============================================
-' @description Создает таблицу для сырого импорта (все поля Text).
+' @description Creates performance indexes for frequently queried fields.
+'              Call this once after initial database setup.
+'              Safe to run multiple times (will skip existing indexes).
+' @author Phase 7 - Performance Improvements
+' =============================================
+Public Sub CreatePerformanceIndexes()
+    On Error GoTo ErrorHandler
+    
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    Dim idx As DAO.Index
+    Dim fld As DAO.Field
+    Dim iCreated As Long
+    Dim iSkipped As Long
+    
+    Set db = CurrentDb
+    iCreated = 0
+    iSkipped = 0
+    
+    Debug.Print "--- Creating Performance Indexes ---"
+    
+    ' ===== INDEX 1: tbl_Personnel_Master.PersonUID (UNIQUE) =====
+    If Not IndexExists("tbl_Personnel_Master", "idx_PersonUID") Then
+        Set tdf = db.TableDefs("tbl_Personnel_Master")
+        Set idx = tdf.CreateIndex("idx_PersonUID")
+        Set fld = idx.CreateField("PersonUID")
+        idx.Fields.Append fld
+        idx.Primary = False
+        idx.Unique = True
+        idx.Required = False
+        On Error GoTo IndexAppendError
+        tdf.Indexes.Append idx
+        On Error GoTo ErrorHandler
+        Debug.Print "✓ Created: idx_PersonUID on tbl_Personnel_Master (UNIQUE)"
+        iCreated = iCreated + 1
+    Else
+        Debug.Print "○ Skipped: idx_PersonUID already exists"
+        iSkipped = iSkipped + 1
+    End If
+    
+    ' ===== INDEX 2: tbl_Personnel_Master.FullName =====
+    If Not IndexExists("tbl_Personnel_Master", "idx_FullName") Then
+        Set tdf = db.TableDefs("tbl_Personnel_Master")
+        Set idx = tdf.CreateIndex("idx_FullName")
+        Set fld = idx.CreateField("FullName")
+        idx.Fields.Append fld
+        idx.Primary = False
+        idx.Unique = False
+        On Error GoTo IndexAppendError
+        tdf.Indexes.Append idx
+        On Error GoTo ErrorHandler
+        Debug.Print "✓ Created: idx_FullName on tbl_Personnel_Master"
+        iCreated = iCreated + 1
+    Else
+        Debug.Print "○ Skipped: idx_FullName already exists"
+        iSkipped = iSkipped + 1
+    End If
+    
+    ' ===== INDEX 3: tbl_History_Log.PersonUID =====
+    If Not IndexExists("tbl_History_Log", "idx_History_PersonUID") Then
+        Set tdf = db.TableDefs("tbl_History_Log")
+        Set idx = tdf.CreateIndex("idx_History_PersonUID")
+        Set fld = idx.CreateField("PersonUID")
+        idx.Fields.Append fld
+        idx.Primary = False
+        idx.Unique = False
+        On Error GoTo IndexAppendError
+        tdf.Indexes.Append idx
+        On Error GoTo ErrorHandler
+        Debug.Print "✓ Created: idx_History_PersonUID on tbl_History_Log"
+        iCreated = iCreated + 1
+    Else
+        Debug.Print "○ Skipped: idx_History_PersonUID already exists"
+        iSkipped = iSkipped + 1
+    End If
+    
+    ' ===== INDEX 4: tbl_History_Log.ChangeDate =====
+    If Not IndexExists("tbl_History_Log", "idx_History_ChangeDate") Then
+        Set tdf = db.TableDefs("tbl_History_Log")
+        Set idx = tdf.CreateIndex("idx_History_ChangeDate")
+        Set fld = idx.CreateField("ChangeDate")
+        idx.Fields.Append fld
+        idx.Primary = False
+        idx.Unique = False
+        On Error GoTo IndexAppendError
+        tdf.Indexes.Append idx
+        On Error GoTo ErrorHandler
+        Debug.Print "✓ Created: idx_History_ChangeDate on tbl_History_Log"
+        iCreated = iCreated + 1
+    Else
+        Debug.Print "○ Skipped: idx_History_ChangeDate already exists"
+        iSkipped = iSkipped + 1
+    End If
+    
+    Debug.Print "--- Index Creation Complete ---"
+    Debug.Print "Created: " & iCreated & " | Skipped: " & iSkipped
+    
+    MsgBox "Performance indexes created!" & vbCrLf & vbCrLf & _
+           "Created: " & iCreated & vbCrLf & _
+           "Skipped (already exist): " & iSkipped & vbCrLf & vbCrLf & _
+           "Search and import should run faster now.", vbInformation, "Indexes"
+    
+    Set fld = Nothing
+    Set idx = Nothing
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Sub
+    
+ErrorHandler:
+    Debug.Print "ERROR: " & Err.Description
+    MsgBox "Index creation error: " & Err.Description & vbCrLf & _
+           "Error number: " & Err.Number, vbCritical, "Error"
+    Set fld = Nothing
+    Set idx = Nothing
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Sub
+
+IndexAppendError:
+    If Err.Number = 3284 Then
+        Debug.Print "○ Skipped: index already exists (" & idx.Name & ")"
+        iSkipped = iSkipped + 1
+        Err.Clear
+        On Error GoTo ErrorHandler
+        Resume Next
+    End If
+    Resume ErrorHandler
+End Sub
+
+' =============================================
+' @description Helper function to check if index exists.
+' @param strTableName [String] Name of the table.
+' @param strIndexName [String] Name of the index.
+' @return [Boolean] True if index exists.
+' =============================================
+Private Function IndexExists(strTableName As String, strIndexName As String) As Boolean
+    On Error Resume Next
+    Dim tdf As DAO.TableDef
+    Dim idx As DAO.Index
+    
+    Set tdf = CurrentDb.TableDefs(strTableName)
+    Set idx = tdf.Indexes(strIndexName)
+    
+    IndexExists = (Err.Number = 0)
+    Err.Clear
+    
+    Set idx = Nothing
+    Set tdf = Nothing
+End Function
+
+' =============================================
+' @description Creates table for raw import (all fields Text).
 ' =============================================
 Private Sub CreateBufferTable(db As DAO.Database)
     Dim sSQL As String
 
-    ' Обрати внимание: Используем SHORT TEXT (255) для всех полей буфера,
-    ' чтобы избежать ошибок типов при импорте Excel.
+    ' Note: Use SHORT TEXT (255) for all buffer fields
+    ' to avoid type errors during Excel import.
     sSQL = "CREATE TABLE tbl_Import_Buffer (" & _
            "ID COUNTER CONSTRAINT PK_Buffer PRIMARY KEY, " & _
            "SourceID_Raw TEXT(255), " & _
@@ -78,12 +234,12 @@ Private Sub CreateBufferTable(db As DAO.Database)
 End Sub
 
 ' =============================================
-' @description Создает главную таблицу персонала (Типизированную).
+' @description Creates main personnel table (Typed).
 ' =============================================
 Private Sub CreateMasterTable(db As DAO.Database)
     Dim sSQL As String
 
-    ' Тут уже строгие типы данных
+    ' Here we use strict data types
     sSQL = "CREATE TABLE tbl_Personnel_Master (" & _
            "PersonUID VARCHAR(50) CONSTRAINT PK_Person PRIMARY KEY, " & _
            "SourceID LONG, " & _
@@ -104,14 +260,14 @@ Private Sub CreateMasterTable(db As DAO.Database)
 End Sub
 
 ' =============================================
-' @description Создает журнал изменений.
-'              FIX: Убрано DEFAULT Now(), так как оно вызывает Error 3290 в DAO.
+' @description Creates change log.
+'              FIX: Removed DEFAULT Now() as it causes Error 3290 in DAO.
 ' =============================================
 Private Sub CreateHistoryTable(db As DAO.Database)
     Dim sSQL As String
 
-    ' Обрати внимание: поле ChangeDate теперь просто DATETIME без дефолта.
-    ' Мы будем писать туда Now() программно при вставке строки.
+    ' Note: ChangeDate field is now just DATETIME without default.
+    ' We will write Now() programmatically when inserting a row.
     sSQL = "CREATE TABLE tbl_History_Log (" & _
            "LogID COUNTER CONSTRAINT PK_Log PRIMARY KEY, " & _
            "PersonUID VARCHAR(50), " & _
@@ -123,14 +279,32 @@ Private Sub CreateHistoryTable(db As DAO.Database)
 
     db.Execute sSQL, dbFailOnError
 
-    ' Создаем индекс для ускорения поиска по человеку
-    db.Execute "CREATE INDEX idx_Log_Person ON tbl_History_Log (PersonUID);", dbFailOnError
+    ' Note: Indexes are now created centrally via CreatePerformanceIndexes()
+    ' (removed old idx_Log_Person to avoid conflicts)
 
     Debug.Print "Создана таблица: tbl_History_Log"
 End Sub
 
 ' =============================================
-' @description Вспомогательная функция проверки существования таблицы.
+' @description Creates import metadata table (one row per import).
+' =============================================
+Private Sub CreateImportMetaTable(db As DAO.Database)
+    Dim sSQL As String
+
+    ' Single-row table to store metadata about last import
+    sSQL = "CREATE TABLE tbl_Import_Meta (" & _
+           "ID COUNTER CONSTRAINT PK_ImportMeta PRIMARY KEY, " & _
+           "ExportFileDate DATETIME, " & _
+           "ImportRunAt DATETIME, " & _
+           "SourceFilePath TEXT(255) " & _
+           ");"
+
+    db.Execute sSQL, dbFailOnError
+    Debug.Print "Создана таблица: tbl_Import_Meta"
+End Sub
+
+' =============================================
+' @description Helper function to check if table exists.
 ' =============================================
 Private Function TableExists(strTableName As String) As Boolean
     Dim tdf As DAO.TableDef
@@ -141,7 +315,7 @@ Private Function TableExists(strTableName As String) As Boolean
 End Function
 
 ' =============================================
-' @description Вспомогательная функция безопасного удаления таблицы.
+' @description Helper function for safe table deletion.
 ' =============================================
 Private Sub DeleteTableIfExists(strTableName As String)
     If TableExists(strTableName) Then

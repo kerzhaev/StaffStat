@@ -1,89 +1,125 @@
-﻿Attribute VB_Name = "mod_Analysis_Logic"
+Attribute VB_Name = "mod_Analysis_Logic"
 Option Explicit
 
 ' =============================================
-' @module mod_Analysis_Logic
-' @author Кержаев Евгений (ФКУ "95 ФЭС" МО РФ)
-' @description Логика анализа и синхронизации данных из Buffer в Master.
-'              Отслеживает изменения (Звание, Должность, Статус) и фиксирует в History.
+' @module mod_Analysis_Logic (PRODUCTION)
+' @description Universal data synchronization
 ' =============================================
 
-' =============================================
-' @description Главная процедура синхронизации.
-'              Переносит данные из tbl_Import_Buffer в tbl_Personnel_Master.
-'              Новых добавляет, существующих обновляет с проверкой изменений.
-' =============================================
 Public Sub SyncBufferToMaster()
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rsBuffer As DAO.Recordset
     Dim rsMaster As DAO.Recordset
-    Dim strPersonUID As String
-    Dim lngNewCount As Long
-    Dim lngUpdatedCount As Long
-    Dim lngChangedCount As Long
+    Dim fld As DAO.Field
+    Dim strUID As String
+    Dim iNew As Long, iUpd As Long
+    Dim dtChangeDate As Date
+
+    ' 1. Extend Master structure
+    DoCmd.Close acTable, "tbl_Personnel_Master", acSaveYes
+    DoCmd.Close acTable, "tbl_Import_Buffer", acSaveYes
+
+    mod_Schema_Manager.SyncMasterStructure
 
     Set db = CurrentDb
+    db.TableDefs.Refresh ' Must clear table cache
 
-    Debug.Print "--- Начало синхронизации Buffer -> Master ---"
+    ' 2. Get export file date from metadata (or Now() as fallback)
+    dtChangeDate = GetExportFileDate()
+    Debug.Print "Using ChangeDate: " & dtChangeDate
 
-    ' Открываем Recordset буфера (все записи)
-    Set rsBuffer = db.OpenRecordset("SELECT * FROM tbl_Import_Buffer ORDER BY PersonUID_Raw;", dbOpenDynaset)
+    Set rsBuffer = db.OpenRecordset("tbl_Import_Buffer", dbOpenSnapshot)
+    Set rsMaster = db.OpenRecordset("tbl_Personnel_Master", dbOpenDynaset)
 
-    ' Открываем Recordset мастера для поиска и обновления
-    Set rsMaster = db.OpenRecordset("SELECT * FROM tbl_Personnel_Master;", dbOpenDynaset)
+    ' If buffer is empty - exit
+    If rsBuffer.EOF Then GoTo ExitHandler
 
-    If rsBuffer.EOF And rsBuffer.BOF Then
-        Debug.Print "Буфер пуст. Нет данных для синхронизации."
-        MsgBox "Буфер пуст. Сначала выполните импорт данных.", vbInformation
-        GoTo CleanExit
-    End If
-
-    ' Цикл по всем записям буфера
     Do While Not rsBuffer.EOF
-        strPersonUID = Nz(rsBuffer!PersonUID_Raw, "")
+        strUID = Nz(rsBuffer!PersonUID_Raw, "")
 
-        ' Пропускаем записи без PersonUID
-        If strPersonUID = "" Then
-            rsBuffer.MoveNext
-            GoTo NextRecord
-        End If
+        If strUID <> "" Then
+            rsMaster.FindFirst "PersonUID = '" & strUID & "'"
 
-        ' Ищем человека в Мастере по PersonUID
-        rsMaster.FindFirst "PersonUID = '" & Replace(strPersonUID, "'", "''") & "'"
+            If rsMaster.NoMatch Then
+                ' --- NEW EMPLOYEE ---
+                rsMaster.AddNew
+                rsMaster!PersonUID = strUID
+                rsMaster!LastUpdated = dtChangeDate
+                rsMaster!IsActive = True
+                CopyAllFields rsBuffer, rsMaster
+                rsMaster.Update
 
-        If rsMaster.NoMatch Then
-            ' --- НОВЫЙ СОТРУДНИК ---
-            Call AddNewPersonToMaster(rsBuffer, rsMaster)
-            Call LogChange(strPersonUID, "Статус", "", "Принят на учет")
-            lngNewCount = lngNewCount + 1
-            Debug.Print "Добавлен новый: " & strPersonUID
-        Else
-            ' --- СУЩЕСТВУЮЩИЙ СОТРУДНИК ---
-            Dim lngChangesInRecord As Long
-            lngChangesInRecord = UpdateExistingPerson(rsBuffer, rsMaster, strPersonUID)
-            If lngChangesInRecord > 0 Then
-                lngChangedCount = lngChangedCount + lngChangesInRecord
-                lngUpdatedCount = lngUpdatedCount + 1
+                LogChange strUID, "Учет", "", "Принят на учет", dtChangeDate
+                iNew = iNew + 1
+            Else
+                ' --- EXISTING ---
+                rsMaster.Edit
+
+                Dim bChanged As Boolean
+                bChanged = False
+
+                For Each fld In rsBuffer.Fields
+                    Dim sBufName As String
+                    Dim sMasName As String
+
+                    sBufName = fld.Name
+                    sMasName = ""
+
+                    ' 1. Name logic (remove _Raw suffix)
+                    If Right(sBufName, 4) = "_Raw" Then
+                        Select Case sBufName
+                            Case "SourceID_Raw": sMasName = "SourceID"
+                            Case "PersonUID_Raw": sMasName = "PersonUID"
+                            Case "Rank_Raw": sMasName = "RankName"
+                            Case "FullName_Raw": sMasName = "FullName"
+                            Case "BirthDate_Raw": sMasName = "BirthDate"
+                            Case "WorkStatus_Raw": sMasName = "WorkStatus"
+                            Case "PosCode_Raw": sMasName = "PosCode"
+                            Case "PosName_Raw": sMasName = "PosName"
+                            Case "OrderDate_Raw": sMasName = "OrderDate"
+                            Case "OrderNum_Raw": sMasName = "OrderNum"
+                            Case Else: sMasName = Left(sBufName, Len(sBufName) - 4)
+                        End Select
+                    Else
+                        sMasName = sBufName ' Dynamic fields
+                    End If
+
+                    ' 2. Check and update
+                    If sMasName <> "" Then
+                        If FieldExistsInRS(rsMaster, sMasName) Then
+                            ' Exclude technical fields from change tracking
+                            If sMasName <> "PersonUID" And sMasName <> "LogID" And sMasName <> "LastUpdated" _
+                               And sMasName <> "ID" And sMasName <> "IsActive" Then
+                                Dim valBuf As String, valMas As String
+                                valBuf = Nz(fld.Value, "")
+                                valMas = Nz(rsMaster.Fields(sMasName).Value, "")
+
+                                If valBuf <> valMas Then
+                                    rsMaster.Fields(sMasName).Value = fld.Value
+                                    LogChange strUID, sMasName, valMas, valBuf, dtChangeDate
+                                    bChanged = True
+                                End If
+                            End If
+                        End If
+                    End If
+                Next fld
+
+                rsMaster!LastUpdated = dtChangeDate
+                rsMaster.Update
+                If bChanged Then iUpd = iUpd + 1
             End If
         End If
 
-NextRecord:
         rsBuffer.MoveNext
     Loop
 
-    Debug.Print "--- Синхронизация завершена ---"
-    Debug.Print "  Новых записей: " & lngNewCount
-    Debug.Print "  Обновлено записей: " & lngUpdatedCount
-    Debug.Print "  Всего изменений: " & lngChangedCount
+ExitHandler:
+    MsgBox "Synchronization completed!" & vbCrLf & _
+           "New: " & iNew & vbCrLf & _
+           "Updated: " & iUpd, vbInformation
 
-    MsgBox "Синхронизация завершена!" & vbCrLf & _
-           "Новых: " & lngNewCount & vbCrLf & _
-           "Обновлено: " & lngUpdatedCount & vbCrLf & _
-           "Изменений: " & lngChangedCount, vbInformation, "Sync Complete"
-
-CleanExit:
     rsBuffer.Close
     rsMaster.Close
     Set rsBuffer = Nothing
@@ -92,199 +128,147 @@ CleanExit:
     Exit Sub
 
 ErrorHandler:
-    Debug.Print "Ошибка SyncBufferToMaster (Line " & Erl & "): " & Err.Description
-    MsgBox "Критическая ошибка синхронизации: " & Err.Description & vbCrLf & _
-           "Номер: " & Err.Number, vbCritical
-    Resume CleanExit
+    MsgBox "Analysis error: " & Err.Description, vbCritical
+    Resume ExitHandler
 End Sub
 
+' --- HELPER FUNCTIONS REMAIN THE SAME ---
+' (CopyAllFields, FieldExistsInRS, LogChange)
+' Make sure CopyAllFields is the latest version (where name logic matches the loop above)
+' If needed - I can duplicate them here, but they haven't changed.
+
 ' =============================================
-' @description Добавляет нового сотрудника в Master из Buffer.
-' @param   rsBuffer [DAO.Recordset] Запись из буфера (текущая).
-' @param   rsMaster [DAO.Recordset] Recordset мастера (открыт для добавления).
+' @description Universally copies fields from rsSource to rsDest
+'              Takes into account that new fields may have the same names.
 ' =============================================
-Private Sub AddNewPersonToMaster(rsBuffer As DAO.Recordset, rsMaster As DAO.Recordset)
-    On Error GoTo ErrorHandler
+Private Sub CopyAllFields(rsSource As DAO.Recordset, rsDest As DAO.Recordset)
+    Dim fldSource As DAO.Field
+    Dim strDestFieldName As String
 
-    rsMaster.AddNew
+    For Each fldSource In rsSource.Fields
+        strDestFieldName = ""
 
-    ' Ключевое поле (обязательное)
-    rsMaster!PersonUID = Nz(rsBuffer!PersonUID_Raw, "")
+        ' --- LOGIC FOR DETERMINING FIELD NAME IN DESTINATION (Master) ---
+        ' 1. If field ends with _Raw, find its counterpart without _Raw
+        If Right(fldSource.Name, 4) = "_Raw" Then
+            Select Case fldSource.Name
+                Case "SourceID_Raw": strDestFieldName = "SourceID"
+                Case "PersonUID_Raw": strDestFieldName = "PersonUID"
+                Case "Rank_Raw": strDestFieldName = "RankName"
+                Case "FullName_Raw": strDestFieldName = "FullName"
+                Case "BirthDate_Raw": strDestFieldName = "BirthDate"
+                Case "WorkStatus_Raw": strDestFieldName = "WorkStatus"
+                Case "PosCode_Raw": strDestFieldName = "PosCode"
+                Case "PosName_Raw": strDestFieldName = "PosName"
+                Case "OrderDate_Raw": strDestFieldName = "OrderDate"
+                Case "OrderNum_Raw": strDestFieldName = "OrderNum"
+                Case Else: strDestFieldName = Left(fldSource.Name, Len(fldSource.Name) - 4) ' General case
+            End Select
+        Else
+            ' 2. If field doesn't end with _Raw (e.g., "Размер_Сапог"),
+            '    look for it in Master with the same name.
+            strDestFieldName = fldSource.Name
+        End If
 
-    ' Преобразование типов из текста
-    rsMaster!SourceID = ConvertToLong(rsBuffer!SourceID_Raw)
-    rsMaster!FullName = Nz(rsBuffer!FullName_Raw, "")
-    rsMaster!RankName = Nz(rsBuffer!Rank_Raw, "")
-    rsMaster!BirthDate = ConvertToDate(rsBuffer!BirthDate_Raw)
-    rsMaster!WorkStatus = Nz(rsBuffer!WorkStatus_Raw, "")
-    rsMaster!PosCode = Nz(rsBuffer!PosCode_Raw, "")
-    rsMaster!PosName = Nz(rsBuffer!PosName_Raw, "")
-    rsMaster!OrderDate = ConvertToDate(rsBuffer!OrderDate_Raw)
-    rsMaster!OrderNum = Nz(rsBuffer!OrderNum_Raw, "")
-
-    ' Служебные поля
-    rsMaster!LastUpdated = Now()
-    rsMaster!IsActive = True
-
-    rsMaster.Update
-
-    Exit Sub
-
-ErrorHandler:
-    Debug.Print "Ошибка AddNewPersonToMaster: " & Err.Description
-    If rsMaster.EditMode <> dbEditNone Then rsMaster.CancelUpdate
-    Err.Raise Err.Number, , "AddNewPersonToMaster: " & Err.Description
+        ' --- COPY VALUE ---
+        If strDestFieldName <> "" And FieldExistsInRS(rsDest, strDestFieldName) Then
+            ' Exclude technical fields (PersonUID already set, ID is auto-increment)
+            If strDestFieldName <> "PersonUID" And strDestFieldName <> "ID" _
+               And strDestFieldName <> "LogID" And strDestFieldName <> "LastUpdated" Then
+                On Error Resume Next ' Ignore type errors (e.g., text to date)
+                rsDest.Fields(strDestFieldName).Value = fldSource.Value
+                On Error GoTo 0
+            End If
+        End If
+    Next fldSource
 End Sub
 
-' =============================================
-' @description Обновляет существующего сотрудника, сравнивая поля.
-'              Записывает изменения в History.
-' @param   rsBuffer [DAO.Recordset] Запись из буфера (текущая).
-' @param   rsMaster [DAO.Recordset] Запись из мастера (найдена, редактируется).
-' @param   strPersonUID [String] Личный номер для логирования.
-' @return  [Long] Количество измененных полей.
-' =============================================
-Private Function UpdateExistingPerson(rsBuffer As DAO.Recordset, rsMaster As DAO.Recordset, strPersonUID As String) As Long
-    On Error GoTo ErrorHandler
-
-    Dim lngChanges As Long
-    Dim varOldVal As Variant
-    Dim varNewVal As Variant
-
-    lngChanges = 0
-
-    rsMaster.Edit
-
-    ' --- СРАВНЕНИЕ RankName (Звание) ---
-    varOldVal = Nz(rsMaster!RankName, "")
-    varNewVal = Nz(rsBuffer!Rank_Raw, "")
-    If varOldVal <> varNewVal Then
-        rsMaster!RankName = varNewVal
-        Call LogChange(strPersonUID, "RankName", CStr(varOldVal), CStr(varNewVal))
-        lngChanges = lngChanges + 1
-    End If
-
-    ' --- СРАВНЕНИЕ WorkStatus (Статус) ---
-    varOldVal = Nz(rsMaster!WorkStatus, "")
-    varNewVal = Nz(rsBuffer!WorkStatus_Raw, "")
-    If varOldVal <> varNewVal Then
-        rsMaster!WorkStatus = varNewVal
-        Call LogChange(strPersonUID, "WorkStatus", CStr(varOldVal), CStr(varNewVal))
-        lngChanges = lngChanges + 1
-    End If
-
-    ' --- СРАВНЕНИЕ PosCode (Код должности) ---
-    varOldVal = Nz(rsMaster!PosCode, "")
-    varNewVal = Nz(rsBuffer!PosCode_Raw, "")
-    If varOldVal <> varNewVal Then
-        rsMaster!PosCode = varNewVal
-        Call LogChange(strPersonUID, "PosCode", CStr(varOldVal), CStr(varNewVal))
-        lngChanges = lngChanges + 1
-    End If
-
-    ' Обновляем также другие поля (без логирования, т.к. они не критичны для отслеживания)
-    If Nz(rsMaster!FullName, "") <> Nz(rsBuffer!FullName_Raw, "") Then
-        rsMaster!FullName = Nz(rsBuffer!FullName_Raw, "")
-    End If
-    If Nz(rsMaster!PosName, "") <> Nz(rsBuffer!PosName_Raw, "") Then
-        rsMaster!PosName = Nz(rsBuffer!PosName_Raw, "")
-    End If
-
-    ' Обновляем дату актуальности
-    rsMaster!LastUpdated = Now()
-
-    rsMaster.Update
-
-    UpdateExistingPerson = lngChanges
-
-    Exit Function
-
-ErrorHandler:
-    Debug.Print "Ошибка UpdateExistingPerson: " & Err.Description
-    If rsMaster.EditMode <> dbEditNone Then rsMaster.CancelUpdate
-    UpdateExistingPerson = 0
+Private Function FieldExistsInRS(rs As DAO.Recordset, strName As String) As Boolean
+    On Error Resume Next
+    Dim x As Variant
+    x = rs.Fields(strName).Name
+    FieldExistsInRS = (Err.Number = 0)
 End Function
 
+Private Sub LogChange(strUID As String, strField As String, strOld As String, strNew As String, dtDate As Date)
+    On Error GoTo ErrorHandler
+    
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset("tbl_History_Log", dbOpenDynaset, dbAppendOnly)
+    
+    rs.AddNew
+    rs!PersonUID = strUID
+    rs!FieldName = strField
+    rs!OldValue = Left(strOld, 255)
+    rs!NewValue = Left(strNew, 255)
+    rs!ChangeDate = dtDate
+    rs.Update
+    
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Sub
+    
+ErrorHandler:
+    Debug.Print "LogChange error: " & Err.Description & " (" & Err.Number & ")"
+    If Not rs Is Nothing Then
+        rs.Close
+        Set rs = Nothing
+    End If
+    If Not db Is Nothing Then Set db = Nothing
+End Sub
+
 ' =============================================
-' @description Записывает изменение в tbl_History_Log.
-' @param   strPersonUID [String] Личный номер сотрудника.
-' @param   strFieldName [String] Название поля (RankName, WorkStatus, PosCode и т.д.).
-' @param   strOldValue [String] Старое значение.
-' @param   strNewValue [String] Новое значение.
+' @description Gets export file date from import metadata table.
+' @return [Date] ExportFileDate from tbl_Import_Meta, or Now() if not available.
 ' =============================================
-Public Sub LogChange(strPersonUID As String, strFieldName As String, strOldValue As String, strNewValue As String)
+Private Function GetExportFileDate() As Date
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim rsLog As DAO.Recordset
+    Dim rs As DAO.Recordset
 
     Set db = CurrentDb
-    Set rsLog = db.OpenRecordset("SELECT * FROM tbl_History_Log;", dbOpenDynaset)
 
-    rsLog.AddNew
-    rsLog!PersonUID = strPersonUID
-    rsLog!ChangeDate = Now()
-    rsLog!FieldName = strFieldName
-    rsLog!OldValue = strOldValue
-    rsLog!NewValue = strNewValue
-    rsLog.Update
-
-    rsLog.Close
-    Set rsLog = Nothing
-    Set db = Nothing
-
-    Exit Sub
-
-ErrorHandler:
-    Debug.Print "Ошибка LogChange: " & Err.Description
-    If Not rsLog Is Nothing Then
-        If rsLog.EditMode <> dbEditNone Then rsLog.CancelUpdate
-        rsLog.Close
-        Set rsLog = Nothing
-    End If
-    Set db = Nothing
-End Sub
-
-' =============================================
-' @description Преобразует текстовое значение в Long с обработкой ошибок.
-' @param   varInput [Variant] Входное значение (обычно Text из Buffer).
-' @return  [Long] Число или 0 при ошибке.
-' =============================================
-Private Function ConvertToLong(varInput As Variant) As Long
-    On Error Resume Next
-
-    If IsNull(varInput) Or varInput = "" Then
-        ConvertToLong = 0
+    ' Check if metadata table exists
+    If Not TableExists("tbl_Import_Meta") Then
+        GetExportFileDate = Now()
         Exit Function
     End If
 
-    ConvertToLong = CLng(varInput)
+    Set rs = db.OpenRecordset("SELECT TOP 1 ExportFileDate FROM tbl_Import_Meta;", dbOpenSnapshot)
 
-    If Err.Number <> 0 Then
-        Debug.Print "Ошибка ConvertToLong для значения: " & CStr(varInput)
-        ConvertToLong = 0
-        Err.Clear
+    If Not rs.EOF Then
+        If Not IsNull(rs!ExportFileDate) Then
+            GetExportFileDate = rs!ExportFileDate
+        Else
+            GetExportFileDate = Now()
+        End If
+    Else
+        ' No metadata record - use current date
+        GetExportFileDate = Now()
     End If
+
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    ' Fallback to current date on any error
+    GetExportFileDate = Now()
 End Function
 
 ' =============================================
-' @description Преобразует текстовое значение в Date с обработкой ошибок.
-' @param   varInput [Variant] Входное значение (обычно Text из Buffer).
-' @return  [Date] Дата или Null при ошибке.
+' @description Helper function to check if table exists.
 ' =============================================
-Private Function ConvertToDate(varInput As Variant) As Variant
+Private Function TableExists(strTableName As String) As Boolean
+    Dim tdf As DAO.TableDef
     On Error Resume Next
-
-    If IsNull(varInput) Or varInput = "" Then
-        ConvertToDate = Null
-        Exit Function
-    End If
-
-    ConvertToDate = CDate(varInput)
-
-    If Err.Number <> 0 Then
-        Debug.Print "Ошибка ConvertToDate для значения: " & CStr(varInput)
-        ConvertToDate = Null
-        Err.Clear
-    End If
+    Set tdf = CurrentDb.TableDefs(strTableName)
+    TableExists = (Err.Number = 0)
+    Err.Clear
 End Function

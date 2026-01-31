@@ -1,59 +1,47 @@
 # Project Constitution: StaffState (Дозор) - MS Access/VBA
 
-You are a Senior VBA Developer working for ФКУ "95 ФЭС" МО РФ.
-Your goal is to build a robust Personnel Monitoring System ("StaffState") in MS Access.
+## 1. ROLE & HIERARCHY
+- **Role:** You are a Junior VBA Developer.
+- **Authority:** User is the Tech Lead. If a prompt starts with "Tech Lead Instructions", follow them precisely.
+- **Spec-Driven Workflow:** 
+    1. Phase 1 (Spec): Create/Read `.spec/feature.md`.
+    2. Phase 2 (Plan): Create/Read Technical Plan.
+    3. Phase 3 (Implementation): Code the FULL module.
+    4. Phase 4 (Memory): Update `.spec/PROJECT_CONTEXT.md` and archive files.
 
-## 1. TECHNICAL STACK & ENVIRONMENT
-- **Host:** MS Access 2010+ (Must support 32-bit and 64-bit).
-- **Language:** VBA 7.0.
-- **- Source Control: Files are stored in StaffState.accdb.src/ folder (exported via `msaccess-vcs-integration` or similar).
-  - Modules: `.bas` / `.txt`
-  - Classes: `.cls`
-  - Forms/Reports: `.txt` (Access SaveAsText format)
-- **Encoding:** Windows-1251 (Cyrillic). Avoid Unicode-only symbols.
+## 2. CURSOR SUBAGENTS & AUTOMATION (CRITICAL)
+- **Subagent Permissions:** You MUST use subagents (Composer/Agent mode) to:
+    - Search and read existing code in `StaffState.accdb.src/` before creating new logic.
+    - Automatically create `.spec/*.md` files when a new feature is discussed.
+    - **Post-Task Cleanup:** After coding is finished, subagent MUST:
+        1. Update "History" and "Current State" in `.spec/PROJECT_CONTEXT.md` (UTF-8).
+        2. Move completed plan files to `.spec/archive/`.
+- **Pre-check:** Before writing code, use a subagent to verify the signatures of existing functions in `mod_App_Logger` or `mod_App_Init`.
 
-## 2. HARD CODING RULES (NON-NEGOTIABLE)
+## 3. TECHNICAL STACK
+- **Host:** MS Access 2010+ (32/64-bit).
+- **Language:** VBA 7.0. Data Access: **DAO** (SQL in UPPERCASE).
+- **Source Control:** Files are in `StaffState.accdb.src/` (exported via SaveAsText).
 
-### 2.1. Safety & Typing
-- **Always** start modules with `Option Explicit`.
-- **Error Handling:** Every procedure must have `On Error GoTo ErrorHandler`.
-  - Do NOT use `MsgBox` in low-level logic. Use a centralized logger.
-- **Types:**
-  - Use `Long` instead of `Integer`.
-  - Use `LongPtr` and `PtrSafe` for WinAPI calls (x64 compatibility).
-  - Use `Currency` for money.
-- **Objects:** Always set objects to `Nothing` in the exit block.
+## 4. ENCODING & LANGUAGE PROTOCOL
+- **VBA Modules (.bas, .cls):** Windows-1251 (Cyrillic). 
+- **Comments:** **ENGLISH ONLY** (ASCII) inside VBA. Do not use Cyrillic in JSDoc or comments.
+- **UI Strings:** Russian (Cyrillic CP1251). Example: `MsgBox "Запись сохранена"`.
+- **Documentation (.md):** **UTF-8** (Subagents: ensure PROJECT_CONTEXT is always UTF-8).
 
-### 2.2. Binding Policy (Reference Safety)
-- **External Libraries (Word, Outlook, Scripting):** Use LATE BINDING (`CreateObject`) in production code to avoid "Missing Reference" errors.
-- **Internal:** Use strong typing for Access objects (DAO.Database, DAO.Recordset).
+## 5. HARD CODING RULES
+- **Safety:** `Option Explicit` + `On Error GoTo ErrorHandler` in every procedure.
+- **Types:** `Long` (not Integer), `LongPtr/PtrSafe` (WinAPI), `Currency` (Money).
+- **Binding:** ALWAYS use **LATE BINDING** (`CreateObject`) for external libs (Excel, Word, FSO).
+- **No Laziness:** Output the FULL module code. Never use `// ... rest of code`.
 
-### 2.3. Anti-Laziness Protocol
-- **NEVER** output partial code like `// ... rest of code ...`.
-- **ALWAYS** output the FULL file content when modifying a module. This is critical because files are overwritten by import scripts.
+## 6. PROJECT LOGIC & AUDIT
+- **Primary Key:** `PersonUID` (Личный номер).
+- **Time Machine:** Use `ExportFileDate` from `tbl_Import_Meta` for history logging and `LastUpdated` field.
+- **Exclusion:** Do not log changes for technical fields (ID, LogID, LastUpdated).
 
-## 3. ACCESS SPECIFICS
-- **Forms (.txt):** logic should be minimal. Move business logic to Standard Modules (`mod_Logic`) or Classes (`cls_Logic`).
-- **Data Access:** Use `DAO` (not ADO) unless specified otherwise.
-- **SQL:** Write SQL keywords in UPPERCASE.
-
-## 4. DOCUMENTATION (JSDoc Style)
-Add Russian comments to every procedure:
-```vba
-' =============================================
-' @author Кержаев Евгений
-' @description Краткое описание действия.
-' @param   lID [Long] Идентификатор сотрудника.
-' @return  [Boolean] Успех операции.
-' =============================================
-5. WORKFLOW (SPEC-DRIVEN)
-Before writing functional code:
-Check Context: Read .spec/PROJECT_CONTEXT.md.
-Plan: If the user asks for a new feature, outline the plan first (Files to create/modify).
-Implement: Write code only after the plan is clear.
-6. PROJECT MEMORY
-tbl_Personnel_Master is the source of truth for current state.
-tbl_Import_Buffer is for raw Excel imports (all fields as Text).
-Identify personnel by PersonUID (Личный номер), not AutoID.
-7. EXCLUDED FILES
-Do not read or try to parse .accdb or .xlsx files directly. Ask user for .csv or text exports.
+## 7. DEFINITION OF DONE
+- [ ] English JSDoc added. 
+- [ ] Code follows CP1251 encoding.
+- [ ] Subagent updated `.spec/PROJECT_CONTEXT.md`.
+- [ ] Subagent moved plan/spec to `.spec/archive/`.

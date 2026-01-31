@@ -1,32 +1,20 @@
 {
     "files.encoding": "windows1251",
     "files.autoGuessEncoding": false,
-    
-    // Ассоциации файлов (чтобы он понимал расширения)
+
+    // Настройки именно для VBA файлов
+    "[vb]": {
+        "files.encoding": "windows1251"
+    },
+    // Ассоциации, чтобы VS Code понимал, что это VB
     "files.associations": {
         "*.bas": "vb",
         "*.cls": "vb",
         "*.frm": "vb",
-        "*.dcm": "vb"
+        "*.dcm": "vb",
+        "*.txt": "vb" 
     },
-    
-    // Настройки для VBA (оставляем кириллицу)
-    "[vb]": {
-        "files.encoding": "windows1251"
-    },
-
-    // НОВОЕ: Настройки для Markdown (Spec Kit и Context) !!!
-    "[markdown]": {
-        "files.encoding": "utf8"
-    },
-
-    // Исключения (скрываем мусор)
-    "files.exclude": {
-        "**/.git": true,
-        "**/.DS_Store": true,
-        "**/*.frx": true,
-        "**/desktop.ini": true,
-        "**/*.tmp": true,
-        "**/~$*": true
-    }
+    // Важно: Отключаем "умные" символы, которые ломают 1251
+    "editor.smartQuotes": false,
+    "editor.renderWhitespace": "all"
 }

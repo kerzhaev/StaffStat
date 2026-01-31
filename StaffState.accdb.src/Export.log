@@ -5,7 +5,7 @@ VCS Version 4.1.2
 Full Path: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb
 Export Folder: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb.src\
 Performing Full Export
-19.01.2026 22:24:31
+22.01.2026 23:57:36
 -------------------------------------
 Scanning source files...
 No db connections found in this database.
@@ -25,132 +25,137 @@ No hidden attributes found in this database.
 -------------------------------------
 Exporting project...          
   StaffState.accdb
-[1] project processed.
+[1]
 -------------------------------------
 Exporting vb project...       
   StaffState
-[1] vb project processed.
+[1]
 -------------------------------------
 Exporting vbe references...   
   stdole
-[2] vbe references processed.
+[2]
 -------------------------------------
 Exporting modules...          
   mod_App_Init
   mod_Analysis_Logic
+  mod_App_Logger
   mod_Import_Logic
-[3] modules processed.
+  mod_Schema_Manager
+[5]
 -------------------------------------
 Exporting themes...           
   Тема Office
-[1] themes processed.
+[1]
 -------------------------------------
 Exporting db properties...    
   Database Properties (DAO)
-[51] db properties processed.
+[51]
 -------------------------------------
 Exporting tables...           
   tbl_History_Log
-    Sanitized in 0,001 seconds.
+    Sanitized in 0,002 seconds.
   tbl_History_Log (SQL)
   tbl_Import_Buffer
-    Sanitized in 0,001 seconds.
+    Sanitized in 0,002 seconds.
   tbl_Import_Buffer (SQL)
-  tbl_Personnel_Master
+  tbl_Import_Meta
     Sanitized in 0,001 seconds.
+  tbl_Import_Meta (SQL)
+  tbl_Personnel_Master
+    Sanitized in 0,008 seconds.
   tbl_Personnel_Master (SQL)
-[3] tables processed.
+[4]
 -------------------------------------
 Exporting forms...            
   uf_Dashboard
-Loading Printer info for: 'PDF-XChange 5.0 for ABBYY'.
-    Sanitized in 0,002 seconds.
-  uf_Search
     Sanitized in 0,003 seconds.
   uf_PersonCard
+    Sanitized in 0,004 seconds.
+  uf_Search
     Sanitized in 0,002 seconds.
-[3] forms processed.
+[3]
 -------------------------------------
 Exporting doc properties...   
   Database Documents
-[2] doc properties processed.
+[2]
 -------------------------------------
 Exporting nav pane groups...  
   Groups
-[1] nav pane groups processed.
+[1]
 -------------------------------------
-Done. (0,77 seconds)
+Done. (0,86 seconds)
 
 --------------------------------------------------
                 PERFORMANCE REPORTS
 --------------------------------------------------
 Category                      Count     Seconds
 --------------------------------------------------
-Tables                        3         0,12
-Forms                         3         0,12
-DB Properties                 51        0,09
-Modules                       3         0,09
-Doc Properties                2         0,05
-Themes                        1         0,05
-Nav Pane Groups               1         0,04
-Project                       1         0,03
-VBE References                2         0,03
+Forms                         3         0,19
+Tables                        4         0,11
+DB Properties                 51        0,10
+Modules                       5         0,05
+Nav Pane Groups               1         0,03
+Doc Properties                2         0,03
+Project                       1         0,02
+VBE References                2         0,02
+Themes                        1         0,02
 VB Project                    1         0,02
-Hidden Attributes             0         0,00
+CommandBars                   0         0,02
+Hidden Attributes             0         0,01
 DB Connections                0         0,00
 Proj Properties               0         0,00
 Table Data Macros             0         0,00
 Shared Images                 0         0,00
-IMEX Specs                    0         0,00
-Queries                       0         0,00
-CommandBars                   0         0,00
-VBE Forms                     0         0,00
-Macros                        0         0,00
 Relations                     0         0,00
+IMEX Specs                    0         0,00
+VBE Forms                     0         0,00
 Table Data                    0         0,00
 Saved Specs                   0         0,00
 Reports                       0         0,00
+Queries                       0         0,00
+Macros                        0         0,00
 --------------------------------------------------
-TOTALS:                       68        0,67
+TOTALS:                       71        0,64
 --------------------------------------------------
 
 --------------------------------------------------
 Operations                    Count     Seconds
 --------------------------------------------------
-Increment Progress            46        0,42
-Convert to JSON               511       0,10
-Scan DB Objects               1         0,04
-Console Updates               2         0,03
-Parse JSON ISO Date           31        0,02
-Close Open Objects            1         0,02
-Get File Property Hash        31        0,01
-App.SaveAsText()              3         0,01
-App.ExportXML()               3         0,01
-Sanitize File                 3         0,01
+Convert to JSON               511       0,14
+Close Open Objects            1         0,12
+Increment Progress            56        0,11
+Scan DB Objects               1         0,07
+App.ExportXML()               4         0,05
+Console Updates               2         0,04
+Parse JSON ISO Date           19        0,02
+App.SaveAsText()              3         0,02
+Export VBE Module             5         0,02
+Get File Property Hash        37        0,02
+Write File                    25        0,01
 Clear Orphaned Files          13        0,01
-Write File                    21        0,01
-Export VBE Module             3         0,01
+Sanitize File                 3         0,01
 Clear Files by Ext            6         0,01
-Compute SHA256                66        0,00
+Save Table SQL                4         0,01
+modFileAccess.VerifyPath      33        0,01
+Compute SHA256                77        0,01
+Sanitize XML                  4         0,00
+Delete File                   17        0,00
 Parse JSON                    1         0,00
+Format XML (alt)              1         0,00
 Read File DevMode             3         0,00
-Delete File                   13        0,00
-Save Table SQL                3         0,00
+Read File                     13        0,00
 Format XML                    3         0,00
-Check for linked table        3         0,00
-Read File Bytes               10        0,00
-modFileAccess.VerifyPath      28        0,00
-Read File                     10        0,00
+Get VBA Hash                  8         0,00
+Read File Bytes               13        0,00
+Get Modified Date             35        0,00
+Sanitize VBA Code             8         0,00
+Check for linked table        4         0,00
 Quick Count Files             1         0,00
-Get Modified Date             28        0,00
-Sanitize XML                  3         0,00
-Get VBA Hash                  6         0,00
-Sanitize VBA Code             6         0,00
 Quick Count Objects           1         0,00
 Export Theme                  1         0,00
 modFileAccess.GetUncPath      2         0,00
 --------------------------------------------------
-Other Operations                        0,04
+Other Operations                        0,18
 --------------------------------------------------
 
 

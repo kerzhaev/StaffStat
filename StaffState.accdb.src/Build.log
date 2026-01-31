@@ -2,12 +2,12 @@
 Beginning build from Source
 StaffState.accdb
 VCS Version 4.1.2
-Full Path: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb
-Export Folder: C:\Users\kerga\Desktop\Projects\StaffState\StaffState.accdb.src\
-19.01.2026 21:48:20
+Full Path: C:\Users\Nachfin\Desktop\Projets\StaffState\StaffState.accdb
+Export Folder: C:\Users\Nachfin\Desktop\Projets\StaffState\StaffState.accdb.src\
+31/01/2026 18:47:59
 -------------------------------------
 Saving backup of original database...
-Saved as StaffState_VCSBackup1.accdb.
+Saved as StaffState_VCSBackup6.accdb.
 Created blank database for import. (v12)
 Removing non built-in references...
   Removed DAO
@@ -44,8 +44,11 @@ Importing vbe references...
 Importing modules...          
   mod_Analysis_Logic.bas
   mod_App_Init.bas
+  mod_App_Logger.bas
+  mod_Fix_Startup.bas
   mod_Import_Logic.bas
-[3]
+  mod_Schema_Manager.bas
+[6]
 -------------------------------------
 Importing themes...           
   Тема Office.thmx
@@ -58,83 +61,83 @@ Importing db properties...
 Importing tables...           
   tbl_History_Log.xml
   tbl_Import_Buffer.xml
+  tbl_Import_Meta.xml
   tbl_Personnel_Master.xml
-[3]
+[4]
 -------------------------------------
 Importing forms...            
   uf_Dashboard.bas
+  uf_PersonCard.bas
   uf_Search.bas
-
+[3]
 -------------------------------------
-ERROR: Import issue with 'uf_Search'
-Error 2128: Во время импорта ''uf_Search'' в приложении ''Microsoft Access'' возникли ошибки. Source: modVCSUtility.LoadComponentFromText
+Importing doc properties...   
+  documents.json
+[1]
 -------------------------------------
-
+Importing nav pane groups...  
+  nav-pane-groups.json
+[1]
 -------------------------------------
-ERROR: Unhandled error, likely before `On Error` directive
-Error 2128: Во время импорта ''uf_Search'' в приложении ''Microsoft Access'' возникли ошибки. Source: .Unknown.LogUnhandledErrors
--------------------------------------
-
--------------------------------------
-CRITICAL: Aborted build.
-Source: modVCSUtility.LoadComponentFromText
--------------------------------------
-
+Done. (0.76 seconds)
 
 --------------------------------------------------
                 PERFORMANCE REPORTS
 --------------------------------------------------
 Category                      Count     Seconds
 --------------------------------------------------
-DB Properties                 1         0,06
-Forms                         0         0,04
-Tables                        3         0,03
-Themes                        1         0,03
-Modules                       3         0,03
-Project                       1         0,01
-VBE References                1         0,01
-VB Project                    1         0,01
+Forms                         3         0.16
+Tables                        4         0.07
+DB Properties                 1         0.06
+Modules                       6         0.05
+Themes                        1         0.02
+Nav Pane Groups               1         0.01
+Doc Properties                1         0.01
+Project                       1         0.01
+VBE References                1         0.01
+VB Project                    1         0.01
 --------------------------------------------------
-TOTALS:                       11        0,21
+TOTALS:                       20        0.41
 --------------------------------------------------
 
 --------------------------------------------------
 Operations                    Count     Seconds
 --------------------------------------------------
-Create new database           1         0,18
-Increment Progress            13        0,04
-Convert to JSON               171       0,03
-Console Updates               8         0,03
-App.LoadFromText()            2         0,02
-Get File List                 18        0,01
-Scan Source Files             1         0,01
-Parse JSON                    6         0,01
-Clear References              1         0,01
-Get File Property Hash        12        0,00
-Import VBE Module             3         0,00
-Create MSysResources Table    1         0,00
-Delete File                   8         0,00
-Write File                    4         0,00
+Create new database           1         0.18
 modVCSUtility.LoadComponentFr 
-omText                        1         0,00
-Read File                     12        0,00
-Compute SHA256                24        0,00
-Parse VBA Module              3         0,00
-Get VBA Hash                  4         0,00
-Parse JSON ISO Date           31        0,00
-Get Modified Date             22        0,00
-Read File Bytes               5         0,00
-Save Stream to File           2         0,00
-modFileAccess.VerifyPath      9         0,00
-Check for linked table        1         0,00
-Add GUID References           2         0,00
-Write Binary File             1         0,00
-Load Stream from File         2         0,00
-modFileAccess.GetUncPath      1         0,00
-Copy Stream                   2         0,00
-Enc. utf-8 as utf-16          2         0,00
+omText                        3         0.09
+Parse JSON ISO Date           42        0.05
+Increment Progress            20        0.05
+App.LoadFromText()            3         0.05
+Convert to JSON               191       0.04
+Get File List                 18        0.02
+Clear References              1         0.01
+Console Updates               3         0.01
+Scan Source Files             1         0.01
+Import VBE Module             6         0.01
+Get File Property Hash        20        0.01
+Parse JSON                    8         0.01
+Write File                    9         0.00
+Read File                     23        0.00
+Delete File                   16        0.00
+Create MSysResources Table    1         0.00
+Get VBA Hash                  9         0.00
+Extended Chars Check          3         0.00
+Parse VBA Module              6         0.00
+Get Modified Date             37        0.00
+Compute SHA256                40        0.00
+modFileAccess.VerifyPath      16        0.00
+Save Stream to File           3         0.00
+Read File Bytes               7         0.00
+Check for linked table        1         0.00
+Add GUID References           2         0.00
+Write Binary File             1         0.00
+Load Stream from File         3         0.00
+Copy Stream                   3         0.00
+modFileAccess.GetUncPath      1         0.00
+Enc. utf-8 as utf-16          3         0.00
 --------------------------------------------------
-Other Operations                        0,17
+Other Operations                        0.21
 --------------------------------------------------
 
 

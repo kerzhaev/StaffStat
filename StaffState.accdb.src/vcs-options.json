@@ -5,7 +5,7 @@
   },
   "Options": {
     "ExportFolder": "",
-    "ShowDebug": true,
+    "ShowDebug": false,
     "UseFastSave": true,
     "UseMergeBuild": false,
     "UseGitIntegration": false,

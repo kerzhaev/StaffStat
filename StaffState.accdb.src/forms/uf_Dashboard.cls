@@ -1,4 +1,4 @@
-﻿Attribute VB_GlobalNameSpace = False
+Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
@@ -28,7 +28,7 @@ Private Sub btnImport_Click()
 
     Exit Sub
 ErrorHandler:
-    MsgBox "Ошибка интерфейса: " & Err.Description, vbCritical
+    MsgBox "UI error: " & Err.Description, vbCritical
     Me.lblStatus.Caption = "Ошибка."
 End Sub
 
@@ -46,7 +46,7 @@ Private Sub btnAnalyze_Click()
 
     Exit Sub
 ErrorHandler:
-    MsgBox "Ошибка интерфейса: " & Err.Description, vbCritical
+    MsgBox "UI error: " & Err.Description, vbCritical
     Me.lblStatus.Caption = "Ошибка."
 End Sub
 
@@ -63,5 +63,23 @@ Private Sub btnOpenLog_Click()
 
     Exit Sub
 ErrorHandler:
-    MsgBox "Не удалось открыть журнал: " & Err.Description, vbCritical
+    MsgBox "Unable to open log: " & Err.Description, vbCritical
+End Sub
+
+' --- КНОПКА 4: СОЗДАТЬ ИНДЕКСЫ (Phase 7) ---
+Private Sub btnCreateIndexes_Click()
+    On Error GoTo ErrorHandler
+    
+    Me.lblStatus.Caption = "Создание индексов производительности..."
+    DoEvents
+    
+    ' Call index creation routine
+    mod_App_Init.CreatePerformanceIndexes
+    
+    Me.lblStatus.Caption = "Индексы созданы. Система работает быстрее."
+    
+    Exit Sub
+ErrorHandler:
+    MsgBox "Index creation error: " & Err.Description, vbCritical
+    Me.lblStatus.Caption = "Ошибка."
 End Sub
