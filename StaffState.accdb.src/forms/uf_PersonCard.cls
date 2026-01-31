@@ -283,7 +283,13 @@ Private Sub ApplyHistoryFilter()
     Dim strFieldFilter As String
 
     ' Base query
-    strSQL = "SELECT ChangeDate, FieldName, OldValue, NewValue FROM tbl_History_Log"
+    ' NOTE: lstHistory is a ListBox; native grouping is not available.
+    ' We display Date in a separate column, and include time in the description.
+    strSQL = "SELECT " & _
+             "ChangeDate AS SortChangeDate, " & _
+             "FORMAT(ChangeDate, ""dd.mm.yyyy"") AS [Дата], " & _
+             "FORMAT(ChangeDate, ""hh:nn"") & "" "" & BuildHistoryDescription([FieldName], [OldValue], [NewValue]) AS [Описание изменений] " & _
+             "FROM tbl_History_Log"
     strWhere = " WHERE PersonUID = '" & m_strUID & "'"
 
     ' 1. Filter by Field Type (ComboBox) - allow custom input with partial match
@@ -314,7 +320,7 @@ Private Sub ApplyHistoryFilter()
     strFieldFilter = Trim(strFieldFilter)
     
     ' TRANSLATE USER INPUT: Convert user-friendly names to technical names
-    ' E.g., "звание" → "RankName", "должность" → "PosName"
+    ' E.g., "Rank" -> "RankName", "Position" -> "PosName"
     strFieldFilter = TranslateFieldName(strFieldFilter)
     
     ' Escape single quotes for SQL safety

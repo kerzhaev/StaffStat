@@ -218,7 +218,7 @@ Begin Form
                     ColumnHeads = NotDefault
                     OverlapFlags =85
                     IMESentenceMode =3
-                    ColumnCount =4
+                    ColumnCount =3
                     Left =328
                     Top =6234
                     Width =12131
@@ -226,7 +226,7 @@ Begin Form
                     TabIndex =5
                     Name ="lstHistory"
                     RowSourceType ="Table/Query"
-                    ColumnWidths ="1701;1701;2268;2268"
+                    ColumnWidths ="0;1701;10430"
 
                     LayoutCachedLeft =328
                     LayoutCachedTop =6234

@@ -51,7 +51,9 @@ Public Sub SyncBufferToMaster()
                 CopyAllFields rsBuffer, rsMaster
                 rsMaster.Update
 
-                LogChange strUID, "Учет", "", "Принят на учет", dtChangeDate
+                ' NOTE: Avoid Cyrillic literals in DB writes for first-run stability.
+                ' UI will translate these tokens to Russian.
+                LogChange strUID, "_System", "", "Added", dtChangeDate
                 iNew = iNew + 1
             Else
                 ' --- EXISTING ---
