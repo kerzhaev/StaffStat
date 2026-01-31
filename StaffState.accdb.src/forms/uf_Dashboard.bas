@@ -1,4 +1,4 @@
-﻿Version =20
+Version =20
 VersionRequired =20
 Begin Form
     DividingLines = NotDefault
@@ -10,7 +10,7 @@ Begin Form
     GridY =10
     Width =9467
     DatasheetFontHeight =11
-    ItemSuffix =8
+    ItemSuffix =15
     Right =25320
     Bottom =12120
     RecSrcDt = Begin
@@ -89,98 +89,20 @@ Begin Form
                 Begin CommandButton
                     OverlapFlags =93
                     Left =340
-                    Top =510
-                    Width =3756
-                    Height =576
+                    Top =300
+                    Width =8516
+                    Height =720
                     ForeColor =4210752
-                    Name ="btnImport"
-                    Caption ="Загрузить"
+                    Name ="btnFullSync"
+                    Caption ="Full Update"
                     OnClick ="[Event Procedure]"
-                    ControlTipText ="Найти далее"
+                    ControlTipText ="Run full import, sync, and index update"
                     GridlineColor =10921638
 
                     LayoutCachedLeft =340
-                    LayoutCachedTop =510
-                    LayoutCachedWidth =4096
-                    LayoutCachedHeight =1086
-                    BackColor =14461583
-                    BorderColor =14461583
-                    HoverColor =15189940
-                    PressedColor =9917743
-                    HoverForeColor =4210752
-                    PressedForeColor =4210752
-                    Overlaps =1
-                End
-                Begin CommandButton
-                    OverlapFlags =85
-                    Left =283
-                    Top =2494
-                    Width =3756
-                    Height =576
-                    TabIndex =1
-                    ForeColor =4210752
-                    Name ="btnOpenLog"
-                    Caption ="Журнал"
-                    OnClick ="[Event Procedure]"
-                    ControlTipText ="Найти далее"
-                    GridlineColor =10921638
-
-                    LayoutCachedLeft =283
-                    LayoutCachedTop =2494
-                    LayoutCachedWidth =4039
-                    LayoutCachedHeight =3070
-                    BackColor =14461583
-                    BorderColor =14461583
-                    HoverColor =15189940
-                    PressedColor =9917743
-                    HoverForeColor =4210752
-                    PressedForeColor =4210752
-                    Overlaps =1
-                End
-                Begin CommandButton
-                    OverlapFlags =93
-                    Left =5100
-                    Top =510
-                    Width =3756
-                    Height =576
-                    TabIndex =3
-                    ForeColor =4210752
-                    Name ="btnCreateIndexes"
-                    Caption ="Создать индексы"
-                    OnClick ="[Event Procedure]"
-                    ControlTipText ="Create performance indexes (one-time operation)"
-                    GridlineColor =10921638
-
-                    LayoutCachedLeft =5100
-                    LayoutCachedTop =510
+                    LayoutCachedTop =300
                     LayoutCachedWidth =8856
-                    LayoutCachedHeight =1086
-                    BackColor =14461583
-                    BorderColor =14461583
-                    HoverColor =15189940
-                    PressedColor =9917743
-                    HoverForeColor =4210752
-                    PressedForeColor =4210752
-                    Overlaps =1
-                End
-                Begin CommandButton
-                    OverlapFlags =85
-                    Left =226
-                    Top =1474
-                    Width =3756
-                    Height =576
-                    TabIndex =2
-                    ForeColor =4210752
-                    Name ="btnAnalyze"
-                    Caption ="Анализ"
-                    OnClick ="[Event Procedure]"
-                    ControlTipText ="Найти далее"
-                    GridlineColor =10921638
-
-                    LayoutCachedLeft =226
-                    LayoutCachedTop =1474
-                    LayoutCachedWidth =3982
-                    LayoutCachedHeight =2050
+                    LayoutCachedHeight =1020
                     BackColor =14461583
                     BorderColor =14461583
                     HoverColor =15189940
@@ -191,19 +113,235 @@ Begin Form
                 End
                 Begin Label
                     OverlapFlags =87
-                    Left =5612
-                    Top =1077
-                    Width =3855
-                    Height =1757
+                    Left =360
+                    Top =1140
+                    Width =2000
+                    Height =240
+                    BorderColor =8355711
+                    ForeColor =6710886
+                    Name ="lblManualControls"
+                    Caption ="Manual Controls"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =360
+                    LayoutCachedTop =1140
+                    LayoutCachedWidth =2360
+                    LayoutCachedHeight =1380
+                End
+                Begin CommandButton
+                    OverlapFlags =93
+                    Left =340
+                    Top =1440
+                    Width =2750
+                    Height =576
+                    ForeColor =4210752
+                    Name ="btnImport"
+                    Caption ="Import"
+                    OnClick ="[Event Procedure]"
+                    ControlTipText ="Run manual import"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =340
+                    LayoutCachedTop =1440
+                    LayoutCachedWidth =3090
+                    LayoutCachedHeight =2016
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
+                    Overlaps =1
+                End
+                Begin CommandButton
+                    OverlapFlags =93
+                    Left =340
+                    Top =2700
+                    Width =2750
+                    Height =576
+                    TabIndex =2
+                    ForeColor =4210752
+                    Name ="btnCreateIndexes"
+                    Caption ="Create Indexes"
+                    OnClick ="[Event Procedure]"
+                    ControlTipText ="Create performance indexes (one-time operation)"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =340
+                    LayoutCachedTop =2700
+                    LayoutCachedWidth =3090
+                    LayoutCachedHeight =3276
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
+                    Overlaps =1
+                End
+                Begin CommandButton
+                    OverlapFlags =85
+                    Left =340
+                    Top =2070
+                    Width =2750
+                    Height =576
+                    TabIndex =1
+                    ForeColor =4210752
+                    Name ="btnAnalyze"
+                    Caption ="Analyze"
+                    OnClick ="[Event Procedure]"
+                    ControlTipText ="Run manual analysis"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =340
+                    LayoutCachedTop =2070
+                    LayoutCachedWidth =3090
+                    LayoutCachedHeight =2646
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
+                    Overlaps =1
+                End
+                Begin Label
+                    OverlapFlags =87
+                    Left =3500
+                    Top =1140
+                    Width =5967
+                    Height =240
                     BorderColor =8355711
                     ForeColor =6710886
                     Name ="lblStatus"
-                    Caption ="в"
+                    Caption ="Ready."
                     GridlineColor =10921638
-                    LayoutCachedLeft =5612
-                    LayoutCachedTop =1077
+                    LayoutCachedLeft =3500
+                    LayoutCachedTop =1140
                     LayoutCachedWidth =9467
-                    LayoutCachedHeight =2834
+                    LayoutCachedHeight =1380
+                End
+                Begin CommandButton
+                    OverlapFlags =85
+                    Left =3500
+                    Top =1440
+                    Width =2750
+                    Height =576
+                    TabIndex =3
+                    ForeColor =4210752
+                    Name ="btnOpenLog"
+                    Caption ="Open Log"
+                    OnClick ="[Event Procedure]"
+                    ControlTipText ="Open change history log"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =3500
+                    LayoutCachedTop =1440
+                    LayoutCachedWidth =6250
+                    LayoutCachedHeight =2016
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
+                    Overlaps =1
+                End
+                Begin Label
+                    OverlapFlags =87
+                    Left =3500
+                    Top =2070
+                    Width =1200
+                    Height =240
+                    BorderColor =8355711
+                    ForeColor =6710886
+                    Name ="lblStartDate"
+                    Caption ="Start Date"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =3500
+                    LayoutCachedTop =2070
+                    LayoutCachedWidth =4700
+                    LayoutCachedHeight =2310
+                End
+                Begin TextBox
+                    OverlapFlags =93
+                    IMESentenceMode =3
+                    Left =4700
+                    Top =2070
+                    Width =1550
+                    Height =240
+                    BorderColor =10921638
+                    ForeColor =4210752
+                    Name ="txtStartDate"
+                    ControlTipText ="Enter start date"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =4700
+                    LayoutCachedTop =2070
+                    LayoutCachedWidth =6250
+                    LayoutCachedHeight =2310
+                End
+                Begin Label
+                    OverlapFlags =87
+                    Left =3500
+                    Top =2380
+                    Width =1200
+                    Height =240
+                    BorderColor =8355711
+                    ForeColor =6710886
+                    Name ="lblEndDate"
+                    Caption ="End Date"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =3500
+                    LayoutCachedTop =2380
+                    LayoutCachedWidth =4700
+                    LayoutCachedHeight =2620
+                End
+                Begin TextBox
+                    OverlapFlags =93
+                    IMESentenceMode =3
+                    Left =4700
+                    Top =2380
+                    Width =1550
+                    Height =240
+                    BorderColor =10921638
+                    ForeColor =4210752
+                    Name ="txtEndDate"
+                    ControlTipText ="Enter end date"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =4700
+                    LayoutCachedTop =2380
+                    LayoutCachedWidth =6250
+                    LayoutCachedHeight =2620
+                End
+                Begin CommandButton
+                    OverlapFlags =85
+                    Left =3500
+                    Top =2700
+                    Width =2750
+                    Height =576
+                    TabIndex =4
+                    ForeColor =4210752
+                    Name ="btnGenerateChangeReport"
+                    Caption ="Changes Report"
+                    OnClick ="[Event Procedure]"
+                    ControlTipText ="Generate changes report"
+                    GridlineColor =10921638
+
+                    LayoutCachedLeft =3500
+                    LayoutCachedTop =2700
+                    LayoutCachedWidth =6250
+                    LayoutCachedHeight =3276
+                    BackColor =14461583
+                    BorderColor =14461583
+                    HoverColor =15189940
+                    PressedColor =9917743
+                    HoverForeColor =4210752
+                    PressedForeColor =4210752
+                    Overlaps =1
                 End
                 Begin Label
                     OverlapFlags =215

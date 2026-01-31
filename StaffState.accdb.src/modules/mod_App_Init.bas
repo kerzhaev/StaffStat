@@ -1,4 +1,4 @@
-﻿Attribute VB_Name = "mod_App_Init"
+Attribute VB_Name = "mod_App_Init"
 Option Compare Database
 
 Option Explicit
@@ -62,7 +62,7 @@ End Sub
 '              Safe to run multiple times (will skip existing indexes).
 ' @author Phase 7 - Performance Improvements
 ' =============================================
-Public Sub CreatePerformanceIndexes()
+Public Sub CreatePerformanceIndexes(ByRef outCreated As Long, ByRef outSkipped As Long, Optional ByVal blnSuppressMsgBox As Boolean = False)
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -75,6 +75,8 @@ Public Sub CreatePerformanceIndexes()
     Set db = CurrentDb
     iCreated = 0
     iSkipped = 0
+    outCreated = 0
+    outSkipped = 0
 
     Debug.Print "--- Creating Performance Indexes ---"
 
@@ -154,10 +156,15 @@ Public Sub CreatePerformanceIndexes()
     Debug.Print "--- Index Creation Complete ---"
     Debug.Print "Created: " & iCreated & " | Skipped: " & iSkipped
 
-    MsgBox "Performance indexes created!" & vbCrLf & vbCrLf & _
-           "Created: " & iCreated & vbCrLf & _
-           "Skipped (already exist): " & iSkipped & vbCrLf & vbCrLf & _
-           "Search and import should run faster now.", vbInformation, "Indexes"
+    If Not blnSuppressMsgBox Then
+        MsgBox "Performance indexes created!" & vbCrLf & vbCrLf & _
+               "Created: " & iCreated & vbCrLf & _
+               "Skipped (already exist): " & iSkipped & vbCrLf & vbCrLf & _
+               "Search and import should run faster now.", vbInformation, "Indexes"
+    End If
+
+    outCreated = iCreated
+    outSkipped = iSkipped
 
     Set fld = Nothing
     Set idx = Nothing
@@ -167,8 +174,12 @@ Public Sub CreatePerformanceIndexes()
 
 ErrorHandler:
     Debug.Print "ERROR: " & Err.Description
-    MsgBox "Index creation error: " & Err.Description & vbCrLf & _
-           "Error number: " & Err.Number, vbCritical, "Error"
+    If Not blnSuppressMsgBox Then
+        MsgBox "Index creation error: " & Err.Description & vbCrLf & _
+               "Error number: " & Err.Number, vbCritical, "Error"
+    End If
+    outCreated = iCreated
+    outSkipped = iSkipped
     Set fld = Nothing
     Set idx = Nothing
     Set tdf = Nothing

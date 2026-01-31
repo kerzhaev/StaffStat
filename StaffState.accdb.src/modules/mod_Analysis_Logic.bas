@@ -1,4 +1,4 @@
-﻿Attribute VB_Name = "mod_Analysis_Logic"
+Attribute VB_Name = "mod_Analysis_Logic"
 Option Explicit
 
 ' =============================================
@@ -6,7 +6,7 @@ Option Explicit
 ' @description Universal data synchronization
 ' =============================================
 
-Public Sub SyncBufferToMaster()
+Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Optional ByVal blnSuppressMsgBox As Boolean = False)
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -32,6 +32,9 @@ Public Sub SyncBufferToMaster()
 
     Set rsBuffer = db.OpenRecordset("tbl_Import_Buffer", dbOpenSnapshot)
     Set rsMaster = db.OpenRecordset("tbl_Personnel_Master", dbOpenDynaset)
+
+    outNew = 0
+    outUpdated = 0
 
     ' If buffer is empty - exit
     If rsBuffer.EOF Then GoTo ExitHandler
@@ -118,9 +121,14 @@ Public Sub SyncBufferToMaster()
     Loop
 
 ExitHandler:
-    MsgBox "Synchronization completed!" & vbCrLf & _
-           "New: " & iNew & vbCrLf & _
-           "Updated: " & iUpd, vbInformation
+    outNew = iNew
+    outUpdated = iUpd
+
+    If Not blnSuppressMsgBox Then
+        MsgBox "Synchronization completed!" & vbCrLf & _
+               "New: " & iNew & vbCrLf & _
+               "Updated: " & iUpd, vbInformation
+    End If
 
     rsBuffer.Close
     rsMaster.Close
@@ -130,8 +138,49 @@ ExitHandler:
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Analysis error: " & Err.Description, vbCritical
+    If Not blnSuppressMsgBox Then
+        MsgBox "Analysis error: " & Err.Description, vbCritical
+    Else
+        Debug.Print "Analysis error: " & Err.Description & " (" & Err.Number & ")"
+    End If
     Resume ExitHandler
+End Sub
+
+' =============================================
+' @description Runs the full import -> sync -> index pipeline.
+'              Shows a single final summary message.
+' =============================================
+Public Sub RunFullSyncProcess()
+    On Error GoTo ErrorHandler
+
+    Dim blnImported As Boolean
+    Dim iNew As Long
+    Dim iUpd As Long
+    Dim iIdxCreated As Long
+    Dim iIdxSkipped As Long
+    Dim strSummary As String
+
+    blnImported = mod_Import_Logic.ImportExcelData(True)
+
+    If blnImported Then
+        SyncBufferToMaster iNew, iUpd, True
+        mod_App_Init.CreatePerformanceIndexes iIdxCreated, iIdxSkipped, True
+        strSummary = "Full Update Summary" & vbCrLf & _
+                     "Import: OK" & vbCrLf & _
+                     "Sync: New=" & iNew & ", Updated=" & iUpd & vbCrLf & _
+                     "Indexes: Created=" & iIdxCreated & ", Skipped=" & iIdxSkipped
+    Else
+        strSummary = "Full Update Summary" & vbCrLf & _
+                     "Import: FAILED or CANCELED" & vbCrLf & _
+                     "Sync: SKIPPED" & vbCrLf & _
+                     "Indexes: SKIPPED"
+    End If
+
+    MsgBox strSummary, vbInformation, "Full Update"
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Full Update failed: " & Err.Description, vbCritical, "Full Update"
 End Sub
 
 ' --- HELPER FUNCTIONS REMAIN THE SAME ---

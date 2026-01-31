@@ -1,4 +1,4 @@
-﻿Attribute VB_Name = "mod_Export_Logic"
+Attribute VB_Name = "mod_Export_Logic"
 Option Compare Database
 Option Explicit
 
@@ -106,4 +106,99 @@ ErrorHandler:
     MsgBox "Export error: " & Err.Description, vbCritical
     ExportSearchToExcel = False
     GoTo Cleanup
+End Function
+
+' =============================================
+' @description Exports change report by date range to Excel.
+' @param dtStart [Date] Start date (inclusive)
+' @param dtEnd [Date] End date (inclusive)
+' @return True if success
+' =============================================
+Public Function ExportChangeReport(ByVal dtStart As Date, ByVal dtEnd As Date) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+    Dim xlApp As Object
+    Dim xlWb As Object
+    Dim xlWs As Object
+    Dim recCount As Long
+
+    Set db = CurrentDb
+
+    strSQL = "SELECT " & _
+             "H.ChangeDate AS [Date], " & _
+             "M.FullName AS [FullName], " & _
+             "H.PersonUID AS [PersonUID], " & _
+             "H.FieldName AS [FieldName], " & _
+             "H.OldValue AS [OldValue], " & _
+             "H.NewValue AS [NewValue] " & _
+             "FROM tbl_History_Log AS H " & _
+             "LEFT JOIN tbl_Personnel_Master AS M ON H.PersonUID = M.PersonUID " & _
+             "WHERE H.ChangeDate BETWEEN " & FormatDateLiteral(dtStart) & " AND " & FormatDateLiteral(dtEnd) & " " & _
+             "ORDER BY M.FullName, H.PersonUID, H.ChangeDate;"
+
+    Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
+
+    If rs.EOF Then
+        MsgBox "No changes found for selected period.", vbInformation
+        GoTo Cleanup
+    End If
+
+    Set xlApp = CreateObject("Excel.Application")
+    xlApp.Visible = True
+    xlApp.DisplayAlerts = False
+    Set xlWb = xlApp.Workbooks.Add
+    Set xlWs = xlWb.Worksheets(1)
+
+    ' Headers (friendly names in Excel)
+    xlWs.Cells(1, 1).Value = "Date"
+    xlWs.Cells(1, 2).Value = "Full Name"
+    xlWs.Cells(1, 3).Value = "ID"
+    xlWs.Cells(1, 4).Value = "Field Changed"
+    xlWs.Cells(1, 5).Value = "Old Value"
+    xlWs.Cells(1, 6).Value = "New Value"
+
+    ' Data via CopyFromRecordset
+    xlWs.Range("A2").CopyFromRecordset rs
+
+    rs.MoveLast
+    recCount = rs.RecordCount
+    rs.MoveFirst
+
+    ' Format: Freeze top row, Bold headers, AutoFit
+    With xlWs.Range(xlWs.Cells(1, 1), xlWs.Cells(1, 6))
+        .Font.Bold = True
+    End With
+    xlWs.Rows(2).Select
+    xlApp.ActiveWindow.FreezePanes = True
+    xlWs.UsedRange.Columns.AutoFit
+
+    ExportChangeReport = True
+
+Cleanup:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    If Not xlWs Is Nothing Then Set xlWs = Nothing
+    If Not xlWb Is Nothing Then Set xlWb = Nothing
+    If Not xlApp Is Nothing Then
+        xlApp.DisplayAlerts = True
+        Set xlApp = Nothing
+    End If
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    MsgBox "Export error: " & Err.Description, vbCritical
+    ExportChangeReport = False
+    GoTo Cleanup
+End Function
+
+' =============================================
+' @description Formats date for Access SQL literal.
+' =============================================
+Private Function FormatDateLiteral(ByVal dtValue As Date) As String
+    FormatDateLiteral = "#" & Format(dtValue, "mm\/dd\/yyyy") & "#"
 End Function

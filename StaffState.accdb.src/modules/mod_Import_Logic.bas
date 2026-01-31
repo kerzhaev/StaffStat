@@ -1,4 +1,4 @@
-﻿Attribute VB_Name = "mod_Import_Logic"
+Attribute VB_Name = "mod_Import_Logic"
 Option Explicit
 
 ' =============================================
@@ -8,12 +8,14 @@ Option Explicit
 
 Private Const cstrLinkedTableName As String = "tmp_Excel_Link"
 
-Public Function ImportExcelData() As Boolean
+Public Function ImportExcelData(Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
     On Error GoTo ErrorHandler
+
+    ImportExcelData = False
 
     Dim strFilePath As String
     strFilePath = SelectExcelFile()
-    If strFilePath = "" Then Exit Function
+    If strFilePath = "" Then GoTo ExitHandler
 
     ' --- FIX: FORCE CLOSE TABLE BEFORE OPERATION ---
     ' acSaveYes will save layout changes if any
@@ -26,30 +28,38 @@ Public Function ImportExcelData() As Boolean
     CurrentDb.Execute "DELETE FROM tbl_Import_Buffer;", dbFailOnError
 
     ' 2. Link
-    If Not LinkExcelFile(strFilePath) Then Exit Function
+    If Not LinkExcelFile(strFilePath, blnSuppressMsgBox) Then GoTo ExitHandler
 
     ' 3. Dynamic import
-    If Not RunDynamicImport() Then Exit Function
+    If Not RunDynamicImport(blnSuppressMsgBox) Then GoTo ExitHandler
 
     ' 4. Save import metadata (file date for change tracking)
     UpdateImportMetadata strFilePath
 
-    MsgBox "Import completed. New columns were added.", vbInformation
     ImportExcelData = True
 
+    If Not blnSuppressMsgBox Then
+        MsgBox "Import completed. New columns were added.", vbInformation
+    End If
+
+ExitHandler:
     DeleteExcelLink
     Exit Function
 
 ErrorHandler:
-    MsgBox "Critical Error: " & Err.Description, vbCritical
-    DeleteExcelLink
+    If Not blnSuppressMsgBox Then
+        MsgBox "Critical Error: " & Err.Description, vbCritical
+    Else
+        Debug.Print "Import error: " & Err.Description & " (" & Err.Number & ")"
+    End If
+    Resume ExitHandler
 End Function
 
 ' =============================================
 ' @description Main magic: reads Excel fields, extends Buffer and builds SQL
 ' @note Uses fuzzy PersonUID field detection (encoding-independent)
 ' =============================================
-Private Function RunDynamicImport() As Boolean
+Private Function RunDynamicImport(Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -119,10 +129,14 @@ Private Function RunDynamicImport() As Boolean
 
     ' --- VALIDATE: PersonUID field must exist ---
     If Len(strPersonUIDExcelName) = 0 Then
-        MsgBox "CRITICAL: Excel file has no PersonUID column!" & vbCrLf & vbCrLf & _
-               "Found columns:" & vbCrLf & strAllColumns & vbCrLf & vbCrLf & _
-               "Looking for column containing: 'number', 'UID', 'PersonUID'", _
-               vbCritical, "Import Error"
+        If Not blnSuppressMsgBox Then
+            MsgBox "CRITICAL: Excel file has no PersonUID column!" & vbCrLf & vbCrLf & _
+                   "Found columns:" & vbCrLf & strAllColumns & vbCrLf & vbCrLf & _
+                   "Looking for column containing: 'number', 'UID', 'PersonUID'", _
+                   vbCritical, "Import Error"
+        Else
+            Debug.Print "Import validation error: PersonUID column not found."
+        End If
         RunDynamicImport = False
         Exit Function
     End If
@@ -142,8 +156,12 @@ Private Function RunDynamicImport() As Boolean
     Exit Function
 
 ErrorHandler:
-    MsgBox "Import error: " & Err.Description & vbCrLf & _
-           "Error number: " & Err.Number, vbCritical, "Dynamic Import"
+    If Not blnSuppressMsgBox Then
+        MsgBox "Import error: " & Err.Description & vbCrLf & _
+               "Error number: " & Err.Number, vbCritical, "Dynamic Import"
+    Else
+        Debug.Print "Dynamic import error: " & Err.Description & " (" & Err.Number & ")"
+    End If
 End Function
 
 ' =============================================
@@ -364,7 +382,7 @@ End Function
 
 ' --- HELPER FUNCTIONS (Same as before, but simplified) ---
 
-Private Function LinkExcelFile(strPath As String) As Boolean
+Private Function LinkExcelFile(strPath As String, Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
     On Error GoTo ErrorHandler
     Dim db As DAO.Database, tdf As DAO.TableDef
     Dim strConnect As String, strSheet As String
@@ -391,7 +409,11 @@ Private Function LinkExcelFile(strPath As String) As Boolean
     LinkExcelFile = True
     Exit Function
 ErrorHandler:
-    MsgBox "Link error: " & Err.Description
+    If Not blnSuppressMsgBox Then
+        MsgBox "Link error: " & Err.Description
+    Else
+        Debug.Print "Link error: " & Err.Description & " (" & Err.Number & ")"
+    End If
 End Function
 
 Private Function GetFirstSheetName(strPath As String) As String

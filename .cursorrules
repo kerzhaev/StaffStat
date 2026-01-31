@@ -34,6 +34,11 @@
 - **Types:** `Long` (not Integer), `LongPtr/PtrSafe` (WinAPI), `Currency` (Money).
 - **Binding:** ALWAYS use **LATE BINDING** (`CreateObject`) for external libs (Excel, Word, FSO).
 - **No Laziness:** Output the FULL module code. Never use `// ... rest of code`.
+- **Git Strategy:** Before starting any new Phase or Feature:
+    1. Use a subagent to check the current branch (`git branch`).
+    2. Create a new feature branch (`git checkout -b feature/phase-name`).
+    3. Commit changes to the feature branch with descriptive English messages.
+    4. Only merge to `main` after Tech Lead approval.
 
 ## 6. PROJECT LOGIC & AUDIT
 - **Primary Key:** `PersonUID` (Личный номер).
