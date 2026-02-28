@@ -1,6 +1,11 @@
-# PROJECT CONTEXT: StaffState (Äîçîð) - MS Access/VBA
+ï»¿# PROJECT CONTEXT: StaffState (Ð¨Ñ‚Ð°Ñ‚Ñ‹) - MS Access/VBA
 
 ## Current State
+- **Phase 25 (Split DB into FE/BE + Auto-Relinker)** is completed.
+  - Database successfully split: `StaffState.accdb` (Front-End, UI + queries) and `StaffState_BE.accdb` (Back-End, data tables).
+  - All data tables are connected as linked tables from BE into FE.
+  - Module `mod_Table_Relinker.bas` added â€” automatically relinks tables on startup if the path to BE changes.
+  - Table definitions migrated to `.json` format in VCS.
 - **Phase 24 (100% English Codebase & Encoding Fix)** is completed.
   - Complete removal of Cyrillic from source files (.bas, .cls).
   - Transition to English system messages and comments to protect encoding with Git and AI agents.
@@ -24,6 +29,7 @@
 - mod_UI_Helpers.bas
 - mod_Export_Logic.bas
 - mod_Fix_Startup.bas
+- mod_Table_Relinker.bas
 
 ## Key Tables
 - tbl_Import_Buffer
@@ -37,6 +43,11 @@
 - uf_PersonCard
 
 ## History
+- **Phase 25 (2026-03-01)**:
+  - Split database into Front-End (`StaffState.accdb`) and Back-End (`StaffState_BE.accdb`).
+  - All data tables moved to BE; FE uses linked tables pointing to BE.
+  - Added `mod_Table_Relinker.bas` â€” auto-relinks tables on startup if BE path changes.
+  - Table definitions format migrated from `.sql`/`.xml` to `.json` in VCS source export.
 - **Phase 24 (2026-02-28)**:
   - 100% English Codebase & Encoding Fix.
   - Complete removal of Cyrillic in source files (.bas, .cls).

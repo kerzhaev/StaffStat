@@ -1,0 +1,13 @@
+﻿{
+  "Info": {
+    "Class": "clsDbTableDef",
+    "Description": "Linked Table"
+  },
+  "Items": {
+    "Name": "tbl_Validation_Log",
+    "Connect": ";DATABASE=rel:StaffState_BE.accdb",
+    "SourceTableName": "tbl_Validation_Log",
+    "Attributes": 1073741824,
+    "PrimaryKey": "[LogID]"
+  }
+}

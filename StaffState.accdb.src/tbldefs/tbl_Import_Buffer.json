@@ -1,0 +1,13 @@
+﻿{
+  "Info": {
+    "Class": "clsDbTableDef",
+    "Description": "Linked Table"
+  },
+  "Items": {
+    "Name": "tbl_Import_Buffer",
+    "Connect": ";DATABASE=rel:StaffState_BE.accdb",
+    "SourceTableName": "tbl_Import_Buffer",
+    "Attributes": 1073741824,
+    "PrimaryKey": "[ID]"
+  }
+}

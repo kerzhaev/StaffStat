@@ -11,7 +11,7 @@ Begin Form
     Width =12730
     DatasheetFontHeight =11
     ItemSuffix =18
-    Right =18390
+    Right =25575
     Bottom =12120
     RecSrcDt = Begin
         0x71deebbc227be640
@@ -406,7 +406,7 @@ Begin Form
                     BorderColor =8355711
                     ForeColor =6710886
                     Name ="lblTotalCount"
-                    Caption ="Total: 0"
+                    Caption ="Total: 26"
                     GridlineColor =10921638
                     LayoutCachedLeft =6350
                     LayoutCachedTop =2070
@@ -422,7 +422,7 @@ Begin Form
                     BorderColor =8355711
                     ForeColor =6710886
                     Name ="lblActiveCount"
-                    Caption ="Active: 0"
+                    Caption ="Active: 26"
                     GridlineColor =10921638
                     LayoutCachedLeft =6350
                     LayoutCachedTop =2310

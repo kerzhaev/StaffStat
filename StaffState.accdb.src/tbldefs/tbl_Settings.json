@@ -1,0 +1,13 @@
+﻿{
+  "Info": {
+    "Class": "clsDbTableDef",
+    "Description": "Linked Table"
+  },
+  "Items": {
+    "Name": "tbl_Settings",
+    "Connect": ";DATABASE=rel:StaffState_BE.accdb",
+    "SourceTableName": "tbl_Settings",
+    "Attributes": 1073741824,
+    "PrimaryKey": "[SettingKey]"
+  }
+}

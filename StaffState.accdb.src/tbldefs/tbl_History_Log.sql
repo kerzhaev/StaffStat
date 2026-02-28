@@ -1,8 +1,0 @@
-﻿CREATE TABLE [tbl_History_Log] (
-  [LogID] AUTOINCREMENT CONSTRAINT [PK_Log] PRIMARY KEY UNIQUE NOT NULL,
-  [PersonUID] VARCHAR (50),
-  [ChangeDate] DATETIME,
-  [FieldName] VARCHAR (100),
-  [OldValue] LONGTEXT,
-  [NewValue] LONGTEXT
-)

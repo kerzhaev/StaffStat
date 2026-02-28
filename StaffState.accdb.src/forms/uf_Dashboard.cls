@@ -15,6 +15,13 @@ Option Explicit
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
+    ' === PHASE 25: Ensure Back-End is connected before loading dashboard ===
+    If Not mod_Table_Relinker.VerifyAndRelinkTables() Then
+        DoCmd.Quit acQuitSaveNone
+        Exit Sub
+    End If
+    ' =======================================================================
+
     Me.txtEndDate.value = Date
     Me.txtStartDate.value = Date - 30
     RefreshMetrics
