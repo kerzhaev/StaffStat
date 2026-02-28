@@ -1,9 +1,11 @@
-Attribute VB_Name = "mod_Analysis_Logic"
+﻿Attribute VB_Name = "mod_Analysis_Logic"
+Option Compare Database
 Option Explicit
 
 ' =============================================
 ' @module mod_Analysis_Logic (PRODUCTION)
 ' @description Universal data synchronization
+' @note 100% English version.
 ' =============================================
 
 Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Optional ByVal blnSuppressMsgBox As Boolean = False)
@@ -16,34 +18,55 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
     Dim strUID As String
     Dim iNew As Long, iUpd As Long
     Dim dtChangeDate As Date
+    Dim lTotal As Long
+    Dim lRecNum As Long
+    Dim strOrderDateContext As String
 
-    ' 1. Extend Master structure
     DoCmd.Close acTable, "tbl_Personnel_Master", acSaveYes
     DoCmd.Close acTable, "tbl_Import_Buffer", acSaveYes
 
     mod_Schema_Manager.SyncMasterStructure
 
     Set db = CurrentDb
-    db.TableDefs.Refresh ' Must clear table cache
+    db.TableDefs.Refresh
 
-    ' 2. Get export file date from metadata (or Now() as fallback)
+    mod_Schema_Manager.CreateValidationLogTable
+
     dtChangeDate = GetExportFileDate()
     Debug.Print "Using ChangeDate: " & dtChangeDate
 
-    Set rsBuffer = db.OpenRecordset("tbl_Import_Buffer", dbOpenSnapshot)
+    lTotal = GetBufferRecordCount(db)
+    If lTotal = 0 Then
+        outNew = 0
+        outUpdated = 0
+        If Not blnSuppressMsgBox Then MsgBox "Synchronization completed! Buffer is empty.", vbInformation
+        Exit Sub
+    End If
+
+    Set rsBuffer = db.OpenRecordset(GetOrderedBufferSQL(), dbOpenSnapshot)
     Set rsMaster = db.OpenRecordset("tbl_Personnel_Master", dbOpenDynaset)
 
     outNew = 0
     outUpdated = 0
+    lRecNum = 0
 
-    ' If buffer is empty - exit
-    If rsBuffer.EOF Then GoTo ExitHandler
+    DBEngine.Workspaces(0).BeginTrans
 
     Do While Not rsBuffer.EOF
-        strUID = Nz(rsBuffer!PersonUID_Raw, "")
+        lRecNum = lRecNum + 1
+        strUID = Trim$(Nz(rsBuffer!PersonUID, ""))
 
-        If strUID <> "" Then
-            rsMaster.FindFirst "PersonUID = '" & strUID & "'"
+        If strUID = "" Then
+            ' skip empty UID
+        ElseIf Not mod_Maintenance_Logic.IsValidPersonUID(strUID) Then
+            mod_Maintenance_Logic.LogValidationError 0, "tbl_Import_Buffer", "InvalidPersonUID", "Invalid PersonUID format: " & strUID
+            Debug.Print "Skipped record " & lRecNum & " - invalid UID: " & strUID
+        Else
+            Debug.Print "Processing record " & lRecNum & " of " & lTotal & " for UID: " & strUID
+
+            strOrderDateContext = GetBufferOrderDateContext(rsBuffer)
+
+            rsMaster.FindFirst "PersonUID = '" & Replace(strUID, "'", "''") & "'"
 
             If rsMaster.NoMatch Then
                 ' --- NEW EMPLOYEE ---
@@ -54,56 +77,33 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
                 CopyAllFields rsBuffer, rsMaster
                 rsMaster.Update
 
-                ' NOTE: Avoid Cyrillic literals in DB writes for first-run stability.
-                ' UI will translate these tokens to Russian.
-                LogChange strUID, "_System", "", "Added", dtChangeDate
+                LogChange strUID, "_System", "", "Added", dtChangeDate, ""
                 iNew = iNew + 1
             Else
                 ' --- EXISTING ---
-                rsMaster.Edit
-
                 Dim bChanged As Boolean
                 bChanged = False
+                rsMaster.Edit
 
                 For Each fld In rsBuffer.Fields
                     Dim sBufName As String
                     Dim sMasName As String
 
                     sBufName = fld.Name
-                    sMasName = ""
+                    sMasName = BufferFieldToMasterName(sBufName)
 
-                    ' 1. Name logic (remove _Raw suffix)
-                    If Right(sBufName, 4) = "_Raw" Then
-                        Select Case sBufName
-                            Case "SourceID_Raw": sMasName = "SourceID"
-                            Case "PersonUID_Raw": sMasName = "PersonUID"
-                            Case "Rank_Raw": sMasName = "RankName"
-                            Case "FullName_Raw": sMasName = "FullName"
-                            Case "BirthDate_Raw": sMasName = "BirthDate"
-                            Case "WorkStatus_Raw": sMasName = "WorkStatus"
-                            Case "PosCode_Raw": sMasName = "PosCode"
-                            Case "PosName_Raw": sMasName = "PosName"
-                            Case "OrderDate_Raw": sMasName = "OrderDate"
-                            Case "OrderNum_Raw": sMasName = "OrderNum"
-                            Case Else: sMasName = Left(sBufName, Len(sBufName) - 4)
-                        End Select
-                    Else
-                        sMasName = sBufName ' Dynamic fields
-                    End If
+                    If sMasName <> "" And FieldExistsInRS(rsMaster, sMasName) Then
+                        If sMasName <> "PersonUID" And sMasName <> "LogID" And sMasName <> "LastUpdated" _
+                           And sMasName <> "ID" And sMasName <> "IsActive" Then
 
-                    ' 2. Check and update
-                    If sMasName <> "" Then
-                        If FieldExistsInRS(rsMaster, sMasName) Then
-                            ' Exclude technical fields from change tracking
-                            If sMasName <> "PersonUID" And sMasName <> "LogID" And sMasName <> "LastUpdated" _
-                               And sMasName <> "ID" And sMasName <> "IsActive" Then
-                                Dim valBuf As String, valMas As String
-                                valBuf = Nz(fld.Value, "")
-                                valMas = Nz(rsMaster.Fields(sMasName).Value, "")
+                            Dim vBuf As Variant, vMas As Variant
+                            vBuf = fld.value
+                            vMas = rsMaster.Fields(sMasName).value
 
-                                If valBuf <> valMas Then
-                                    rsMaster.Fields(sMasName).Value = fld.Value
-                                    LogChange strUID, sMasName, valMas, valBuf, dtChangeDate
+                            If Not IsNull(rsBuffer.Fields(fld.Name).value) And rsBuffer.Fields(fld.Name).value <> "" Then
+                                If Not ValuesEqual(vBuf, vMas) Then
+                                    rsMaster.Fields(sMasName).value = fld.value
+                                    LogChange strUID, sMasName, ValueToLogString(vMas), ValueToLogString(vBuf), dtChangeDate, strOrderDateContext
                                     bChanged = True
                                 End If
                             End If
@@ -120,6 +120,8 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
         rsBuffer.MoveNext
     Loop
 
+    DBEngine.Workspaces(0).CommitTrans
+
 ExitHandler:
     outNew = iNew
     outUpdated = iUpd
@@ -130,6 +132,7 @@ ExitHandler:
                "Updated: " & iUpd, vbInformation
     End If
 
+    On Error Resume Next
     rsBuffer.Close
     rsMaster.Close
     Set rsBuffer = Nothing
@@ -138,6 +141,7 @@ ExitHandler:
     Exit Sub
 
 ErrorHandler:
+    DBEngine.Workspaces(0).Rollback
     If Not blnSuppressMsgBox Then
         MsgBox "Analysis error: " & Err.Description, vbCritical
     Else
@@ -148,7 +152,6 @@ End Sub
 
 ' =============================================
 ' @description Runs the full import -> sync -> index pipeline.
-'              Shows a single final summary message.
 ' =============================================
 Public Sub RunFullSyncProcess()
     On Error GoTo ErrorHandler
@@ -160,15 +163,25 @@ Public Sub RunFullSyncProcess()
     Dim iIdxSkipped As Long
     Dim strSummary As String
 
+    ' 1. Import
     blnImported = mod_Import_Logic.ImportExcelData(True)
 
     If blnImported Then
+        ' 2. Sync
         SyncBufferToMaster iNew, iUpd, True
+
+        ' 3. Rebuild Indexes
         mod_App_Init.CreatePerformanceIndexes iIdxCreated, iIdxSkipped, True
+
         strSummary = "Full Update Summary" & vbCrLf & _
                      "Import: OK" & vbCrLf & _
                      "Sync: New=" & iNew & ", Updated=" & iUpd & vbCrLf & _
                      "Indexes: Created=" & iIdxCreated & ", Skipped=" & iIdxSkipped
+
+        ' 4. Auto Health Check
+        If UCase(Trim$(CStr(Nz(mod_Maintenance_Logic.GetSetting("AutoCheckEnabled", "False"), "False")))) = "TRUE" Then
+            mod_Maintenance_Logic.RunDataHealthCheck True
+        End If
     Else
         strSummary = "Full Update Summary" & vbCrLf & _
                      "Import: FAILED or CANCELED" & vbCrLf & _
@@ -176,58 +189,25 @@ Public Sub RunFullSyncProcess()
                      "Indexes: SKIPPED"
     End If
 
-    MsgBox strSummary, vbInformation, "Full Update"
+    mod_UI_Helpers.ShowMessage strSummary, vbInformation
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Full Update failed: " & Err.Description, vbCritical, "Full Update"
+    mod_UI_Helpers.ShowMessage "Full Update failed: " & Err.Description, vbCritical
 End Sub
 
-' --- HELPER FUNCTIONS REMAIN THE SAME ---
-' (CopyAllFields, FieldExistsInRS, LogChange)
-' Make sure CopyAllFields is the latest version (where name logic matches the loop above)
-' If needed - I can duplicate them here, but they haven't changed.
-
-' =============================================
-' @description Universally copies fields from rsSource to rsDest
-'              Takes into account that new fields may have the same names.
-' =============================================
 Private Sub CopyAllFields(rsSource As DAO.Recordset, rsDest As DAO.Recordset)
     Dim fldSource As DAO.Field
     Dim strDestFieldName As String
 
     For Each fldSource In rsSource.Fields
-        strDestFieldName = ""
+        strDestFieldName = fldSource.Name
+        If strDestFieldName = "ID" Then strDestFieldName = ""
 
-        ' --- LOGIC FOR DETERMINING FIELD NAME IN DESTINATION (Master) ---
-        ' 1. If field ends with _Raw, find its counterpart without _Raw
-        If Right(fldSource.Name, 4) = "_Raw" Then
-            Select Case fldSource.Name
-                Case "SourceID_Raw": strDestFieldName = "SourceID"
-                Case "PersonUID_Raw": strDestFieldName = "PersonUID"
-                Case "Rank_Raw": strDestFieldName = "RankName"
-                Case "FullName_Raw": strDestFieldName = "FullName"
-                Case "BirthDate_Raw": strDestFieldName = "BirthDate"
-                Case "WorkStatus_Raw": strDestFieldName = "WorkStatus"
-                Case "PosCode_Raw": strDestFieldName = "PosCode"
-                Case "PosName_Raw": strDestFieldName = "PosName"
-                Case "OrderDate_Raw": strDestFieldName = "OrderDate"
-                Case "OrderNum_Raw": strDestFieldName = "OrderNum"
-                Case Else: strDestFieldName = Left(fldSource.Name, Len(fldSource.Name) - 4) ' General case
-            End Select
-        Else
-            ' 2. If field doesn't end with _Raw (e.g., "??????_?????"),
-            '    look for it in Master with the same name.
-            strDestFieldName = fldSource.Name
-        End If
-
-        ' --- COPY VALUE ---
         If strDestFieldName <> "" And FieldExistsInRS(rsDest, strDestFieldName) Then
-            ' Exclude technical fields (PersonUID already set, ID is auto-increment)
-            If strDestFieldName <> "PersonUID" And strDestFieldName <> "ID" _
-               And strDestFieldName <> "LogID" And strDestFieldName <> "LastUpdated" Then
-                On Error Resume Next ' Ignore type errors (e.g., text to date)
-                rsDest.Fields(strDestFieldName).Value = fldSource.Value
+            If strDestFieldName <> "PersonUID" And strDestFieldName <> "LogID" And strDestFieldName <> "LastUpdated" Then
+                On Error Resume Next
+                rsDest.Fields(strDestFieldName).value = fldSource.value
                 On Error GoTo 0
             End If
         End If
@@ -241,20 +221,24 @@ Private Function FieldExistsInRS(rs As DAO.Recordset, strName As String) As Bool
     FieldExistsInRS = (Err.Number = 0)
 End Function
 
-Private Sub LogChange(strUID As String, strField As String, strOld As String, strNew As String, dtDate As Date)
+Private Sub LogChange(strUID As String, strField As String, strOld As String, strNew As String, dtDate As Date, Optional strOrderDateContext As String = "")
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
+    Dim strNewVal As String
+
+    strNewVal = Left(strNew, 255)
+    If strOrderDateContext <> "" Then strNewVal = Left(strNew, 200) & " [OrderDate: " & Left(strOrderDateContext, 40) & "]"
 
     Set db = CurrentDb
     Set rs = db.OpenRecordset("tbl_History_Log", dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
     rs!PersonUID = strUID
-    rs!FieldName = strField
+    rs!fieldName = strField
     rs!OldValue = Left(strOld, 255)
-    rs!NewValue = Left(strNew, 255)
+    rs!NewValue = strNewVal
     rs!ChangeDate = dtDate
     rs.Update
 
@@ -272,19 +256,12 @@ ErrorHandler:
     If Not db Is Nothing Then Set db = Nothing
 End Sub
 
-' =============================================
-' @description Gets export file date from import metadata table.
-' @return [Date] ExportFileDate from tbl_Import_Meta, or Now() if not available.
-' =============================================
 Private Function GetExportFileDate() As Date
     On Error GoTo ErrorHandler
-
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
     Set db = CurrentDb
-
-    ' Check if metadata table exists
     If Not TableExists("tbl_Import_Meta") Then
         GetExportFileDate = Now()
         Exit Function
@@ -299,7 +276,6 @@ Private Function GetExportFileDate() As Date
             GetExportFileDate = Now()
         End If
     Else
-        ' No metadata record - use current date
         GetExportFileDate = Now()
     End If
 
@@ -309,17 +285,72 @@ Private Function GetExportFileDate() As Date
     Exit Function
 
 ErrorHandler:
-    ' Fallback to current date on any error
     GetExportFileDate = Now()
 End Function
 
-' =============================================
-' @description Helper function to check if table exists.
-' =============================================
 Private Function TableExists(strTableName As String) As Boolean
     Dim tdf As DAO.TableDef
     On Error Resume Next
     Set tdf = CurrentDb.TableDefs(strTableName)
     TableExists = (Err.Number = 0)
     Err.Clear
+End Function
+
+Private Function GetOrderedBufferSQL() As String
+    GetOrderedBufferSQL = "SELECT * FROM tbl_Import_Buffer ORDER BY PersonUID ASC, Nz([OrderDate_Text],'') ASC, [ID] ASC;"
+End Function
+
+Private Function GetBufferRecordCount(db As DAO.Database) As Long
+    On Error Resume Next
+    Dim rs As DAO.Recordset
+    Set rs = db.OpenRecordset("SELECT COUNT(*) AS Cnt FROM tbl_Import_Buffer;", dbOpenSnapshot)
+    If Not rs Is Nothing And Not rs.EOF Then
+        GetBufferRecordCount = Nz(rs!Cnt, 0)
+        rs.Close
+    Else
+        GetBufferRecordCount = 0
+    End If
+    Set rs = Nothing
+End Function
+
+Private Function GetBufferOrderDateContext(rsBuffer As DAO.Recordset) As String
+    On Error Resume Next
+    If FieldExistsInRS(rsBuffer, "OrderDate_Text") Then
+        GetBufferOrderDateContext = Trim$(Nz(rsBuffer!OrderDate_Text, ""))
+    Else
+        GetBufferOrderDateContext = ""
+    End If
+End Function
+
+Private Function BufferFieldToMasterName(sBufName As String) As String
+    If sBufName = "ID" Then BufferFieldToMasterName = "": Exit Function
+    BufferFieldToMasterName = sBufName
+End Function
+
+Private Function ValuesEqual(v1 As Variant, v2 As Variant) As Boolean
+    Dim s1 As String, s2 As String
+    If IsNull(v1) And IsNull(v2) Then ValuesEqual = True: Exit Function
+    If IsNull(v1) Then
+        s2 = ValueToLogString(v2)
+        ValuesEqual = (s2 = "")
+        Exit Function
+    End If
+    If IsNull(v2) Then
+        s1 = ValueToLogString(v1)
+        ValuesEqual = (s1 = "")
+        Exit Function
+    End If
+    s1 = ValueToLogString(v1)
+    s2 = ValueToLogString(v2)
+    ValuesEqual = (s1 = s2)
+End Function
+
+Private Function ValueToLogString(v As Variant) As String
+    If IsNull(v) Then ValueToLogString = "": Exit Function
+    ValueToLogString = Trim$(CStr(v))
+End Function
+
+Private Function IsBufferValueEmpty(v As Variant) As Boolean
+    If IsNull(v) Then IsBufferValueEmpty = True: Exit Function
+    IsBufferValueEmpty = (Trim$(CStr(v)) = "")
 End Function

@@ -3,78 +3,201 @@ Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Compare Database
-
 Option Explicit
 
+' True when form opened with OpenArgs MODE=DUPLICATES
+Private m_fDuplicatesMode As Boolean
+' Mode string from OpenArgs (e.g. "MODE=DUPLICATES"); empty = normal search
+Private m_strMode As String
 
+' --- FORM LOAD: delegate to OpenArgs handler ---
+Private Sub Form_Load()
+    On Error GoTo ErrorHandler
 
-' --- SEARCH BUTTON ---
+    m_fDuplicatesMode = False
+    m_strMode = ""
+    HandleOpenArgsMode
+    If Not m_fDuplicatesMode Then Me.Caption = mod_UI_Helpers.GetSearchCaption()
+
+ExitHere:
+    Exit Sub
+ErrorHandler:
+    Debug.Print "Form_Load (uf_Search) error: " & Err.Number & " - " & Err.Description
+    m_fDuplicatesMode = False
+    Resume ExitHere
+End Sub
+
+' --- Entry point ---
+Private Sub HandleOpenArgsMode()
+    On Error GoTo ErrorHandler
+
+    Dim strArgs As String
+
+    strArgs = Nz(Me.OpenArgs, "")
+    If IsDuplicatesMode(strArgs) Then
+        LoadDuplicatesModeAndNotify
+    End If
+
+ExitHere:
+    Exit Sub
+ErrorHandler:
+    Debug.Print "HandleOpenArgsMode error: " & Err.Number & " - " & Err.Description
+    Resume ExitHere
+End Sub
+
+Private Function IsDuplicatesMode(ByVal strOpenArgs As String) As Boolean
+    On Error GoTo ErrorHandler
+    IsDuplicatesMode = (InStr(1, Nz(strOpenArgs, ""), "MODE=DUPLICATES", vbTextCompare) > 0)
+    Exit Function
+ErrorHandler:
+    IsDuplicatesMode = False
+    Debug.Print "IsDuplicatesMode error: " & Err.Number & " - " & Err.Description
+End Function
+
+Private Sub LoadDuplicatesModeAndNotify()
+    On Error GoTo ErrorHandler
+
+    Const cSqlGroups As String = "SELECT Count(*) AS GroupCount FROM (SELECT FullName, BirthDate FROM tbl_Personnel_Master WHERE FullName Is Not Null AND Len(Trim(FullName))>0 AND BirthDate Is Not Null GROUP BY FullName, BirthDate HAVING Count(*)>1) AS d;"
+    Const cSqlRecords As String = "SELECT Count(*) AS RecordCount FROM tbl_Personnel_Master AS pm INNER JOIN (SELECT FullName, BirthDate FROM tbl_Personnel_Master WHERE FullName Is Not Null AND Len(Trim(FullName))>0 AND BirthDate Is Not Null GROUP BY FullName, BirthDate HAVING Count(*)>1) AS d ON pm.FullName=d.FullName AND pm.BirthDate=d.BirthDate;"
+
+    Dim strSQL As String
+    Dim lngGroups As Long
+    Dim lngRecords As Long
+
+    m_fDuplicatesMode = True
+    m_strMode = "MODE=DUPLICATES"
+    Me.txtFilter.value = ""
+    Me.txtFilter.Enabled = False
+    Me.Caption = "Duplicates (FullName + BirthDate)"
+    On Error Resume Next
+    Me.btnExportExcel.Enabled = False
+    On Error GoTo ErrorHandler
+
+    strSQL = BuildDuplicatesSQL()
+    If strSQL <> "" Then
+        Me.lstResults.RowSource = ""
+        Me.lstResults.RowSource = strSQL
+        Me.lstResults.Requery
+    End If
+    Me.btnExportExcel.Enabled = (Me.lstResults.ListCount > 0)
+
+    lngGroups = ExecuteScalarLong(cSqlGroups)
+    lngRecords = ExecuteScalarLong(cSqlRecords)
+    Debug.Print "Duplicates mode: groups=" & lngGroups & ", records=" & lngRecords
+
+    If lngGroups = 0 Then
+        MsgBox "No duplicates found.", vbInformation
+    Else
+        MsgBox "Found duplicates: groups = " & lngGroups & ", records = " & lngRecords & ".", vbInformation
+    End If
+
+ExitHere:
+    Exit Sub
+ErrorHandler:
+    Debug.Print "LoadDuplicatesModeAndNotify error: " & Err.Number & " - " & Err.Description
+    m_fDuplicatesMode = False
+    Resume ExitHere
+End Sub
+
+Private Function ExecuteScalarLong(ByVal strSQL As String) As Long
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim v As Variant
+
+    ExecuteScalarLong = 0
+    If Trim$(strSQL) = "" Then Exit Function
+
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
+    If Not rs.EOF Then
+        v = rs.Fields(0).value
+        If Not IsNull(v) Then ExecuteScalarLong = CLng(v)
+    End If
+
+ExitHere:
+    On Error Resume Next
+    If Not rs Is Nothing Then
+        rs.Close
+        Set rs = Nothing
+    End If
+    Set db = Nothing
+    Exit Function
+ErrorHandler:
+    Debug.Print "ExecuteScalarLong error: " & Err.Number & " - " & Err.Description & " | SQL: " & Left$(strSQL, 80)
+    ExecuteScalarLong = 0
+    Resume ExitHere
+End Function
+
 Private Sub btnSearch_Click()
-    ' #Region agent log
     DebugLog "uf_Search.cls:btnSearch_Click", "btnSearch_Click entry", "H4", "{""event"":""btnSearch_Click""}"
-    ' #End Region
     PerformSearch
 End Sub
 
-' --- CLEAR BUTTON ---
 Private Sub btnClear_Click()
-    On Error Resume Next
-    Me.txtFilter.Value = ""
-    Me.lstResults.RowSource = ""
-    Me.txtFilter.SetFocus
+    On Error GoTo ErrorHandler
+
+    If m_fDuplicatesMode Or (m_strMode <> "") Then
+        m_fDuplicatesMode = False
+        m_strMode = ""
+        Me.lstResults.RowSource = ""
+        Me.lstResults.Requery
+        Me.txtFilter.Enabled = True
+        Me.txtFilter.value = ""
+        Me.Caption = mod_UI_Helpers.GetSearchCaption()
+        On Error Resume Next
+        Me.btnExportExcel.Enabled = False
+        Me.btnSearch.Enabled = True
+        Me.btnClear.Enabled = True
+        On Error GoTo ErrorHandler
+        Me.txtFilter.SetFocus
+    Else
+        Me.txtFilter.value = ""
+        Me.lstResults.RowSource = ""
+        Me.lstResults.Requery
+        Me.txtFilter.SetFocus
+    End If
+    Exit Sub
+ErrorHandler:
+    Debug.Print "btnClear_Click error: " & Err.Number & " - " & Err.Description
 End Sub
 
-' --- AUTO-SEARCH ON TEXT CHANGE ---
 Private Sub txtFilter_Change()
-    ' Perform search automatically as user types (without showing "not found" message)
-    ' #Region agent log
+    If m_fDuplicatesMode Then Exit Sub
     DebugLog "uf_Search.cls:txtFilter_Change", "txtFilter_Change entry", "H4", "{""event"":""txtFilter_Change""}"
-    ' #End Region
     PerformSearch bSilent:=True
 End Sub
 
-' --- ENTER KEY PRESS IN INPUT FIELD ---
 Private Sub txtFilter_KeyDown(KeyCode As Integer, Shift As Integer)
-    ' If Enter pressed (Code 13)
     If KeyCode = 13 Then
         PerformSearch
-        KeyCode = 0 ' Suppress standard Enter sound
+        KeyCode = 0
     End If
 End Sub
 
-' --- KEY UP EVENT (More reliable for auto-search) ---
 Private Sub txtFilter_KeyUp(KeyCode As Integer, Shift As Integer)
-    ' Trigger search after key is released (text is already updated)
-    ' Skip Enter key (already handled in KeyDown)
+    If m_fDuplicatesMode Then Exit Sub
     If KeyCode <> 13 Then
-        ' #Region agent log
         DebugLog "uf_Search.cls:txtFilter_KeyUp", "txtFilter_KeyUp entry", "H4", "{""event"":""txtFilter_KeyUp"",""keyCode"":" & CStr(KeyCode) & "}"
-        ' #End Region
         PerformSearch bSilent:=True
     End If
 End Sub
 
-' --- DOUBLE CLICK ON LIST ---
 Private Sub lstResults_DblClick(Cancel As Integer)
     On Error GoTo ErrorHandler
 
-    Dim strUID As Variant ' Use Variant to catch Null
+    Dim strUID As Variant
 
-    ' Check if there's a selection
     If Me.lstResults.ItemsSelected.count = 0 Then Exit Sub
+    strUID = Me.lstResults.value
 
-    ' Get value (it's taken from Bound Column = 1)
-    strUID = Me.lstResults.Value
-
-    ' DIAGNOSTICS: If empty - report it
     If IsNull(strUID) Or strUID = "" Then
         MsgBox "Warning: Employee ID was not read from the list." & vbCrLf & _
                "Check 'Column Count' (should be 4) and 'Bound Column' (should be 1).", vbExclamation
         Exit Sub
     End If
 
-    ' If all ok - open card
-    ' Pass ID in OpenArgs (last parameter)
     DoCmd.OpenForm "uf_PersonCard", , , , , acDialog, CStr(strUID)
 
     Exit Sub
@@ -82,89 +205,120 @@ ErrorHandler:
     MsgBox "Open error: " & Err.Description
 End Sub
 
-' --- EXPORT TO EXCEL ---
 Private Sub btnExportExcel_Click()
     On Error GoTo ErrorHandler
 
-    Dim strSQL   As String
-    Dim strFilter As String
-    Dim db       As DAO.Database
-    Dim rs       As DAO.Recordset
-
-    strFilter = GetCurrentFilterText()
-    strSQL = BuildDynamicSearchSQL(strFilter, bAddTop50:=False)
-    If strSQL = "" Then
-        MsgBox "No data to export.", vbExclamation
+    If m_fDuplicatesMode Then
+        ExportDuplicatesToExcel
         Exit Sub
     End If
 
-    Set db = CurrentDb
-    Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
-    If rs.EOF Then
-        rs.Close
-        Set rs = Nothing
-        Set db = Nothing
-        MsgBox "No data to export.", vbExclamation
-        Exit Sub
+    If mod_Export_Logic.ExportFullSearchToExcel() Then
+        ' Success message inside logic
     End If
 
-    If mod_Export_Logic.ExportSearchToExcel(rs) Then
-        ' Success (message shown inside ExportSearchToExcel)
-    End If
-
-Cleanup:
-    On Error Resume Next
-    If Not rs Is Nothing Then
-        rs.Close
-        Set rs = Nothing
-    End If
-    Set db = Nothing
     Exit Sub
-
 ErrorHandler:
     MsgBox "Export error: " & Err.Description, vbCritical
-    GoTo Cleanup
 End Sub
 
-' --- SEARCH LOGIC (dynamic: TableDef.Fields, searchable types only) ---
-' @param bSilent [Boolean] If True, suppress "not found" message (for auto-search)
+Private Sub ExportDuplicatesToExcel()
+    On Error GoTo ErrorHandler
+
+    Const cQdfName As String = "qtmpExportDuplicates"
+
+    Dim strSQL   As String
+    Dim filePath As String
+
+    If Me.lstResults.ListCount = 0 Then
+        MsgBox "Nothing to export: the list is empty.", vbExclamation
+        Exit Sub
+    End If
+
+    strSQL = BuildDuplicatesExportSql()
+    If strSQL = "" Then
+        Debug.Print "ExportDuplicatesToExcel: BuildDuplicatesExportSql returned empty"
+        MsgBox "Error preparing data for export.", vbCritical
+        Exit Sub
+    End If
+
+    SaveOrReplaceQueryDef cQdfName, strSQL
+
+    filePath = CurrentProject.Path & "\Duplicates_" & Format(Now, "yyyymmdd_hhnnss") & ".xlsx"
+    DoCmd.TransferSpreadsheet acExport, acSpreadsheetTypeExcel12Xml, cQdfName, filePath, True
+
+    MsgBox "Export completed: " & filePath, vbInformation
+
+ExitHere:
+    Exit Sub
+ErrorHandler:
+    Debug.Print "ExportDuplicatesToExcel error: " & Err.Number & " - " & Err.Description
+    MsgBox "Export error: " & Err.Description, vbCritical
+    Resume ExitHere
+End Sub
+
+Private Function BuildDuplicatesExportSql() As String
+    On Error GoTo ErrorHandler
+
+    BuildDuplicatesExportSql = "SELECT pm.PersonUID, pm.FullName, pm.BirthDate, pm.RankName, pm.PosName, pm.IsActive " & _
+        "FROM tbl_Personnel_Master AS pm " & _
+        "INNER JOIN (" & _
+        "SELECT FullName, BirthDate FROM tbl_Personnel_Master " & _
+        "WHERE FullName Is Not Null AND Len(Trim(FullName))>0 AND BirthDate Is Not Null " & _
+        "GROUP BY FullName, BirthDate HAVING Count(*)>1" & _
+        ") AS d ON pm.FullName = d.FullName AND pm.BirthDate = d.BirthDate " & _
+        "ORDER BY pm.FullName, pm.BirthDate, pm.PersonUID;"
+
+    Exit Function
+ErrorHandler:
+    BuildDuplicatesExportSql = ""
+    Debug.Print "BuildDuplicatesExportSql error: " & Err.Number & " - " & Err.Description
+End Function
+
+Private Sub SaveOrReplaceQueryDef(ByVal strName As String, ByVal strSQL As String)
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+
+    If Trim$(strName) = "" Or Trim$(strSQL) = "" Then Exit Sub
+
+    Set db = CurrentDb
+    On Error Resume Next
+    db.QueryDefs.Delete strName
+    On Error GoTo ErrorHandler
+    db.CreateQueryDef strName, strSQL
+
+ExitHere:
+    Set db = Nothing
+    Exit Sub
+ErrorHandler:
+    Debug.Print "SaveOrReplaceQueryDef error: " & Err.Number & " - " & Err.Description
+    Resume ExitHere
+End Sub
+
 Private Sub PerformSearch(Optional bSilent As Boolean = False)
     On Error GoTo ErrorHandler
 
-    Dim strSQL    As String
-    Dim strFilter As String
+    If m_fDuplicatesMode Then Exit Sub
 
-    strFilter = GetCurrentFilterText()
-    ' #Region agent log
-    DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after GetCurrentFilterText", "H1", "{""bSilent"":" & LCase$(CStr(bSilent)) & ",""filterLen"":" & CStr(Len(strFilter)) & "}"
-    ' #End Region
+    Dim strSQL As String
 
-    ' Escape single quotes for SQL safety
-    strFilter = Replace(strFilter, "'", "''")
+    strSQL = GetSearchSQL(bAddTop50:=True)
 
-    ' MINIMUM LENGTH CHECK: Start search only after 2 characters
-    If Len(strFilter) > 0 And Len(strFilter) < 2 Then
-        Me.lstResults.RowSource = ""
-        Me.lstResults.Requery
-        Exit Sub
-    End If
+    DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after GetSearchSQL", "H2", "{""bSilent"":" & LCase$(CStr(bSilent)) & ",""sqlLen"":" & CStr(Len(strSQL)) & ",""hasSQL"":" & LCase$(CStr(strSQL <> "")) & "}"
 
-    strSQL = BuildDynamicSearchSQL(strFilter, bAddTop50:=True)
-    ' #Region agent log
-    DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after BuildDynamicSearchSQL", "H2", "{""sqlLen"":" & CStr(Len(strSQL)) & ",""hasSQL"":" & LCase$(CStr(strSQL <> "")) & "}"
-    ' #End Region
     If strSQL = "" Then
         Me.lstResults.RowSource = ""
         Me.lstResults.Requery
         Exit Sub
     End If
 
+    Me.lstResults.RowSourceType = "Table/Query"
     Me.lstResults.RowSource = ""
     Me.lstResults.RowSource = strSQL
     Me.lstResults.Requery
-    ' #Region agent log
+
     DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after Requery", "H3", "{""listCount"":" & CStr(Me.lstResults.ListCount) & "}"
-    ' #End Region
 
     If Not bSilent And Me.lstResults.ListCount = 0 Then
         MsgBox "No employees found.", vbExclamation
@@ -175,142 +329,63 @@ ErrorHandler:
     If Not bSilent Then
         MsgBox "Search error: " & Err.Description, vbCritical
     End If
-    ' #Region agent log
     DebugLog "uf_Search.cls:PerformSearch", "PerformSearch error", "H2", "{""errNumber"":" & CStr(Err.Number) & ",""hasError"":" & LCase$(CStr(Err.Number <> 0)) & "}"
-    ' #End Region
 End Sub
 
-' --- Get filter text from txtFilter ---
-Private Function GetCurrentFilterText() As String
+Public Function GetCurrentFilterText() As String
     On Error Resume Next
     GetCurrentFilterText = Trim$(Nz(Me.txtFilter.Text, ""))
     If Err.Number <> 0 Or GetCurrentFilterText = "" Then
-        GetCurrentFilterText = Trim$(Nz(Me.txtFilter.Value, ""))
+        GetCurrentFilterText = Trim$(Nz(Me.txtFilter.value, ""))
     End If
-    ' #Region agent log
     DebugLog "uf_Search.cls:GetCurrentFilterText", "GetCurrentFilterText result", "H1", "{""textErr"":" & CStr(Err.Number) & ",""filterLen"":" & CStr(Len(GetCurrentFilterText)) & "}"
-    ' #End Region
 End Function
 
-' --- Build dynamic SELECT and WHERE from tbl_Personnel_Master schema ---
-' Searchable types: Text(10), Memo(12), Long(4), Date(8). Blacklist: ID, SourceID, IsActive, LastUpdated, LogID, PersonUID_Raw.
-' @param strFilter [String] Escaped search text (caller must replace ')
-' @param bAddTop50 [Boolean] If True, add TOP 50 for list
-' @return Full SQL or empty string on error
-Private Function BuildDynamicSearchSQL(ByVal strFilter As String, ByVal bAddTop50 As Boolean) As String
+Public Function GetSearchSQL(Optional ByVal bAddTop50 As Boolean = False) As String
     On Error GoTo ErrorHandler
 
-    Dim db     As DAO.Database
-    Dim tdf    As DAO.TableDef
-    Dim fld    As DAO.Field
-    Dim selParts  As String
-    Dim whereParts As String
-    Dim fName As String
-    Dim dt     As Integer
-    Dim preferred As String
-    Dim rest   As String
-    Dim n      As String
-    Dim orderField As String
-    Dim firstField As String
-    Dim fc As Long
-    Dim fcErr As Long
+    Dim strSQL As String
+    Dim strFilter As String
+    Dim selCols As String
+    Dim whereClause As String
 
-    DebugInspectTableDef "tbl_Personnel_Master"
-    Set db = CurrentDb
-    ' #Region agent log
-    DebugLog "uf_Search.cls:BuildDynamicSearchSQL", "BuildDynamicSearchSQL after Set db", "H2", "{""dbSet"":" & LCase$(CStr(Not db Is Nothing)) & "}"
-    ' #End Region
-    Set tdf = db.TableDefs("tbl_Personnel_Master")
-    ' #Region agent log
-    DebugLog "uf_Search.cls:BuildDynamicSearchSQL", "BuildDynamicSearchSQL after Set tdf", "H2", "{""tableName"":""" & JsonEscape(tdf.Name) & """}"
-    ' #End Region
-    fc = SafeFieldCount(tdf, fcErr)
-    ' #Region agent log
-    DebugLog "uf_Search.cls:BuildDynamicSearchSQL", "BuildDynamicSearchSQL field count", "H2", "{""fieldCount"":" & CStr(fc) & ",""fcErr"":" & CStr(fcErr) & "}"
-    ' #End Region
-    If fcErr <> 0 Then GoTo ErrorHandler
-    preferred = ""
-    rest = ""
-    orderField = ""
-    firstField = ""
+    strFilter = GetCurrentFilterText()
+    strFilter = Replace(strFilter, "'", "''")
 
-    ' Build SELECT: prefer PersonUID, FullName, RankName, PosName first; then rest (non-blacklist)
-    For Each fld In tdf.Fields
-        fName = fld.Name
-        If mod_Export_Logic.IsTechnicalField(fName) Then GoTo NextField
-        n = "[" & fName & "]"
-        If firstField = "" Then firstField = n
-        Select Case fName
-            Case "PersonUID", "FullName", "RankName", "PosName"
-                If preferred <> "" Then preferred = preferred & ", "
-                preferred = preferred & n
-                If fName = "FullName" Then orderField = n
-            Case Else
-                If rest <> "" Then rest = rest & ", "
-                rest = rest & n
-        End Select
-NextField:
-    Next fld
-
-    selParts = preferred
-    If rest <> "" Then
-        If selParts <> "" Then selParts = selParts & ", "
-        selParts = selParts & rest
-    End If
-    If selParts = "" Then Exit Function
-
-    BuildDynamicSearchSQL = "SELECT "
-    If bAddTop50 Then BuildDynamicSearchSQL = BuildDynamicSearchSQL & "TOP 50 "
-    BuildDynamicSearchSQL = BuildDynamicSearchSQL & selParts & " FROM tbl_Personnel_Master"
-
-    ' Build WHERE: only searchable types (Text=10, Memo=12, Long=4, Date=8)
-    If Trim$(strFilter) <> "" Then
-        whereParts = ""
-        For Each fld In tdf.Fields
-            fName = fld.Name
-            If mod_Export_Logic.IsTechnicalField(fName) Then GoTo NextW
-            dt = fld.Type
-            Select Case dt
-                Case 10, 12  ' dbText, dbMemo
-                    n = "([" & fName & "] LIKE '*" & strFilter & "*')"
-                Case 4       ' dbLong
-                    n = "(CStr([" & fName & "]) LIKE '*" & strFilter & "*')"
-                Case 8       ' dbDate
-                    n = "(Format([" & fName & "],'yyyy-mm-dd') LIKE '*" & strFilter & "*')"
-                Case Else
-                    GoTo NextW
-            End Select
-            If whereParts <> "" Then whereParts = whereParts & " OR "
-            whereParts = whereParts & n
-NextW:
-        Next fld
-        If whereParts <> "" Then
-            BuildDynamicSearchSQL = BuildDynamicSearchSQL & " WHERE " & whereParts
-        End If
+    If Len(strFilter) > 0 And Len(strFilter) < 2 Then
+        GetSearchSQL = ""
+        Exit Function
     End If
 
-    If orderField = "" Then orderField = firstField
-    If orderField <> "" Then
-        BuildDynamicSearchSQL = BuildDynamicSearchSQL & " ORDER BY " & orderField & ";"
+    If bAddTop50 Then
+        selCols = "TOP 50 [PersonUID], [FullName], [RankName], [PosName]"
+    Else
+        selCols = "[PersonUID], [FullName], [RankName], [PosName], [SourceID]"
     End If
-    ' #Region agent log
-    DebugLog "uf_Search.cls:BuildDynamicSearchSQL", "BuildDynamicSearchSQL exit", "H2", "{""sqlLen"":" & CStr(Len(BuildDynamicSearchSQL)) & ",""orderFieldSet"":" & LCase$(CStr(orderField <> "")) & "}"
-    ' #End Region
 
-Cleanup:
-    On Error Resume Next
-    Set tdf = Nothing
+    If Trim$(strFilter) = "" Then
+        whereClause = "1=1"
+    Else
+        whereClause = "(Nz([PersonUID],"""") LIKE '*" & strFilter & "*') " & _
+            "OR (Nz([FullName],"""") LIKE '*" & strFilter & "*') " & _
+            "OR (Nz([RankName],"""") LIKE '*" & strFilter & "*') " & _
+            "OR (Nz([PosName],"""") LIKE '*" & strFilter & "*') " & _
+            "OR (CStr(Nz([SourceID],"""")) LIKE '*" & strFilter & "*')"
+    End If
+
+    strSQL = "SELECT " & selCols & " " & _
+        "FROM tbl_Personnel_Master " & _
+        "WHERE " & whereClause & " " & _
+        "ORDER BY [FullName];"
+
+    GetSearchSQL = strSQL
     Exit Function
-
 ErrorHandler:
-    BuildDynamicSearchSQL = ""
-    ' #Region agent log
-    DebugLog "uf_Search.cls:BuildDynamicSearchSQL", "BuildDynamicSearchSQL error", "H2", "{""errNumber"":" & CStr(Err.Number) & ",""hasError"":" & LCase$(CStr(Err.Number <> 0)) & ",""errDesc"":""" & JsonEscape(Err.Description) & """}"
-    ' #End Region
-    GoTo Cleanup
+    GetSearchSQL = ""
+    Debug.Print "GetSearchSQL error: " & Err.Number & " - " & Err.Description
 End Function
 
-' --- DEBUG LOGGING (agent) ---
+' --- DEBUG LOGGING ---
 Private Sub DebugLog(ByVal location As String, ByVal message As String, ByVal hypothesisId As String, ByVal dataJson As String)
     On Error GoTo ErrorHandler
     Dim f As Integer
@@ -319,7 +394,7 @@ Private Sub DebugLog(ByVal location As String, ByVal message As String, ByVal hy
     Dim ts As Currency
     Dim logId As String
 
-    logPath = "c:\Users\Nachfin\Desktop\Projets\StaffState\.cursor\debug.log"
+    logPath = CurrentProject.Path & "\debug_search.log"
     ts = CLng(Timer * 1000)
     Randomize
     logId = "log_" & Format$(Now, "yyyymmddhhnnss") & "_" & CStr(Int(Rnd() * 100000))
@@ -391,4 +466,28 @@ Private Function SafeFieldCount(ByVal tdf As DAO.TableDef, ByRef errNumber As Lo
         errNumber = Err.Number
         Err.Clear
     End If
+End Function
+
+' =============================================
+' @description Builds SQL for duplicates mode
+' =============================================
+Private Function BuildDuplicatesSQL() As String
+    On Error GoTo ErrorHandler
+
+    ' Ignore blank names and null birth dates; group by FullName+BirthDate, HAVING Count>1
+    BuildDuplicatesSQL = "SELECT pm.PersonUID, " & _
+        "pm.FullName & "" ("" & Format(pm.BirthDate,""dd.mm.yyyy"") & "")"" AS FullName, " & _
+        "pm.RankName, pm.PosName " & _
+        "FROM tbl_Personnel_Master AS pm " & _
+        "INNER JOIN (" & _
+        "SELECT FullName, BirthDate FROM tbl_Personnel_Master " & _
+        "WHERE FullName Is Not Null AND Len(Trim(FullName))>0 AND BirthDate Is Not Null " & _
+        "GROUP BY FullName, BirthDate HAVING Count(*)>1" & _
+        ") AS d ON pm.FullName = d.FullName AND pm.BirthDate = d.BirthDate " & _
+        "ORDER BY pm.FullName, pm.BirthDate, pm.PersonUID;"
+
+    Exit Function
+ErrorHandler:
+    BuildDuplicatesSQL = ""
+    Debug.Print "BuildDuplicatesSQL error: " & Err.Number & " - " & Err.Description
 End Function

@@ -1,0 +1,3 @@
+# WinAppDriver UI tests
+# Pure Legacy Stack - WinAppDriver 1.2.1 (JSON Wire Protocol) compatibility
+selenium==3.141.0

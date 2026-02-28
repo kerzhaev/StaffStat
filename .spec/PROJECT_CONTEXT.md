@@ -1,6 +1,10 @@
-# PROJECT CONTEXT: StaffState (Р”РѕР·РѕСЂ) - MS Access/VBA
+# PROJECT CONTEXT: StaffState (Дозор) - MS Access/VBA
 
 ## Current State
+- **Phase 24 (100% English Codebase & Encoding Fix)** is completed.
+  - Complete removal of Cyrillic from source files (.bas, .cls).
+  - Transition to English system messages and comments to protect encoding with Git and AI agents.
+  - The `AddNewFieldToSchema` function has been successfully returned to `uf_Settings` and `mod_Schema_Manager`.
 - Phase 10 (Change Report) is implemented and working.
 - Dashboard includes start/end date inputs for period reporting.
 - Dashboard date inputs now normalize dot-separated dates and change report SQL uses forced MM/DD/YYYY literals.
@@ -33,6 +37,11 @@
 - uf_PersonCard
 
 ## History
+- **Phase 24 (2026-02-28)**:
+  - 100% English Codebase & Encoding Fix.
+  - Complete removal of Cyrillic in source files (.bas, .cls).
+  - Transition to English system messages and comments to protect encoding when working with Git and AI agents.
+  - Successfully brought back the `AddNewFieldToSchema` function to `uf_Settings` form and `mod_Schema_Manager` module.
 - Phase 10 (2026-02-01):
   - Implemented period change report export with date range filtering.
   - Added dashboard inputs for start/end dates and report action.

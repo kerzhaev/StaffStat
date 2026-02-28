@@ -1,16 +1,17 @@
 ﻿Attribute VB_Name = "mod_App_Logger"
+Option Compare Database
 Option Explicit
 
 ' =============================================
 ' @module mod_App_Logger
-' @author ??????? ???????
+' @author Kerzhaev Evgeniy
 ' @description Centralized error and event logging system
+' @note 100% English version. Safe for modern IDEs.
 ' =============================================
 
 Private Const cstrTableName As String = "tbl_System_Logs"
 
 ' =============================================
-' @author ??????? ???????
 ' @description Checks for tbl_System_Logs table and creates it if necessary
 ' =============================================
 Public Sub InitLogger()
@@ -42,7 +43,7 @@ Public Sub InitLogger()
 
         ' LogDate field (DateTime, Default Now)
         Set fld = tdf.CreateField("LogDate", dbDate)
-        fld.DefaultValue = "Now()"
+        fld.defaultValue = "Now()"
         tdf.Fields.Append fld
 
         ' LogType field (Text 50)
@@ -72,7 +73,7 @@ Public Sub InitLogger()
         ' Add table to database
         db.TableDefs.Append tdf
 
-        Debug.Print "?? ??????? " & cstrTableName & " ??????? ???????"
+        Debug.Print "Logger: table " & cstrTableName & " created"
     End If
 
     Set idx = Nothing
@@ -82,7 +83,7 @@ Public Sub InitLogger()
     Exit Sub
 
 ErrorHandler:
-    Debug.Print "?????? InitLogger: " & Err.Description & " (" & Err.Number & ")"
+    Debug.Print "InitLogger error: " & Err.Description & " (" & Err.Number & ")"
     If Not idx Is Nothing Then Set idx = Nothing
     If Not fld Is Nothing Then Set fld = Nothing
     If Not tdf Is Nothing Then Set tdf = Nothing
@@ -90,8 +91,7 @@ ErrorHandler:
 End Sub
 
 ' =============================================
-' @author ??????? ???????
-' @description Writes error to logging table
+' @description Writes error to log. Always written (ERROR/INFO/DEBUG all log errors).
 ' @param sSource [String] Error source (module/procedure name)
 ' @param sMsg [String] Error message text
 ' @param bShowUI [Boolean] Whether to show MsgBox to user (default True)
@@ -121,21 +121,17 @@ Public Sub LogError(ByVal sSource As String, ByVal sMsg As String, Optional ByVa
     ' Output to debug window
     Debug.Print "ERROR [" & sSource & "]: " & sMsg
 
-    ' Initialize table if not yet created
     InitLogger
 
-    ' Write to table
     Set db = CurrentDb
     strSQL = "INSERT INTO [" & cstrTableName & "] (LogType, Source, Description, WinUser, LogDate) " & _
              "VALUES ('ERROR', '" & strSafeSource & "', '" & strSafeMsg & "', '" & strWinUser & "', Now());"
-
     db.Execute strSQL, dbFailOnError
 
-    ' Show to user if required
     If bShowUI Then
         MsgBox "An error occurred in module: " & sSource & vbCrLf & vbCrLf & _
                "Details: " & sMsg & vbCrLf & vbCrLf & _
-               "The details were saved in the system log.", vbCritical, "Error"
+               "The details were saved in the system log.", vbCritical, "System Error"
     End If
 
     Set db = Nothing
@@ -143,21 +139,32 @@ Public Sub LogError(ByVal sSource As String, ByVal sMsg As String, Optional ByVa
     Exit Sub
 
 ErrorHandler:
-    ' Fallback: if failed to write to DB, at least output to Debug
-    Debug.Print "??????????? ?????? LogError: " & Err.Description & " (" & Err.Number & ")"
-    Debug.Print "???????? ?????? [" & sSource & "]: " & sMsg
+    Debug.Print "LogError write failed: " & Err.Description & " (" & Err.Number & ")"
+    Debug.Print "Original message [" & sSource & "]: " & sMsg
     If Not db Is Nothing Then Set db = Nothing
     If Not objNetwork Is Nothing Then Set objNetwork = Nothing
 End Sub
 
 ' =============================================
-' @author ??????? ???????
-' @description Writes informational message to logging table
+' @description Returns current LogLevel from settings (ERROR, INFO, DEBUG). Default INFO.
+' =============================================
+Private Function GetLogLevel() As String
+    On Error Resume Next
+    GetLogLevel = UCase(Trim$(CStr(Nz(mod_Maintenance_Logic.GetSetting("LogLevel", "INFO"), "INFO"))))
+    If Err.Number <> 0 Or Len(GetLogLevel) = 0 Then GetLogLevel = "INFO"
+End Function
+
+' =============================================
+' @description Writes informational message to logging table. Only writes if LogLevel is INFO or DEBUG.
 ' @param sMsg [String] Informational message text
 ' @param sSource [String] Message source (default "General")
 ' =============================================
 Public Sub LogInfo(ByVal sMsg As String, Optional ByVal sSource As String = "General")
     On Error GoTo ErrorHandler
+
+    Dim strLevel As String
+    strLevel = GetLogLevel
+    If strLevel <> "INFO" And strLevel <> "DEBUG" Then Exit Sub
 
     Dim db As DAO.Database
     Dim strSQL As String
@@ -165,7 +172,6 @@ Public Sub LogInfo(ByVal sMsg As String, Optional ByVal sSource As String = "Gen
     Dim strSafeSource As String
     Dim strSafeMsg As String
 
-    ' Get Windows username
     On Error Resume Next
     Dim objNetwork As Object
     Set objNetwork = CreateObject("WScript.Network")
@@ -174,21 +180,16 @@ Public Sub LogInfo(ByVal sMsg As String, Optional ByVal sSource As String = "Gen
     On Error GoTo ErrorHandler
     If strWinUser = "" Then strWinUser = "Unknown"
 
-    ' Escape apostrophes for SQL
     strSafeSource = Replace(sSource, "'", "''")
     strSafeMsg = Replace(sMsg, "'", "''")
 
-    ' Output to debug window
     Debug.Print "INFO [" & sSource & "]: " & sMsg
 
-    ' Initialize table if not yet created
     InitLogger
 
-    ' Write to table
     Set db = CurrentDb
     strSQL = "INSERT INTO [" & cstrTableName & "] (LogType, Source, Description, WinUser, LogDate) " & _
              "VALUES ('INFO', '" & strSafeSource & "', '" & strSafeMsg & "', '" & strWinUser & "', Now());"
-
     db.Execute strSQL, dbFailOnError
 
     Set db = Nothing
@@ -196,9 +197,51 @@ Public Sub LogInfo(ByVal sMsg As String, Optional ByVal sSource As String = "Gen
     Exit Sub
 
 ErrorHandler:
-    ' Fallback: if failed to write to DB, at least output to Debug
-    Debug.Print "?????? LogInfo: " & Err.Description & " (" & Err.Number & ")"
-    Debug.Print "???????? ????????? [" & sSource & "]: " & sMsg
+    Debug.Print "LogInfo error: " & Err.Description & " (" & Err.Number & ")"
+    Debug.Print "Original info [" & sSource & "]: " & sMsg
+    If Not db Is Nothing Then Set db = Nothing
+    If Not objNetwork Is Nothing Then Set objNetwork = Nothing
+End Sub
+
+' =============================================
+' @description Writes debug message. Only written when LogLevel = "DEBUG".
+' @param sMsg [String] Debug message text
+' @param sSource [String] Message source (default "General")
+' =============================================
+Public Sub LogDebug(ByVal sMsg As String, Optional ByVal sSource As String = "General")
+    On Error GoTo ErrorHandler
+
+    If GetLogLevel() <> "DEBUG" Then Exit Sub
+
+    Dim db As DAO.Database
+    Dim strSQL As String
+    Dim strWinUser As String
+    Dim strSafeSource As String
+    Dim strSafeMsg As String
+
+    On Error Resume Next
+    Dim objNetwork As Object
+    Set objNetwork = CreateObject("WScript.Network")
+    strWinUser = objNetwork.UserName
+    If Err.Number <> 0 Then strWinUser = Environ("USERNAME")
+    On Error GoTo ErrorHandler
+    If strWinUser = "" Then strWinUser = "Unknown"
+
+    strSafeSource = Replace(sSource, "'", "''")
+    strSafeMsg = Replace(sMsg, "'", "''")
+    Debug.Print "DEBUG [" & sSource & "]: " & sMsg
+
+    InitLogger
+    Set db = CurrentDb
+    strSQL = "INSERT INTO [" & cstrTableName & "] (LogType, Source, Description, WinUser, LogDate) " & _
+             "VALUES ('DEBUG', '" & strSafeSource & "', '" & strSafeMsg & "', '" & strWinUser & "', Now());"
+    db.Execute strSQL, dbFailOnError
+
+    Set db = Nothing
+    If Not objNetwork Is Nothing Then Set objNetwork = Nothing
+    Exit Sub
+ErrorHandler:
+    Debug.Print "LogDebug error: " & Err.Description
     If Not db Is Nothing Then Set db = Nothing
     If Not objNetwork Is Nothing Then Set objNetwork = Nothing
 End Sub

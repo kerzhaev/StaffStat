@@ -5,22 +5,83 @@ Option Explicit
 ' =============================================
 ' @module mod_UI_Helpers
 ' @description UI helper functions (friendly captions, history formatting)
-' @note Keep VBA source ASCII-only for stability; build RU strings via ChrW.
+' @note 100% English version. Safe for modern IDEs, Git and AI tools.
 ' =============================================
 
 ' =============================================
-' @description Returns "(?????)" in Russian (ASCII-safe).
+' @description Shows a message to the user (wrapper for MsgBox).
+' @param msg [String] Message text
+' @param msgType [VbMsgBoxStyle] vbInformation, vbExclamation, etc. Default vbInformation
 ' =============================================
-Private Function RuEmptyToken() As String
-    RuEmptyToken = "(" & _
-                   ChrW(1087) & ChrW(1091) & ChrW(1089) & ChrW(1090) & ChrW(1086) & _
-                   ")"
+Public Sub ShowMessage(ByVal msg As String, Optional ByVal msgType As VbMsgBoxStyle = vbInformation)
+    On Error GoTo ErrorHandler
+    MsgBox msg, msgType, "StaffState"
+    Exit Sub
+ErrorHandler:
+    Debug.Print "ShowMessage error: " & Err.Description
+End Sub
+
+' --- UI Messages and Captions ---
+
+Public Function GetSearchCaption() As String
+    GetSearchCaption = "Employee Search"
+End Function
+
+Public Function GetMsgBackupPathUndefined() As String
+    GetMsgBackupPathUndefined = "Backup directory is not defined: the database is located in a path that cannot be accessed."
+End Function
+
+Public Function GetMsgBackupSaved(ByVal strPath As String) As String
+    GetMsgBackupSaved = "Backup successfully saved to: " & strPath
+End Function
+
+Public Function GetMsgBackupError70() As String
+    GetMsgBackupError70 = "File is locked. Cannot create a backup while the database is being used."
+End Function
+
+Public Function GetMsgBackupFailedLocked() As String
+    GetMsgBackupFailedLocked = "Cannot backup while the database is heavily used. Please close other Access windows and try again."
+End Function
+
+Public Function GetMsgBackupFailedGeneric(ByVal strErrDesc As String) As String
+    GetMsgBackupFailedGeneric = "Backup failed: " & strErrDesc & vbCrLf & vbCrLf & _
+        "If the file is locked, try closing other Access windows or copy the file manually."
+End Function
+
+Public Function GetMsgValidationLogCleared() As String
+    GetMsgValidationLogCleared = "Validation log has been cleared successfully."
+End Function
+
+Public Function GetMsgExportCompleted(ByVal recCount As Long) As String
+    GetMsgExportCompleted = "Export completed successfully. Exported " & recCount & " record(s)."
 End Function
 
 ' =============================================
-' @description Returns Russian caption for internal field name (ASCII-safe).
+' @description Asks user Yes/No; use for export/action prompts.
+' @param msg [String] Question text
+' @param title [String] Optional dialog title, default "StaffState"
+' @return [Boolean] True if user chose Yes
+' =============================================
+Public Function AskUserYesNo(ByVal msg As String, Optional ByVal title As String = "StaffState") As Boolean
+    On Error GoTo ErrorHandler
+    AskUserYesNo = (MsgBox(msg, vbYesNo + vbQuestion, title) = vbYes)
+    Exit Function
+ErrorHandler:
+    Debug.Print "AskUserYesNo error: " & Err.Description
+    AskUserYesNo = False
+End Function
+
+' =============================================
+' @description Returns "(empty)" token.
+' =============================================
+Private Function GetEmptyToken() As String
+    GetEmptyToken = "(empty)"
+End Function
+
+' =============================================
+' @description Returns English caption for internal field name.
 ' @param strInternalName [String] Internal field name (e.g., "RankName")
-' @return [String] Russian caption
+' @return [String] English UI caption
 ' =============================================
 Public Function GetFieldFriendlyName(ByVal strInternalName As String) As String
     On Error GoTo ErrorHandler
@@ -30,54 +91,27 @@ Public Function GetFieldFriendlyName(ByVal strInternalName As String) As String
 
     Select Case s
         Case "_System"
-            ' "????"
-            GetFieldFriendlyName = ChrW(1059) & ChrW(1095) & ChrW(1077) & ChrW(1090)
-
+            GetFieldFriendlyName = "System Account"
         Case "RankName"
-            ' "??????"
-            GetFieldFriendlyName = ChrW(1047) & ChrW(1074) & ChrW(1072) & ChrW(1085) & ChrW(1080) & ChrW(1077)
-
+            GetFieldFriendlyName = "Rank"
         Case "WorkStatus"
-            ' "??????"
-            GetFieldFriendlyName = ChrW(1057) & ChrW(1090) & ChrW(1072) & ChrW(1090) & ChrW(1091) & ChrW(1089)
-
+            GetFieldFriendlyName = "Work Status"
         Case "PosName"
-            ' "?????????"
-            GetFieldFriendlyName = ChrW(1044) & ChrW(1086) & ChrW(1083) & ChrW(1078) & ChrW(1085) & ChrW(1086) & ChrW(1089) & ChrW(1090) & ChrW(1100)
-
+            GetFieldFriendlyName = "Position Name"
         Case "PosCode"
-            ' "??? ?????????"
-            GetFieldFriendlyName = ChrW(1050) & ChrW(1086) & ChrW(1076) & " " & _
-                                   ChrW(1076) & ChrW(1086) & ChrW(1083) & ChrW(1078) & ChrW(1085) & ChrW(1086) & ChrW(1089) & ChrW(1090) & ChrW(1080)
-
+            GetFieldFriendlyName = "Position Code"
         Case "FullName"
-            ' "???"
-            GetFieldFriendlyName = ChrW(1060) & ChrW(1048) & ChrW(1054)
-
+            GetFieldFriendlyName = "Full Name"
         Case "PersonUID"
-            ' "?????? ?????"
-            GetFieldFriendlyName = ChrW(1051) & ChrW(1080) & ChrW(1095) & ChrW(1085) & ChrW(1099) & ChrW(1081) & " " & _
-                                   ChrW(1085) & ChrW(1086) & ChrW(1084) & ChrW(1077) & ChrW(1088)
-
+            GetFieldFriendlyName = "Personal ID"
         Case "SourceID"
-            ' "????????"
-            GetFieldFriendlyName = ChrW(1048) & ChrW(1089) & ChrW(1090) & ChrW(1086) & ChrW(1095) & ChrW(1085) & ChrW(1080) & ChrW(1082)
-
+            GetFieldFriendlyName = "Source ID"
         Case "OrderDate"
-            ' "???? ???????"
-            GetFieldFriendlyName = ChrW(1044) & ChrW(1072) & ChrW(1090) & ChrW(1072) & " " & _
-                                   ChrW(1087) & ChrW(1088) & ChrW(1080) & ChrW(1082) & ChrW(1072) & ChrW(1079) & ChrW(1072)
-
+            GetFieldFriendlyName = "Order Date"
         Case "OrderNum"
-            ' "????? ???????"
-            GetFieldFriendlyName = ChrW(1053) & ChrW(1086) & ChrW(1084) & ChrW(1077) & ChrW(1088) & " " & _
-                                   ChrW(1087) & ChrW(1088) & ChrW(1080) & ChrW(1082) & ChrW(1072) & ChrW(1079) & ChrW(1072)
-
+            GetFieldFriendlyName = "Order Number"
         Case "BirthDate"
-            ' "???? ????????"
-            GetFieldFriendlyName = ChrW(1044) & ChrW(1072) & ChrW(1090) & ChrW(1072) & " " & _
-                                   ChrW(1088) & ChrW(1086) & ChrW(1078) & ChrW(1076) & ChrW(1077) & ChrW(1085) & ChrW(1080) & ChrW(1103)
-
+            GetFieldFriendlyName = "Date of Birth"
         Case Else
             GetFieldFriendlyName = Replace(s, "_", " ")
     End Select
@@ -88,9 +122,9 @@ ErrorHandler:
 End Function
 
 ' =============================================
-' @description Translates system event token to Russian (ASCII-safe).
-' @param sToken [String] Token stored in DB (ASCII)
-' @return [String] Russian user-facing text
+' @description Translates system event token to English.
+' @param sToken [String] Token stored in DB
+' @return [String] English user-facing text
 ' =============================================
 Private Function TranslateSystemToken(ByVal sToken As String) As String
     Dim s As String
@@ -98,15 +132,9 @@ Private Function TranslateSystemToken(ByVal sToken As String) As String
 
     Select Case s
         Case "ADDED"
-            ' "?????? ?? ????"
-            TranslateSystemToken = ChrW(1055) & ChrW(1088) & ChrW(1080) & ChrW(1085) & ChrW(1103) & ChrW(1090) & " " & _
-                                   ChrW(1085) & ChrW(1072) & " " & _
-                                   ChrW(1091) & ChrW(1095) & ChrW(1077) & ChrW(1090)
+            TranslateSystemToken = "Added to database"
         Case "REMOVED"
-            ' "???? ? ?????"
-            TranslateSystemToken = ChrW(1057) & ChrW(1085) & ChrW(1103) & ChrW(1090) & " " & _
-                                   ChrW(1089) & " " & _
-                                   ChrW(1091) & ChrW(1095) & ChrW(1077) & ChrW(1090) & ChrW(1072)
+            TranslateSystemToken = "Removed from database"
         Case Else
             TranslateSystemToken = Trim$(Nz(sToken, ""))
     End Select
@@ -114,7 +142,7 @@ End Function
 
 ' =============================================
 ' @description Builds a human-friendly history description line.
-' @param strInternalName [String] Field internal name (FieldName from tbl_History_Log)
+' @param strInternalName [String] Field internal name
 ' @param vOld [Variant] OldValue
 ' @param vNew [Variant] NewValue
 ' @return [String] Human-friendly description string
@@ -140,14 +168,14 @@ Public Function BuildHistoryDescription(ByVal strInternalName As String, ByVal v
 
     If sOld = "" And sNew <> "" Then
         sMarker = "[+]"
-        sOld = RuEmptyToken()
+        sOld = GetEmptyToken()
     ElseIf sOld <> "" And sNew = "" Then
         sMarker = "[-]"
-        sNewDisplay = RuEmptyToken()
+        sNewDisplay = GetEmptyToken()
     Else
         sMarker = "[*]"
-        If sOld = "" Then sOld = RuEmptyToken()
-        If sNewDisplay = "" Then sNewDisplay = RuEmptyToken()
+        If sOld = "" Then sOld = GetEmptyToken()
+        If sNewDisplay = "" Then sNewDisplay = GetEmptyToken()
     End If
 
     BuildHistoryDescription = sMarker & " " & sCaption & ": " & sOld & " -> " & sNewDisplay

@@ -34,7 +34,7 @@ Public Sub FixStartupForm()
     Else
         ' Property exists - update it
         On Error GoTo ErrorHandler
-        prp.Value = "uf_Dashboard"
+        prp.value = "uf_Dashboard"
         Debug.Print "Updated StartUpForm property"
     End If
 

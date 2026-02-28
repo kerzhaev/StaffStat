@@ -3,18 +3,15 @@
   <xsd:element name="dataroot">
     <xsd:complexType>
       <xsd:sequence>
-        <xsd:element ref="tbl_History_Log" minOccurs="0" maxOccurs="unbounded"></xsd:element>
+        <xsd:element ref="tbl_Settings" minOccurs="0" maxOccurs="unbounded"></xsd:element>
       </xsd:sequence>
       <xsd:attribute name="generated" type="xsd:dateTime"></xsd:attribute>
     </xsd:complexType>
   </xsd:element>
-  <xsd:element name="tbl_History_Log">
+  <xsd:element name="tbl_Settings">
     <xsd:annotation>
       <xsd:appinfo>
-        <od:index index-name="idx_History_ChangeDate" index-key="ChangeDate " primary="no" unique="no" clustered="no" order="asc"></od:index>
-        <od:index index-name="idx_History_PersonUID" index-key="PersonUID " primary="no" unique="no" clustered="no" order="asc"></od:index>
-        <od:index index-name="idx_Log_Person" index-key="PersonUID " primary="no" unique="no" clustered="no" order="asc"></od:index>
-        <od:index index-name="PK_Log" index-key="LogID " primary="yes" unique="yes" clustered="no" order="asc"></od:index>
+        <od:index index-name="PK_Settings" index-key="SettingKey " primary="yes" unique="yes" clustered="no" order="asc"></od:index>
         <od:tableProperty name="Orientation" type="2" value="0"></od:tableProperty>
         <od:tableProperty name="OrderByOn" type="1" value="0"></od:tableProperty>
         <od:tableProperty name="DefaultView" type="2" value="2"></od:tableProperty>
@@ -36,19 +33,7 @@
     </xsd:annotation>
     <xsd:complexType>
       <xsd:sequence>
-        <xsd:element name="LogID" minOccurs="1" od:jetType="autonumber" od:sqlSType="int" od:autoUnique="yes" od:nonNullable="yes" type="xsd:int">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="ColumnWidth" type="3" value="-1"></od:fieldProperty>
-              <od:fieldProperty name="ColumnOrder" type="3" value="1"></od:fieldProperty>
-              <od:fieldProperty name="ColumnHidden" type="1" value="0"></od:fieldProperty>
-              <od:fieldProperty name="TextAlign" type="2" value="0"></od:fieldProperty>
-              <od:fieldProperty name="AggregateType" type="4" value="-1"></od:fieldProperty>
-              <od:fieldProperty name="CurrencyLCID" type="4" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
-        </xsd:element>
-        <xsd:element name="PersonUID" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+        <xsd:element name="SettingKey" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
           <xsd:annotation>
             <xsd:appinfo>
               <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
@@ -66,11 +51,11 @@
             </xsd:restriction>
           </xsd:simpleType>
         </xsd:element>
-        <xsd:element name="ChangeDate" minOccurs="0" od:jetType="datetime" od:sqlSType="datetime" type="xsd:dateTime">
+        <xsd:element name="SettingValue" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
           <xsd:annotation>
             <xsd:appinfo>
               <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-              <od:fieldProperty name="ColumnWidth" type="3" value="3825"></od:fieldProperty>
+              <od:fieldProperty name="ColumnWidth" type="3" value="2100"></od:fieldProperty>
               <od:fieldProperty name="ColumnOrder" type="3" value="0"></od:fieldProperty>
               <od:fieldProperty name="ColumnHidden" type="1" value="0"></od:fieldProperty>
               <od:fieldProperty name="TextAlign" type="2" value="0"></od:fieldProperty>
@@ -78,8 +63,13 @@
               <od:fieldProperty name="CurrencyLCID" type="4" value="0"></od:fieldProperty>
             </xsd:appinfo>
           </xsd:annotation>
+          <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+              <xsd:maxLength value="255"></xsd:maxLength>
+            </xsd:restriction>
+          </xsd:simpleType>
         </xsd:element>
-        <xsd:element name="FieldName" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
+        <xsd:element name="SettingGroup" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
           <xsd:annotation>
             <xsd:appinfo>
               <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
@@ -93,11 +83,11 @@
           </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
-              <xsd:maxLength value="100"></xsd:maxLength>
+              <xsd:maxLength value="50"></xsd:maxLength>
             </xsd:restriction>
           </xsd:simpleType>
         </xsd:element>
-        <xsd:element name="OldValue" minOccurs="0" od:jetType="memo" od:sqlSType="ntext">
+        <xsd:element name="Description" minOccurs="0" od:jetType="text" od:sqlSType="nvarchar">
           <xsd:annotation>
             <xsd:appinfo>
               <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
@@ -111,25 +101,7 @@
           </xsd:annotation>
           <xsd:simpleType>
             <xsd:restriction base="xsd:string">
-              <xsd:maxLength value="536870910"></xsd:maxLength>
-            </xsd:restriction>
-          </xsd:simpleType>
-        </xsd:element>
-        <xsd:element name="NewValue" minOccurs="0" od:jetType="memo" od:sqlSType="ntext">
-          <xsd:annotation>
-            <xsd:appinfo>
-              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
-              <od:fieldProperty name="ColumnWidth" type="3" value="4590"></od:fieldProperty>
-              <od:fieldProperty name="ColumnOrder" type="3" value="0"></od:fieldProperty>
-              <od:fieldProperty name="ColumnHidden" type="1" value="0"></od:fieldProperty>
-              <od:fieldProperty name="TextAlign" type="2" value="0"></od:fieldProperty>
-              <od:fieldProperty name="AggregateType" type="4" value="-1"></od:fieldProperty>
-              <od:fieldProperty name="CurrencyLCID" type="4" value="0"></od:fieldProperty>
-            </xsd:appinfo>
-          </xsd:annotation>
-          <xsd:simpleType>
-            <xsd:restriction base="xsd:string">
-              <xsd:maxLength value="536870910"></xsd:maxLength>
+              <xsd:maxLength value="255"></xsd:maxLength>
             </xsd:restriction>
           </xsd:simpleType>
         </xsd:element>

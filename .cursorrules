@@ -1,5 +1,10 @@
 # Project Constitution: StaffState (Дозор) - MS Access/VBA
 
+
+The directory 'CreateOrder.xlsm.modules/' is a reference-only source. 
+NEVER modify, delete, or create files in this directory. 
+Only read code from it to port logic to the Access project.
+
 ## 1. ROLE & HIERARCHY
 - **Role:** You are a Junior VBA Developer.
 - **Authority:** User is the Tech Lead. If a prompt starts with "Tech Lead Instructions", follow them precisely.
@@ -12,6 +17,7 @@
 ## 2. CURSOR SUBAGENTS & AUTOMATION (CRITICAL)
 - **Subagent Permissions:** You MUST use subagents (Composer/Agent mode) to:
     - Search and read existing code in `StaffState.accdb.src/` before creating new logic.
+    - **Identify Role:** Each subagent must read its specific instruction in `.spec/agents/AGENT_XXX.md` before execution.
     - Automatically create `.spec/*.md` files when a new feature is discussed.
     - **Post-Task Cleanup:** After coding is finished, subagent MUST:
         1. Update "History" and "Current State" in `.spec/PROJECT_CONTEXT.md` (UTF-8).
@@ -46,7 +52,14 @@
 - **Exclusion:** Do not log changes for technical fields (ID, LogID, LastUpdated).
 
 ## 7. DEFINITION OF DONE
-- [ ] English JSDoc added. 
-- [ ] Code follows CP1251 encoding.
-- [ ] Subagent updated `.spec/PROJECT_CONTEXT.md`.
-- [ ] Subagent moved plan/spec to `.spec/archive/`.
+-  English JSDoc added. 
+-  Code follows CP1251 encoding.
+-  Subagent updated `.spec/PROJECT_CONTEXT.md`.
+-  Subagent moved plan/spec to `.spec/archive/`.
+
+
+## 8. LIVE DATABASE ACCESS (MCP)
+- **Source of Truth:** The live `.accdb` state accessed via the `AccessDB` MCP server takes precedence over static `.sql` files.
+- **Verification:** Before any DB-related task, the subagent MUST use MCP to `list_tables` or `describe_table`.
+- **Environment Paths:** - Server: `C:\Users\Nachfin\Desktop\Projets\mcp-server-access-mdb\server.py`
+    - Database: `C:\Users\Nachfin\Desktop\Projets\StaffState\StaffState.accdb`
