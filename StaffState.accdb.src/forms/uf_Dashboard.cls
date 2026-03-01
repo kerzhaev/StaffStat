@@ -2,15 +2,14 @@
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-Option Compare Database
-Option Explicit
-
 ' =============================================
 ' @form uf_Dashboard
 ' @author Kerzhaev Evgeniy
 ' @description Main control panel for StaffState
 ' @note 100% English version.
 ' =============================================
+Option Compare Database
+Option Explicit
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
@@ -22,13 +21,34 @@ Private Sub Form_Load()
     End If
     ' =======================================================================
 
+    ' --- PHASE 30: Apply UI Localization ---
+    Me.Caption = mod_UI_Helpers.GetLoc("TITLE_DASHBOARD")
+
+    On Error Resume Next
+    ' Перевод кнопок
+    Me.cmdSettings.Caption = mod_UI_Helpers.GetLoc("BTN_SETTINGS")
+    Me.btnImport.Caption = mod_UI_Helpers.GetLoc("BTN_IMPORT")
+    Me.cmdHealthCheck.Caption = mod_UI_Helpers.GetLoc("BTN_HEALTH_CHECK")
+    Me.btnAnalyze.Caption = mod_UI_Helpers.GetLoc("BTN_ANALYZE")
+    Me.btnOpenLog.Caption = mod_UI_Helpers.GetLoc("BTN_OPEN_LOG")
+    Me.btnCreateIndexes.Caption = mod_UI_Helpers.GetLoc("BTN_CREATE_INDEXES")
+    Me.btnFullSync.Caption = mod_UI_Helpers.GetLoc("BTN_FULL_SYNC")
+    Me.btnFindDuplicates.Caption = mod_UI_Helpers.GetLoc("BTN_FIND_DUPLICATES")
+    Me.btnGenerateChangeReport.Caption = mod_UI_Helpers.GetLoc("BTN_CHANGE_REPORT")
+    Me.btnSnapshotReport.Caption = mod_UI_Helpers.GetLoc("BTN_SNAPSHOT")
+
+    ' Перевод рамок (Frames/Groups) - добавлено несколько вариантов имен для подстраховки
+    Me.fraManualControls.Caption = mod_UI_Helpers.GetLoc("LBL_MANUAL_CONTROLS")
+    Me.fraManualControls.Caption = mod_UI_Helpers.GetLoc("LBL_MANUAL_CONTROLS")
+    On Error GoTo ErrorHandler
+
     Me.txtEndDate.value = Date
     Me.txtStartDate.value = Date - 30
     RefreshMetrics
 
     Exit Sub
 ErrorHandler:
-    MsgBox "UI error: " & Err.Description, vbCritical
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
 End Sub
 
 Private Sub Form_Activate()
@@ -51,10 +71,10 @@ Public Sub RefreshMetrics()
     Set d = mod_Maintenance_Logic.GetDashboardStats()
     If d Is Nothing Then GoTo SafeFallback
 
-    Me.lblTotalCount.Caption = "Total: " & CStr(d("TotalCount"))
-    Me.lblActiveCount.Caption = "Active: " & CStr(d("ActiveCount"))
+    Me.lblTotalCount.Caption = mod_UI_Helpers.GetLoc("LBL_TOTAL") & CStr(d("TotalCount"))
+    Me.lblActiveCount.Caption = mod_UI_Helpers.GetLoc("LBL_ACTIVE") & CStr(d("ActiveCount"))
     lngErr = CLng(d("ErrorCount"))
-    Me.lblErrorCount.Caption = "Errors: " & CStr(lngErr)
+    Me.lblErrorCount.Caption = mod_UI_Helpers.GetLoc("LBL_ERRORS") & CStr(lngErr)
 
     If lngErr > 0 Then
         Me.lblErrorCount.ForeColor = vbRed
@@ -71,9 +91,9 @@ ErrorHandler:
     GoTo SafeFallback
 SafeFallback:
     On Error Resume Next
-    Me.lblTotalCount.Caption = "Total: --"
-    Me.lblActiveCount.Caption = "Active: --"
-    Me.lblErrorCount.Caption = "Errors: --"
+    Me.lblTotalCount.Caption = mod_UI_Helpers.GetLoc("LBL_TOTAL") & "--"
+    Me.lblActiveCount.Caption = mod_UI_Helpers.GetLoc("LBL_ACTIVE") & "--"
+    Me.lblErrorCount.Caption = mod_UI_Helpers.GetLoc("LBL_ERRORS") & "--"
     Me.lblErrorCount.ForeColor = vbBlack
 End Sub
 
@@ -82,51 +102,51 @@ Private Sub cmdSettings_Click()
     DoCmd.OpenForm "uf_Settings", acNormal
     Exit Sub
 ErrorHandler:
-    MsgBox "Unable to open Settings: " & Err.Description, vbCritical
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
 End Sub
 
 Private Sub btnImport_Click()
     On Error GoTo ErrorHandler
 
-    Me.lblStatus.Caption = "Running import..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_IMPORT")
     DoEvents
 
     If mod_Import_Logic.ImportExcelData(False) Then
-        Me.lblStatus.Caption = "Import completed successfully."
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_IMPORT_SUCCESS")
     Else
-        Me.lblStatus.Caption = "Import canceled or failed."
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_IMPORT_FAILED")
     End If
 
     Exit Sub
 ErrorHandler:
-    MsgBox "UI error: " & Err.Description, vbCritical
-    Me.lblStatus.Caption = "Error."
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
 
 Private Sub cmdHealthCheck_Click()
     On Error GoTo ErrorHandler
 
     Dim lngErrors As Long
-    Me.lblStatus.Caption = "Running health check..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_HEALTH")
     DoEvents
 
     lngErrors = mod_Maintenance_Logic.RunDataHealthCheck(False)
 
     If lngErrors > 0 Then
-        If mod_UI_Helpers.AskUserYesNo("Export error report to Excel?", "Health Check") Then
+        If mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_EXPORT_ERRORS"), mod_UI_Helpers.GetLoc("TITLE_HEALTH_CHECK")) Then
             mod_Maintenance_Logic.ExportValidationLogToExcel
         End If
     End If
 
     If lngErrors >= 0 Then
-        Me.lblStatus.Caption = "Health check done. Errors: " & lngErrors
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_HEALTH_DONE") & lngErrors
         RefreshMetrics
     End If
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Health check error: " & Err.Description, vbCritical
-    Me.lblStatus.Caption = "Error."
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
 
 Private Sub btnAnalyze_Click()
@@ -135,27 +155,27 @@ Private Sub btnAnalyze_Click()
     Dim iNew As Long
     Dim iUpd As Long
 
-    Me.lblStatus.Caption = "Running analysis..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_ANALYSIS")
     DoEvents
 
     mod_Analysis_Logic.SyncBufferToMaster iNew, iUpd, False
 
-    Me.lblStatus.Caption = "Analysis completed. New: " & iNew & ", Updated: " & iUpd
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_ANALYSIS_DONE") & iNew & mod_UI_Helpers.GetLoc("LBL_UPDATED") & iUpd
 
     Exit Sub
 ErrorHandler:
-    MsgBox "UI error: " & Err.Description, vbCritical
-    Me.lblStatus.Caption = "Error."
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
 
 Private Sub btnOpenLog_Click()
     On Error GoTo ErrorHandler
-    Me.lblStatus.Caption = "Opening log..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_OPENING_LOG")
     DoCmd.OpenTable "tbl_History_Log"
-    Me.lblStatus.Caption = "Log opened."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_LOG_OPENED")
     Exit Sub
 ErrorHandler:
-    MsgBox "Unable to open log: " & Err.Description, vbCritical
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
 End Sub
 
 Private Sub btnCreateIndexes_Click()
@@ -163,40 +183,40 @@ Private Sub btnCreateIndexes_Click()
     Dim iCreated As Long
     Dim iSkipped As Long
 
-    Me.lblStatus.Caption = "Creating performance indexes..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_CREATING_INDEXES")
     DoEvents
 
     mod_App_Init.CreatePerformanceIndexes iCreated, iSkipped, False
-    Me.lblStatus.Caption = "Indexes created. Created: " & iCreated & ", Skipped: " & iSkipped
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_INDEXES_DONE") & iCreated & mod_UI_Helpers.GetLoc("LBL_SKIPPED") & iSkipped
 
     Exit Sub
 ErrorHandler:
-    MsgBox "Index creation error: " & Err.Description, vbCritical
-    Me.lblStatus.Caption = "Error."
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
 
 ' --- FULL UPDATE BUTTON FIX ---
 Private Sub btnFullSync_Click()
     On Error GoTo ErrorHandler
 
-    Me.lblStatus.Caption = "Running full update..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_FULL_SYNC")
     DoEvents
 
     mod_Analysis_Logic.RunFullSyncProcess
 
-    Me.lblStatus.Caption = "Full update completed."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_FULL_SYNC_DONE")
     RefreshMetrics
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Full update error: " & Err.Description, vbCritical
-    Me.lblStatus.Caption = "Error."
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
 
 Private Sub btnFindDuplicates_Click()
     On Error GoTo ErrorHandler
 
-    Me.lblStatus.Caption = "Opening duplicates finder..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_OPENING_DUPLICATES")
     DoEvents
 
     If CurrentProject.AllForms("uf_Search").IsLoaded Then
@@ -204,14 +224,14 @@ Private Sub btnFindDuplicates_Click()
     End If
     DoCmd.OpenForm "uf_Search", acNormal, , , , , "MODE=DUPLICATES"
 
-    Me.lblStatus.Caption = "Duplicates finder opened."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_DUPLICATES_OPENED")
     Exit Sub
 
 ErrorHandler:
     On Error Resume Next
     mod_App_Logger.LogError "uf_Dashboard.btnFindDuplicates_Click", CStr(Err.Number) & " - " & Err.Description, False
-    MsgBox "Unable to open duplicates finder: " & Err.Description, vbCritical
-    Me.lblStatus.Caption = "Error."
+    MsgBox mod_UI_Helpers.GetLoc("ERR_OPEN_DUPLICATES") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
 
 Private Sub btnGenerateChangeReport_Click()
@@ -225,38 +245,38 @@ Private Sub btnGenerateChangeReport_Click()
     sStart = Trim$(Replace(Nz(Me.txtStartDate.value, ""), ".", "/"))
     sEnd = Trim$(Replace(Nz(Me.txtEndDate.value, ""), ".", "/"))
     If sStart = "" Or sEnd = "" Then
-        MsgBox "Enter Start Date and End Date.", vbExclamation
+        MsgBox mod_UI_Helpers.GetLoc("ERR_ENTER_DATES"), vbExclamation, mod_UI_Helpers.GetLoc("TITLE_WARNING")
         Exit Sub
     End If
     If Not IsDate(sStart) Or Not IsDate(sEnd) Then
-        MsgBox "Invalid date format. Use DD.MM.YYYY or DD/MM/YYYY.", vbExclamation
+        MsgBox mod_UI_Helpers.GetLoc("ERR_INVALID_DATE_FORMAT"), vbExclamation, mod_UI_Helpers.GetLoc("TITLE_WARNING")
         Exit Sub
     End If
     dtStart = CDate(sStart)
     dtEnd = CDate(sEnd)
     If dtStart > dtEnd Then
-        MsgBox "Start date must be earlier than or equal to End date.", vbExclamation
+        MsgBox mod_UI_Helpers.GetLoc("ERR_START_AFTER_END"), vbExclamation, mod_UI_Helpers.GetLoc("TITLE_WARNING")
         Exit Sub
     End If
 
-    Me.lblStatus.Caption = "Generating audit report..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_GEN_AUDIT")
     DoEvents
     mod_Reports_Logic.GenerateAuditReport dtStart, dtEnd
-    Me.lblStatus.Caption = "Audit report done."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_AUDIT_DONE")
     Exit Sub
 ErrorHandler:
-    MsgBox "Report error: " & Err.Description, vbCritical
-    Me.lblStatus.Caption = "Error."
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
 
 Private Sub btnSnapshotReport_Click()
     On Error GoTo ErrorHandler
-    Me.lblStatus.Caption = "Generating snapshot report..."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_GEN_SNAPSHOT")
     DoEvents
     mod_Reports_Logic.GenerateCurrentStaffReport
-    Me.lblStatus.Caption = "Snapshot report done."
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_SNAPSHOT_DONE")
     Exit Sub
 ErrorHandler:
-    MsgBox "Snapshot report error: " & Err.Description, vbCritical
-    Me.lblStatus.Caption = "Error."
+    MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub

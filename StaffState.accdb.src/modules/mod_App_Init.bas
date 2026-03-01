@@ -12,7 +12,14 @@ Option Explicit
 
 Public Sub InitializeApp()
     On Error GoTo ErrorHandler
+
+    ' 1. Create and verify all database tables
     InitDatabaseStructure
+
+    ' 2. Initialize Localization Engine (Phase 30)
+    ' Loads dictionary into memory before any forms are opened
+    Call mod_UI_Helpers.InitLocalization
+
     Exit Sub
 ErrorHandler:
     Debug.Print "InitializeApp error: " & Err.Description & " (" & Err.Number & ")"
@@ -61,6 +68,9 @@ Public Sub InitDatabaseStructure()
     mod_Schema_Manager.CreateImportProfilesTable
     mod_Schema_Manager.CreateImportMappingTable
     mod_Schema_Manager.SeedImportMappingProfile1
+
+    ' 8. Create LOCALIZATION table (Phase 30)
+    mod_Schema_Manager.CreateLocalizationTable
 
     Debug.Print "--- Init database structure complete ---"
     MsgBox "Database structure created successfully!", vbInformation, "StaffState Init"

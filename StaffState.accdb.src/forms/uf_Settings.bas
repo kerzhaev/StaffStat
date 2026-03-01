@@ -10,7 +10,7 @@ Begin Form
     Width =11565
     DatasheetFontHeight =11
     ItemSuffix =29
-    Right =25575
+    Right =25320
     Bottom =12120
     RecSrcDt = Begin
         0xa95bb271d47ce640

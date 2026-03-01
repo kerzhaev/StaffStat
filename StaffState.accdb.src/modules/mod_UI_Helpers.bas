@@ -7,7 +7,10 @@ Option Explicit
 ' @description UI helper functions (friendly captions, history formatting)
 ' @note 100% English version. Safe for modern IDEs, Git and AI tools.
 ' =============================================
-
+' =============================================
+' LOCALIZATION ENGINE (Phase 30)
+' =============================================
+Private dictLocales As Object ' Scripting.Dictionary
 ' =============================================
 ' @description Shows a message to the user (wrapper for MsgBox).
 ' @param msg [String] Message text
@@ -184,3 +187,64 @@ Public Function BuildHistoryDescription(ByVal strInternalName As String, ByVal v
 ErrorHandler:
     BuildHistoryDescription = "[*] " & Trim$(Nz(strInternalName, "")) & ": " & Trim$(Nz(vOld, "")) & " -> " & Trim$(Nz(vNew, ""))
 End Function
+
+' =============================================
+' @description Loads all translations into memory
+' =============================================
+Public Sub InitLocalization()
+    On Error GoTo ErrorHandler
+
+    ' Initialize Dictionary (Late Binding)
+    Set dictLocales = CreateObject("Scripting.Dictionary")
+    dictLocales.CompareMode = 1 ' vbTextCompare (case-insensitive)
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Set db = CurrentDb
+
+    ' Safely attempt to open table
+    On Error Resume Next
+    Set rs = db.OpenRecordset("SELECT MsgKey, LocalValue FROM tbl_Localization", dbOpenForwardOnly)
+    On Error GoTo ErrorHandler
+
+    If Not rs Is Nothing Then
+        Do While Not rs.EOF
+            ' Load keys and values into memory
+            dictLocales.Add Nz(rs!MsgKey, ""), Nz(rs!LocalValue, "")
+            rs.MoveNext
+        Loop
+        rs.Close
+        Set rs = Nothing
+    End If
+
+    Debug.Print "Localization Engine initialized. Loaded " & dictLocales.count & " keys."
+    Exit Sub
+
+ErrorHandler:
+    Debug.Print "InitLocalization Error " & Err.Number & ": " & Err.Description
+End Sub
+
+' =============================================
+' @description Fast UI text retriever
+' @param strKey [String] The English message key
+' @return [String] Localized string or [KEY] if missing
+' =============================================
+Public Function GetLoc(ByVal strKey As String) As String
+    ' Auto-initialize if not loaded yet
+    If dictLocales Is Nothing Then InitLocalization
+
+    If dictLocales.Exists(strKey) Then
+        GetLoc = dictLocales(strKey)
+    Else
+        ' Return bracketed key so developer can spot missing translations
+        GetLoc = "[" & strKey & "]"
+    End If
+End Function
+
+' =============================================
+' @description Clears cache (useful after editing the table)
+' =============================================
+Public Sub ReloadLocalization()
+    Set dictLocales = Nothing
+    InitLocalization
+End Sub

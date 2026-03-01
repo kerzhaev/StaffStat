@@ -124,7 +124,7 @@ Begin Form
                     Height =240
                     BorderColor =8355711
                     ForeColor =6710886
-                    Name ="lblManualControls"
+                    Name ="fraManualControls"
                     Caption ="Manual Controls"
                     GridlineColor =10921638
                     LayoutCachedLeft =360

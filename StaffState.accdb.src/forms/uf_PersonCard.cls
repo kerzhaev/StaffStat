@@ -2,18 +2,22 @@
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-Option Compare Database
-Option Explicit
-
 ' =============================================
 ' @form uf_PersonCard
 ' @description Employee card form (view only, read-only data)
 ' @note 100% English code version. Explicit error handling (Phase 28).
 ' =============================================
 
+Option Compare Database
+Option Explicit
+
 Private m_strUID As String
 
 Private Sub Form_Open(Cancel As Integer)
+    On Error Resume Next
+    ' --- PHASE 30: Apply UI Localization ---
+    Me.Caption = mod_UI_Helpers.GetLoc("TITLE_PERSON_CARD")
+
     If Not IsNull(Me.OpenArgs) Then
         m_strUID = Me.OpenArgs
         LoadPersonData
@@ -36,7 +40,7 @@ Public Sub LoadPersonData()
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
 
     If rs.EOF Then
-        MsgBox "Employee with UID " & m_strUID & " not found.", vbExclamation, "StaffState"
+        MsgBox mod_UI_Helpers.GetLoc("ERR_EMP_NOT_FOUND") & " " & m_strUID, vbExclamation, mod_UI_Helpers.GetLoc("TITLE_WARNING")
         GoTo Cleanup
     End If
 
@@ -71,8 +75,8 @@ Public Sub LoadPersonData()
 
     ' Visual styling based on status
     If HasField(rs, "WorkStatus") Then
-        ' Check for Russian word "??????" using ASCII-safe ChrW
-        strDismissed = ChrW(1059) & ChrW(1074) & ChrW(1086) & ChrW(1083) & ChrW(1077) & ChrW(1085)
+        ' Get localized string from Dictionary instead of using ChrW()
+        strDismissed = mod_UI_Helpers.GetLoc("STATUS_DISMISSED")
         If InStr(1, Nz(rs!WorkStatus, ""), strDismissed, vbTextCompare) > 0 Then
             Me.txtFullName.ForeColor = vbRed
         Else
@@ -134,9 +138,12 @@ End Function
 Private Sub SetupHistoryFilters()
     On Error GoTo ErrorHandler
 
+    Dim strAll As String
+    strAll = mod_UI_Helpers.GetLoc("FILTER_ALL")
+
     Me.cboFilterHistory.RowSourceType = "Value List"
-    Me.cboFilterHistory.RowSource = "'All';'RankName';'PosName';'WorkStatus';'FullName';'BirthDate'"
-    Me.cboFilterHistory = "All"
+    Me.cboFilterHistory.RowSource = "'" & strAll & "';'RankName';'PosName';'WorkStatus';'FullName';'BirthDate'"
+    Me.cboFilterHistory = strAll
 
     Me.lstHistory.ColumnCount = 4
     Me.lstHistory.ColumnWidths = "2cm;3cm;4cm;4cm"
@@ -151,10 +158,13 @@ Private Sub ApplyHistoryFilter()
     On Error GoTo ErrorHandler
     Dim strSQL As String
     Dim strWhere As String
+    Dim strAll As String
+
+    strAll = mod_UI_Helpers.GetLoc("FILTER_ALL")
 
     strWhere = " WHERE PersonUID = '" & Replace(m_strUID, "'", "''") & "'"
 
-    If Nz(Me.cboFilterHistory, "All") <> "All" Then
+    If Nz(Me.cboFilterHistory, strAll) <> strAll Then
         strWhere = strWhere & " AND FieldName LIKE '*" & Replace(Me.cboFilterHistory, "'", "''") & "*'"
     End If
 
@@ -174,6 +184,6 @@ Private Sub cboFilterHistory_Change()
 End Sub
 
 Private Sub btnResetDates_Click()
-    Me.cboFilterHistory = "All"
+    Me.cboFilterHistory = mod_UI_Helpers.GetLoc("FILTER_ALL")
     ApplyHistoryFilter
 End Sub

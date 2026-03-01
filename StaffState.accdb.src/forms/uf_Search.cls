@@ -2,6 +2,9 @@
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
+' =============================================
+' @form uf_Search
+
 Option Compare Database
 Option Explicit
 
@@ -14,10 +17,15 @@ Private m_strMode As String
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
+    ' --- PHASE 30: Apply UI Localization ---
+    Me.btnSearch.Caption = mod_UI_Helpers.GetLoc("BTN_SEARCH")
+    Me.btnClear.Caption = mod_UI_Helpers.GetLoc("BTN_CLEAR")
+    Me.btnExportExcel.Caption = mod_UI_Helpers.GetLoc("BTN_EXPORT")
+
     m_fDuplicatesMode = False
     m_strMode = ""
     HandleOpenArgsMode
-    If Not m_fDuplicatesMode Then Me.Caption = mod_UI_Helpers.GetSearchCaption()
+    If Not m_fDuplicatesMode Then Me.Caption = mod_UI_Helpers.GetLoc("TITLE_SEARCH")
 
 ExitHere:
     Exit Sub
@@ -68,7 +76,7 @@ Private Sub LoadDuplicatesModeAndNotify()
     m_strMode = "MODE=DUPLICATES"
     Me.txtFilter.value = ""
     Me.txtFilter.Enabled = False
-    Me.Caption = "Duplicates (FullName + BirthDate)"
+    Me.Caption = mod_UI_Helpers.GetLoc("TITLE_DUPLICATES")
     On Error Resume Next
     Me.btnExportExcel.Enabled = False
     On Error GoTo ErrorHandler
@@ -86,9 +94,12 @@ Private Sub LoadDuplicatesModeAndNotify()
     Debug.Print "Duplicates mode: groups=" & lngGroups & ", records=" & lngRecords
 
     If lngGroups = 0 Then
-        MsgBox "No duplicates found.", vbInformation
+        MsgBox mod_UI_Helpers.GetLoc("MSG_NO_DUPLICATES"), vbInformation, mod_UI_Helpers.GetLoc("TITLE_INFO")
     Else
-        MsgBox "Found duplicates: groups = " & lngGroups & ", records = " & lngRecords & ".", vbInformation
+        MsgBox mod_UI_Helpers.GetLoc("MSG_DUPLICATES_FOUND") & " " & _
+               mod_UI_Helpers.GetLoc("LBL_GROUPS") & " = " & lngGroups & ", " & _
+               mod_UI_Helpers.GetLoc("LBL_RECORDS") & " = " & lngRecords & ".", _
+               vbInformation, mod_UI_Helpers.GetLoc("TITLE_INFO")
     End If
 
 ExitHere:
@@ -145,7 +156,7 @@ Private Sub btnClear_Click()
         Me.lstResults.Requery
         Me.txtFilter.Enabled = True
         Me.txtFilter.value = ""
-        Me.Caption = mod_UI_Helpers.GetSearchCaption()
+        Me.Caption = mod_UI_Helpers.GetLoc("TITLE_SEARCH")
         On Error Resume Next
         Me.btnExportExcel.Enabled = False
         Me.btnSearch.Enabled = True
@@ -193,8 +204,7 @@ Private Sub lstResults_DblClick(Cancel As Integer)
     strUID = Me.lstResults.value
 
     If IsNull(strUID) Or strUID = "" Then
-        MsgBox "Warning: Employee ID was not read from the list." & vbCrLf & _
-               "Check 'Column Count' (should be 4) and 'Bound Column' (should be 1).", vbExclamation
+        MsgBox mod_UI_Helpers.GetLoc("ERR_EMP_ID_NOT_READ"), vbExclamation, mod_UI_Helpers.GetLoc("TITLE_WARNING")
         Exit Sub
     End If
 
@@ -202,7 +212,7 @@ Private Sub lstResults_DblClick(Cancel As Integer)
 
     Exit Sub
 ErrorHandler:
-    MsgBox "Open error: " & Err.Description
+    MsgBox mod_UI_Helpers.GetLoc("TITLE_ERROR") & ": " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
 End Sub
 
 Private Sub btnExportExcel_Click()
@@ -219,7 +229,7 @@ Private Sub btnExportExcel_Click()
 
     Exit Sub
 ErrorHandler:
-    MsgBox "Export error: " & Err.Description, vbCritical
+    MsgBox mod_UI_Helpers.GetLoc("TITLE_ERROR") & ": " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
 End Sub
 
 Private Sub ExportDuplicatesToExcel()
@@ -231,14 +241,14 @@ Private Sub ExportDuplicatesToExcel()
     Dim filePath As String
 
     If Me.lstResults.ListCount = 0 Then
-        MsgBox "Nothing to export: the list is empty.", vbExclamation
+        MsgBox mod_UI_Helpers.GetLoc("MSG_EXPORT_EMPTY"), vbExclamation, mod_UI_Helpers.GetLoc("TITLE_WARNING")
         Exit Sub
     End If
 
     strSQL = BuildDuplicatesExportSql()
     If strSQL = "" Then
         Debug.Print "ExportDuplicatesToExcel: BuildDuplicatesExportSql returned empty"
-        MsgBox "Error preparing data for export.", vbCritical
+        MsgBox mod_UI_Helpers.GetLoc("ERR_EXPORT_PREP"), vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
         Exit Sub
     End If
 
@@ -247,13 +257,13 @@ Private Sub ExportDuplicatesToExcel()
     filePath = CurrentProject.Path & "\Duplicates_" & Format(Now, "yyyymmdd_hhnnss") & ".xlsx"
     DoCmd.TransferSpreadsheet acExport, acSpreadsheetTypeExcel12Xml, cQdfName, filePath, True
 
-    MsgBox "Export completed: " & filePath, vbInformation
+    MsgBox mod_UI_Helpers.GetLoc("MSG_EXPORT_SUCCESS") & " " & filePath, vbInformation, mod_UI_Helpers.GetLoc("TITLE_INFO")
 
 ExitHere:
     Exit Sub
 ErrorHandler:
     Debug.Print "ExportDuplicatesToExcel error: " & Err.Number & " - " & Err.Description
-    MsgBox "Export error: " & Err.Description, vbCritical
+    MsgBox mod_UI_Helpers.GetLoc("TITLE_ERROR") & ": " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     Resume ExitHere
 End Sub
 
@@ -321,13 +331,13 @@ Private Sub PerformSearch(Optional bSilent As Boolean = False)
     DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after Requery", "H3", "{""listCount"":" & CStr(Me.lstResults.ListCount) & "}"
 
     If Not bSilent And Me.lstResults.ListCount = 0 Then
-        MsgBox "No employees found.", vbExclamation
+        MsgBox mod_UI_Helpers.GetLoc("MSG_NO_EMPLOYEES"), vbExclamation, mod_UI_Helpers.GetLoc("TITLE_SEARCH")
     End If
 
     Exit Sub
 ErrorHandler:
     If Not bSilent Then
-        MsgBox "Search error: " & Err.Description, vbCritical
+        MsgBox mod_UI_Helpers.GetLoc("TITLE_ERROR") & ": " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     End If
     DebugLog "uf_Search.cls:PerformSearch", "PerformSearch error", "H2", "{""errNumber"":" & CStr(Err.Number) & ",""hasError"":" & LCase$(CStr(Err.Number <> 0)) & "}"
 End Sub

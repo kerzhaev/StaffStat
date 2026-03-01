@@ -516,3 +516,252 @@ End Sub
 Public Sub AddNewFieldToSchema(ByVal strFieldName As String, Optional ByVal strDataType As String = "VARCHAR(255)")
     AlterFieldType strFieldName, strDataType
 End Sub
+
+' =============================================
+' @author
+' @description Creates the tbl_Localization table for UI translations
+' =============================================
+Public Sub CreateLocalizationTable()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    ' Check if table already exists
+    Dim td As DAO.TableDef
+    Dim bExists As Boolean
+    bExists = False
+
+    For Each td In db.TableDefs
+        If td.Name = "tbl_Localization" Then
+            bExists = True
+            Exit For
+        End If
+    Next td
+
+    If bExists Then
+        Debug.Print "Table tbl_Localization already exists. Skipping creation."
+        Exit Sub
+    End If
+
+    ' Create table
+    Dim strSQL As String
+    strSQL = "CREATE TABLE tbl_Localization (" & _
+             "MsgKey VARCHAR(100) CONSTRAINT PK_Localization PRIMARY KEY, " & _
+             "LocalValue LONGTEXT, " & _
+             "Category VARCHAR(50));"
+
+    db.Execute strSQL, dbFailOnError
+    Debug.Print "Table tbl_Localization created successfully."
+
+    ' Seed default values (English placeholders to protect encoding)
+    ' The user will translate these to Russian directly in Access UI
+    db.Execute "INSERT INTO tbl_Localization (MsgKey, LocalValue, Category) VALUES ('BTN_SEARCH', 'Search', 'UI')", dbFailOnError
+    db.Execute "INSERT INTO tbl_Localization (MsgKey, LocalValue, Category) VALUES ('BTN_CLEAR', 'Clear', 'UI')", dbFailOnError
+    db.Execute "INSERT INTO tbl_Localization (MsgKey, LocalValue, Category) VALUES ('BTN_EXPORT', 'Export to Excel', 'UI')", dbFailOnError
+    db.Execute "INSERT INTO tbl_Localization (MsgKey, LocalValue, Category) VALUES ('MSG_NO_DUPLICATES', 'No duplicates found.', 'System')", dbFailOnError
+    db.Execute "INSERT INTO tbl_Localization (MsgKey, LocalValue, Category) VALUES ('ERR_INVALID_UID', 'Invalid PersonUID format.', 'Error')", dbFailOnError
+
+    Exit Sub
+
+ErrorHandler:
+    Debug.Print "CreateLocalizationTable Error " & Err.Number & ": " & Err.Description
+End Sub
+
+' =============================================
+' @description Helper to safely Insert or Update localization keys
+' =============================================
+Private Sub UpsertLocKey(db As DAO.Database, strKey As String, strValue As String, strCat As String)
+    Dim rs As DAO.Recordset
+    ' Ищем существующий ключ
+    Set rs = db.OpenRecordset("SELECT * FROM tbl_Localization WHERE MsgKey = '" & strKey & "'", dbOpenDynaset)
+
+    If rs.EOF Then
+        rs.AddNew       ' Если нет - добавляем
+        rs!MsgKey = strKey
+    Else
+        rs.Edit         ' Если есть - обновляем текст
+    End If
+
+    rs!LocalValue = strValue
+    rs!Category = strCat
+    rs.Update
+
+    rs.Close
+    Set rs = Nothing
+End Sub
+
+' =============================================
+' @description Seeds tbl_Localization with default Russian UI text
+' =============================================
+Public Sub SeedLocalizationTable()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    Debug.Print "Starting localization seeding..."
+
+    ' --- Общие элементы UI ---
+    UpsertLocKey db, "BTN_SEARCH", "Поиск", "UI"
+    UpsertLocKey db, "BTN_CLEAR", "Очистить", "UI"
+    UpsertLocKey db, "BTN_EXPORT", "Экспорт в Excel", "UI"
+    UpsertLocKey db, "BTN_SAVE", "Сохранить", "UI"
+    UpsertLocKey db, "BTN_CANCEL", "Отмена", "UI"
+
+    ' --- Заголовки (Titles) ---
+    UpsertLocKey db, "TITLE_INFO", "Информация", "UI"
+    UpsertLocKey db, "TITLE_ERROR", "Ошибка", "UI"
+    UpsertLocKey db, "TITLE_WARNING", "Предупреждение", "UI"
+    UpsertLocKey db, "TITLE_SEARCH", "Поиск", "UI"
+
+    ' --- Сообщения (Messages) ---
+    UpsertLocKey db, "MSG_NO_DUPLICATES", "Дубликаты не найдены.", "System"
+    UpsertLocKey db, "MSG_DUPLICATES_FOUND", "Найдены дубликаты.", "System"
+    UpsertLocKey db, "MSG_SEARCH_PROMPT", "Введите от 2 символов для поиска...", "System"
+
+    ' --- Ошибки (Errors) ---
+    UpsertLocKey db, "ERR_INVALID_UID", "Неверный формат личного номера.", "Error"
+    UpsertLocKey db, "ERR_DB_LOCKED", "База данных заблокирована другим пользователем.", "Error"
+
+    ' --- Карточка сотрудника (Person Card) ---
+    UpsertLocKey db, "LBL_INACTIVE_EMPLOYEE", "СОТРУДНИК НЕАКТИВЕН", "UI"
+    UpsertLocKey db, "TAB_SERVICE", "Служба", "UI"
+    UpsertLocKey db, "TAB_CONTRACT", "Контракт", "UI"
+    UpsertLocKey db, "TAB_PERSONAL", "Личные данные", "UI"
+    UpsertLocKey db, "TAB_LOGISTICS", "Снабжение", "UI"
+    UpsertLocKey db, "TAB_BANK", "Банк", "UI"
+    UpsertLocKey db, "TAB_HISTORY", "Машина времени", "UI"
+
+    ' --- Форма uf_Search ---
+    UpsertLocKey db, "TITLE_DUPLICATES", "Дубликаты (ФИО + Дата рождения)", "UI"
+    UpsertLocKey db, "LBL_GROUPS", "групп", "UI"
+    UpsertLocKey db, "LBL_RECORDS", "записей", "UI"
+    UpsertLocKey db, "ERR_EMP_ID_NOT_READ", "Внимание: ID сотрудника не прочитан из списка. Проверьте 'Column Count' (должно быть 4) и 'Bound Column' (должно быть 1).", "Error"
+    UpsertLocKey db, "MSG_EXPORT_EMPTY", "Нет данных для экспорта: список пуст.", "System"
+    UpsertLocKey db, "ERR_EXPORT_PREP", "Ошибка при подготовке данных к экспорту.", "Error"
+    UpsertLocKey db, "MSG_EXPORT_SUCCESS", "Экспорт успешно завершен:", "System"
+    UpsertLocKey db, "MSG_NO_EMPLOYEES", "Сотрудники не найдены.", "System"
+
+    ' --- Форма uf_Settings ---
+    UpsertLocKey db, "TITLE_SETTINGS", "Настройки системы", "UI"
+    UpsertLocKey db, "TAB_GENERAL", "Основные настройки", "UI"
+    UpsertLocKey db, "TAB_MAPPING", "Маппинг импорта", "UI"
+    UpsertLocKey db, "TAB_MAINTENANCE", "Обслуживание", "UI"
+
+    UpsertLocKey db, "BTN_ADD_MAPPING", "Добавить связь", "UI"
+    UpsertLocKey db, "BTN_DEL_MAPPING", "Удалить связь", "UI"
+    UpsertLocKey db, "BTN_RESEED_MAPPING", "Восстановить по умолчанию", "UI"
+    UpsertLocKey db, "BTN_CREATE_BACKUP", "Создать резервную копию", "UI"
+    UpsertLocKey db, "BTN_CLEAR_LOGS", "Очистить журнал проверки", "UI"
+    UpsertLocKey db, "BTN_RUN_HEALTH_CHECK", "Запустить проверку данных", "UI"
+
+    UpsertLocKey db, "MSG_SETTINGS_SAVED", "Настройки успешно сохранены.", "System"
+    UpsertLocKey db, "ERR_SAVE_FAILED", "Ошибка сохранения:", "Error"
+
+    UpsertLocKey db, "MSG_FILL_MAPPING_FIELDS", "Пожалуйста, заполните Excel Header и Target Field.", "System"
+    UpsertLocKey db, "TITLE_SCHEMA_MANAGER", "Менеджер схемы БД", "UI"
+    UpsertLocKey db, "MSG_FIELD_MISSING", "Поле не существует в базе данных:", "System"
+    UpsertLocKey db, "PROMPT_SELECT_DATA_TYPE", "Выберите тип данных (введите цифру):" & vbCrLf & "1 - Текст (255 симв.) [По умолчанию]" & vbCrLf & "2 - Дата / Время" & vbCrLf & "3 - Число (Длинное целое)" & vbCrLf & "4 - Длинный текст (Мемо)" & vbCrLf & "5 - Да/Нет (Логическое)", "UI"
+    UpsertLocKey db, "MSG_MAPPING_CANCELED", "Создание маппинга отменено.", "System"
+    UpsertLocKey db, "MSG_FIELD_CREATED", "Поле успешно создано с типом", "System"
+    UpsertLocKey db, "ERR_ADD_MAPPING_FAILED", "Ошибка добавления маппинга:", "Error"
+
+    UpsertLocKey db, "MSG_SELECT_ROW_DELETE", "Пожалуйста, выберите строку для удаления.", "System"
+    UpsertLocKey db, "TITLE_CONFIRM", "Подтверждение", "UI"
+    UpsertLocKey db, "PROMPT_DEL_PERSONUID", "Удаление маппинга PersonUID может сломать процесс импорта. Продолжить?", "System"
+    UpsertLocKey db, "ERR_DELETE_FAILED", "Ошибка удаления:", "Error"
+
+    UpsertLocKey db, "PROMPT_RESEED_MAPPING", "Восстановить маппинг по умолчанию? Все текущие пользовательские связи будут удалены.", "System"
+    UpsertLocKey db, "MSG_MAPPING_RESTORED", "Маппинг восстановлен по умолчанию.", "System"
+    UpsertLocKey db, "ERR_RESEED_FAILED", "Ошибка восстановления (ReSeed):", "Error"
+
+    UpsertLocKey db, "TITLE_CHANGE_TYPE", "Изменение типа данных", "UI"
+    UpsertLocKey db, "PROMPT_CHANGE_TYPE_WARN", "Вы хотите изменить тип данных для поля", "System"
+    UpsertLocKey db, "PROMPT_CHANGE_TYPE_WARN2", "ВНИМАНИЕ: Изменение типа может привести к очистке существующих данных в этой колонке.", "System"
+    UpsertLocKey db, "PROMPT_CHANGE_TYPE_INPUT", "Изменение типа данных для поля", "System"
+    UpsertLocKey db, "MSG_FIELD_TYPE_CHANGED", "Тип поля успешно изменен на", "System"
+    UpsertLocKey db, "ERR_CHANGE_TYPE_FAILED", "Ошибка изменения типа:", "Error"
+
+    ' --- Форма uf_PersonCard ---
+    UpsertLocKey db, "TITLE_PERSON_CARD", "Карточка сотрудника", "UI"
+    UpsertLocKey db, "ERR_EMP_NOT_FOUND", "Сотрудник не найден. Личный номер:", "Error"
+    UpsertLocKey db, "STATUS_DISMISSED", "Уволен", "System" ' Заменяет хардкод ChrW
+    UpsertLocKey db, "FILTER_ALL", "Все", "UI"
+    UpsertLocKey db, "BTN_RESET", "Сброс", "UI"
+
+    ' --- Форма uf_Dashboard ---
+    UpsertLocKey db, "TITLE_DASHBOARD", "Панель управления (Дозор)", "UI"
+    UpsertLocKey db, "LBL_TOTAL", "Всего: ", "UI"
+    UpsertLocKey db, "LBL_ACTIVE", "Активных: ", "UI"
+    UpsertLocKey db, "LBL_ERRORS", "Ошибок: ", "UI"
+    UpsertLocKey db, "ERR_UI", "Ошибка интерфейса: ", "Error"
+
+    ' --- Обновленные ключи для Dashboard ---
+    UpsertLocKey db, "BTN_HEALTH_CHECK", "Проверка данных", "UI"
+    UpsertLocKey db, "BTN_OPEN_LOG", "Открыть журнал", "UI"
+    UpsertLocKey db, "BTN_CHANGE_REPORT", "Отчет об изменениях", "UI"
+
+    ' Новые ключи для рамок (Frames) и подписей
+    UpsertLocKey db, "LBL_MANUAL_CONTROLS", "Ручное управление", "UI"
+
+    ' Сообщения статуса
+    UpsertLocKey db, "STATUS_ERROR", "Ошибка.", "UI"
+    UpsertLocKey db, "MSG_RUNNING_IMPORT", "Выполнение импорта...", "System"
+    UpsertLocKey db, "MSG_IMPORT_SUCCESS", "Импорт успешно завершен.", "System"
+    UpsertLocKey db, "MSG_IMPORT_FAILED", "Импорт отменен или завершен с ошибкой.", "Error"
+
+    UpsertLocKey db, "MSG_RUNNING_HEALTH", "Выполнение проверки целостности...", "System"
+    UpsertLocKey db, "PROMPT_EXPORT_ERRORS", "Экспортировать отчет об ошибках в Excel?", "System"
+    UpsertLocKey db, "TITLE_HEALTH_CHECK", "Проверка данных", "UI"
+    UpsertLocKey db, "MSG_HEALTH_DONE", "Проверка завершена. Ошибок: ", "System"
+
+    UpsertLocKey db, "MSG_RUNNING_ANALYSIS", "Выполнение анализа изменений...", "System"
+    UpsertLocKey db, "MSG_ANALYSIS_DONE", "Анализ завершен. Новых: ", "System"
+    UpsertLocKey db, "LBL_UPDATED", ", Обновлено: ", "System"
+
+    UpsertLocKey db, "MSG_OPENING_LOG", "Открытие журнала...", "System"
+    UpsertLocKey db, "MSG_LOG_OPENED", "Журнал открыт.", "System"
+
+    UpsertLocKey db, "MSG_CREATING_INDEXES", "Создание индексов производительности...", "System"
+    UpsertLocKey db, "MSG_INDEXES_DONE", "Индексы созданы. Добавлено: ", "System"
+    UpsertLocKey db, "LBL_SKIPPED", ", Пропущено: ", "System"
+
+    UpsertLocKey db, "MSG_RUNNING_FULL_SYNC", "Выполнение полного цикла обновления...", "System"
+    UpsertLocKey db, "MSG_FULL_SYNC_DONE", "Полное обновление завершено.", "System"
+
+    UpsertLocKey db, "MSG_OPENING_DUPLICATES", "Открытие инструмента поиска дубликатов...", "System"
+    UpsertLocKey db, "MSG_DUPLICATES_OPENED", "Поиск дубликатов запущен.", "System"
+    UpsertLocKey db, "ERR_OPEN_DUPLICATES", "Не удалось открыть поиск дубликатов: ", "Error"
+
+    ' Отчеты
+    UpsertLocKey db, "ERR_ENTER_DATES", "Пожалуйста, введите начальную и конечную даты.", "Error"
+    UpsertLocKey db, "ERR_INVALID_DATE_FORMAT", "Неверный формат даты. Используйте DD.MM.YYYY.", "Error"
+    UpsertLocKey db, "ERR_START_AFTER_END", "Начальная дата должна быть меньше или равна конечной.", "Error"
+    UpsertLocKey db, "MSG_GEN_AUDIT", "Генерация аудит-отчета...", "System"
+    UpsertLocKey db, "MSG_AUDIT_DONE", "Аудит-отчет готов.", "System"
+    UpsertLocKey db, "MSG_GEN_SNAPSHOT", "Генерация штатного среза...", "System"
+    UpsertLocKey db, "MSG_SNAPSHOT_DONE", "Штатный срез готов.", "System"
+
+    ' Кнопки
+    UpsertLocKey db, "BTN_SETTINGS", "Настройки", "UI"
+    UpsertLocKey db, "BTN_IMPORT", "Импорт", "UI"
+    UpsertLocKey db, "BTN_HEALTH_CHECK", "Health Check", "UI"
+    UpsertLocKey db, "BTN_ANALYZE", "Анализ", "UI"
+    UpsertLocKey db, "BTN_OPEN_LOG", "Журнал", "UI"
+    UpsertLocKey db, "BTN_CREATE_INDEXES", "Создать индексы", "UI"
+    UpsertLocKey db, "BTN_FULL_SYNC", "Полное обновление", "UI"
+    UpsertLocKey db, "BTN_FIND_DUPLICATES", "Поиск дубликатов", "UI"
+    UpsertLocKey db, "BTN_CHANGE_REPORT", "Changes Report", "UI"
+    UpsertLocKey db, "BTN_SNAPSHOT", "Штатный срез", "UI"
+
+    Debug.Print "Localization seeding complete."
+    MsgBox "Базовый словарь локализации успешно загружен в таблицу!", vbInformation, "StaffState Init"
+
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Ошибка при заполнении локализации: " & Err.Description, vbCritical, "Error " & Err.Number
+    Set db = Nothing
+End Sub

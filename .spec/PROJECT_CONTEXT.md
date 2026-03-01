@@ -1,6 +1,11 @@
 ﻿# PROJECT CONTEXT: StaffState (Штаты) - MS Access/VBA
 
 ## Current State
+- **Phase 30 (UI Localization Engine)** is completed.
+  - Created `tbl_Localization` table for storing Russian UI translations (DB encoding protection).
+  - Implemented a fast caching engine based on `Scripting.Dictionary` (Late Binding) in `mod_UI_Helpers`, loaded into memory at app start (`InitLocalization`).
+  - Added `GetLoc(strKey)` function for instantaneous translation retrieval from cache.
+  - Added `SeedLocalizationTable` seeder in `mod_Schema_Manager` for basic dictionary population.
 - **Phase 29 (Batch Transactions & Performance)** is completed.
   - Implemented batch transactions in `SyncBufferToMaster` (commit every 2000 records) for datasets > 30,000.
   - Added `DoEvents` for UI responsiveness.
@@ -52,11 +57,18 @@
 - tbl_Import_Meta
 
 ## UI Forms
-- uf_Dashboard
-- uf_Search
-- uf_PersonCard
+- uf_Dashboard: All hardcoded Russian text (Captions, MsgBox, InputBox) replaced with `GetLoc` calls.
+- uf_Search: All hardcoded Russian text replaced with `GetLoc` calls.
+- uf_Settings: All hardcoded Russian text replaced with `GetLoc` calls.
+- uf_PersonCard: All hardcoded Russian text replaced with `GetLoc` calls. Dismissal status check now uses the localization key `STATUS_DISMISSED` instead of assembling the word via `ChrW()`.
 
 ## History
+- **Phase 30 (2026-03-01)**:
+  - UI Localization: Created `tbl_Localization` for safe storage of Russian UI translations.
+  - Caching Engine: Implemented `Scripting.Dictionary` caching in `mod_UI_Helpers` (`InitLocalization`, `GetLoc`) for rapid retrieval.
+  - Seeder: Added `SeedLocalizationTable` in `mod_Schema_Manager`.
+  - UI Refactoring: Replaced all Russian hardcoded strings in `uf_Dashboard`, `uf_Search`, `uf_Settings`, and `uf_PersonCard` with `GetLoc`.
+  - Dismissal Status: `uf_PersonCard` now uses `STATUS_DISMISSED` localization key instead of `ChrW()` assembly.
 - **Phase 29 (2026-03-01)**:
   - Batch Transactions: Implemented in `SyncBufferToMaster` with commit every 2000 records to prevent MS Access freezing on large sets (> 30k records).
   - UI Responsiveness: Integrated `DoEvents` to keep the Windows UI thread alive during long operations.

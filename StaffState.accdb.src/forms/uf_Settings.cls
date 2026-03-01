@@ -2,9 +2,6 @@
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-Option Compare Database
-Option Explicit
-
 ' =============================================
 ' @form uf_Settings
 ' @description Settings UI with tab control: General, Mapping, Maintenance.
@@ -12,8 +9,35 @@ Option Explicit
 ' @note 100% English version. Safe for modern IDEs.
 ' =============================================
 
+Option Compare Database
+Option Explicit
+
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
+
+    ' --- PHASE 30: Apply UI Localization ---
+    Me.Caption = mod_UI_Helpers.GetLoc("TITLE_SETTINGS")
+
+    ' Wrap control caption assignment in Resume Next
+    ' in case some buttons/tabs are renamed or missing
+    On Error Resume Next
+    Me.cmdSave.Caption = mod_UI_Helpers.GetLoc("BTN_SAVE")
+    Me.cmdCancel.Caption = mod_UI_Helpers.GetLoc("BTN_CANCEL")
+
+    Me.btnAddMapping.Caption = mod_UI_Helpers.GetLoc("BTN_ADD_MAPPING")
+    Me.btnDeleteMapping.Caption = mod_UI_Helpers.GetLoc("BTN_DEL_MAPPING")
+    Me.btnReSeedMapping.Caption = mod_UI_Helpers.GetLoc("BTN_RESEED_MAPPING")
+
+    Me.cmdCreateBackup.Caption = mod_UI_Helpers.GetLoc("BTN_CREATE_BACKUP")
+    Me.cmdClearLogs.Caption = mod_UI_Helpers.GetLoc("BTN_CLEAR_LOGS")
+    Me.btnRunHealthCheck.Caption = mod_UI_Helpers.GetLoc("BTN_RUN_HEALTH_CHECK")
+
+    ' Localize Tabs
+    Me.pgGeneral.Caption = mod_UI_Helpers.GetLoc("TAB_GENERAL")
+    Me.pgMapping.Caption = mod_UI_Helpers.GetLoc("TAB_MAPPING")
+    Me.pgMaintenance.Caption = mod_UI_Helpers.GetLoc("TAB_MAINTENANCE")
+    On Error GoTo ErrorHandler
+
     LoadSettingsFromStorage
     Me.cboTargetField.LimitToList = False
     RefreshMappingList
@@ -61,12 +85,12 @@ Private Sub cmdSave_Click()
     mod_Maintenance_Logic.SetSetting "AutoCheckEnabled", IIf(Nz(Me.chkAutoCheckEnabled.value, False) = True, "True", "False"), "General"
     mod_Maintenance_Logic.SetSetting "LogLevel", CStr(Nz(Me.cboLogLevel.value, "INFO")), "General"
 
-    mod_UI_Helpers.ShowMessage "Settings saved successfully.", vbInformation
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_SETTINGS_SAVED"), vbInformation
     DoCmd.Close acForm, Me.Name, acSaveNo
     Exit Sub
 ErrorHandler:
     Debug.Print "cmdSave_Click: " & Err.Number & " - " & Err.Description
-    mod_UI_Helpers.ShowMessage "Save failed: " & Err.Description, vbExclamation
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("ERR_SAVE_FAILED") & " " & Err.Description, vbExclamation
     Exit Sub
 End Sub
 
@@ -103,23 +127,19 @@ Private Sub btnAddMapping_Click()
     strTarget = Trim$(Nz(Me.cboTargetField.value, ""))
 
     If Len(strExcel) = 0 Or Len(strTarget) = 0 Then
-        mod_UI_Helpers.ShowMessage "Please fill in both Excel Header and Target Field.", vbExclamation
+        mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_FILL_MAPPING_FIELDS"), vbExclamation
         Exit Sub
     End If
 
     ' --- PHASE 27: Smart Typing (Prompt user for data type) ---
     If Not mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strTarget) Then
         strTypeSelection = InputBox( _
-            "Field [" & strTarget & "] does not exist in the database." & vbCrLf & vbCrLf & _
-            "Select Data Type (enter number):" & vbCrLf & _
-            "1 - Short Text (255 chars) [Default]" & vbCrLf & _
-            "2 - Date / Time" & vbCrLf & _
-            "3 - Number (Long Integer)" & vbCrLf & _
-            "4 - Long Text (Memo/Notes)" & vbCrLf & _
-            "5 - Yes/No (Boolean)", "Schema Manager", "1")
+            mod_UI_Helpers.GetLoc("MSG_FIELD_MISSING") & " [" & strTarget & "]" & vbCrLf & vbCrLf & _
+            mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), _
+            mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
 
         If Trim$(strTypeSelection) = "" Then
-            mod_UI_Helpers.ShowMessage "Mapping creation canceled.", vbExclamation
+            mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_MAPPING_CANCELED"), vbExclamation
             Exit Sub
         End If
 
@@ -132,7 +152,7 @@ Private Sub btnAddMapping_Click()
         End Select
 
         mod_Schema_Manager.AddNewFieldToSchema strTarget, strSqlType
-        mod_UI_Helpers.ShowMessage "Field [" & strTarget & "] created as " & strSqlType & ".", vbInformation
+        mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_FIELD_CREATED") & " " & strSqlType & ".", vbInformation
     End If
 
     ' --- PHASE 26: Parameterized Query for mapping (Safe Insert) ---
@@ -159,7 +179,7 @@ ErrorHandler:
     If Not qdf Is Nothing Then Set qdf = Nothing
     If Not db Is Nothing Then Set db = Nothing
     Debug.Print "btnAddMapping_Click: " & Err.Description
-    mod_UI_Helpers.ShowMessage "Add mapping failed: " & Err.Description, vbExclamation
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("ERR_ADD_MAPPING_FAILED") & " " & Err.Description, vbExclamation
 End Sub
 
 Private Sub btnDeleteMapping_Click()
@@ -170,7 +190,7 @@ Private Sub btnDeleteMapping_Click()
     Dim strSQL As String
 
     If Me.lstMapping.ListIndex < 0 Then
-        mod_UI_Helpers.ShowMessage "Please select a row to delete.", vbExclamation
+        mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_SELECT_ROW_DELETE"), vbExclamation
         Exit Sub
     End If
 
@@ -178,7 +198,7 @@ Private Sub btnDeleteMapping_Click()
     strTarget = Nz(Me.lstMapping.Column(2), "")
 
     If UCase(Trim$(strTarget)) = "PERSONUID" Then
-        If Not mod_UI_Helpers.AskUserYesNo("Removing PersonUID mapping may break the import process. Continue?", "Confirm") Then Exit Sub
+        If Not mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_DEL_PERSONUID"), mod_UI_Helpers.GetLoc("TITLE_CONFIRM")) Then Exit Sub
     End If
 
     Set db = CurrentDb
@@ -191,20 +211,20 @@ Private Sub btnDeleteMapping_Click()
 ErrorHandler:
     If Not db Is Nothing Then Set db = Nothing
     Debug.Print "btnDeleteMapping_Click: " & Err.Description
-    mod_UI_Helpers.ShowMessage "Delete failed: " & Err.Description, vbExclamation
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("ERR_DELETE_FAILED") & " " & Err.Description, vbExclamation
 End Sub
 
 Private Sub btnReSeedMapping_Click()
     On Error GoTo ErrorHandler
-    If Not mod_UI_Helpers.AskUserYesNo("Restore default mapping? Current custom links will be deleted.", "Confirm") Then Exit Sub
+    If Not mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_RESEED_MAPPING"), mod_UI_Helpers.GetLoc("TITLE_CONFIRM")) Then Exit Sub
 
     mod_Schema_Manager.ReSeedMapping
     RefreshMappingList
-    mod_UI_Helpers.ShowMessage "Mapping restored to default.", vbInformation
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_MAPPING_RESTORED"), vbInformation
     Exit Sub
 ErrorHandler:
     Debug.Print "btnReSeedMapping_Click: " & Err.Description
-    mod_UI_Helpers.ShowMessage "ReSeed failed: " & Err.Description, vbExclamation
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("ERR_RESEED_FAILED") & " " & Err.Description, vbExclamation
 End Sub
 
 ' --- Maintenance tab (pgMaintenance) ---
@@ -247,16 +267,12 @@ Private Sub lstMapping_DblClick(Cancel As Integer)
     strTarget = Nz(Me.lstMapping.Column(2), "")
     If strTarget = "" Then Exit Sub
 
-    If Not mod_UI_Helpers.AskUserYesNo("Do you want to change the data type for field [" & strTarget & "]?" & vbCrLf & vbCrLf & "WARNING: Changing types may clear existing data in this column.", "Change Data Type") Then Exit Sub
+    If Not mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_CHANGE_TYPE_WARN") & " [" & strTarget & "]?" & vbCrLf & vbCrLf & mod_UI_Helpers.GetLoc("PROMPT_CHANGE_TYPE_WARN2"), mod_UI_Helpers.GetLoc("TITLE_CHANGE_TYPE")) Then Exit Sub
 
     strTypeSelection = InputBox( _
-        "Change Data Type for [" & strTarget & "]" & vbCrLf & vbCrLf & _
-        "Select New Data Type (enter number):" & vbCrLf & _
-        "1 - Short Text (255 chars)" & vbCrLf & _
-        "2 - Date / Time" & vbCrLf & _
-        "3 - Number (Long Integer)" & vbCrLf & _
-        "4 - Long Text (Memo/Notes)" & vbCrLf & _
-        "5 - Yes/No (Boolean)", "Schema Manager", "1")
+        mod_UI_Helpers.GetLoc("PROMPT_CHANGE_TYPE_INPUT") & " [" & strTarget & "]" & vbCrLf & vbCrLf & _
+        mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), _
+        mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
 
     If Trim$(strTypeSelection) = "" Then Exit Sub
 
@@ -269,10 +285,10 @@ Private Sub lstMapping_DblClick(Cancel As Integer)
     End Select
 
     mod_Schema_Manager.AlterFieldType strTarget, strSqlType
-    mod_UI_Helpers.ShowMessage "Field [" & strTarget & "] successfully changed to " & strSqlType & ".", vbInformation
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_FIELD_TYPE_CHANGED") & " " & strSqlType & ".", vbInformation
 
     RefreshMappingList
     Exit Sub
 ErrorHandler:
-    mod_UI_Helpers.ShowMessage "Error changing type: " & Err.Description, vbCritical
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("ERR_CHANGE_TYPE_FAILED") & " " & Err.Description, vbCritical
 End Sub
