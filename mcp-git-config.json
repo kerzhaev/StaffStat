@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git",
+        "C:\\Users\\Nachfin\\Desktop\\Projets\\StaffState"
+      ]
+    }
+  }
+}

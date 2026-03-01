@@ -257,10 +257,24 @@ ErrorHandler:
     Debug.Print "ReSeedMapping error: " & Err.Description
 End Sub
 
+' =============================================
+' @description Adds mapping row using Parameterized QueryDef
+' =============================================
 Private Sub AddMapping(db As DAO.Database, lngProfile As Long, strExcel As String, strTarget As String)
+    Dim qdf As DAO.QueryDef
     Dim strSQL As String
-    strSQL = "INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES (" & lngProfile & ", '" & Replace(strExcel, "'", "''") & "', '" & Replace(strTarget, "'", "''") & "')"
-    db.Execute strSQL, dbFailOnError
+
+    strSQL = "PARAMETERS prmProfile Long, prmExcel Text (255), prmTarget Text (100); " & _
+             "INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) " & _
+             "VALUES ([prmProfile], [prmExcel], [prmTarget]);"
+
+    Set qdf = db.CreateQueryDef("", strSQL)
+    qdf.Parameters("prmProfile").value = lngProfile
+    qdf.Parameters("prmExcel").value = Left$(strExcel, 255)
+    qdf.Parameters("prmTarget").value = Left$(strTarget, 100)
+
+    qdf.Execute dbFailOnError
+    Set qdf = Nothing
 End Sub
 
 Private Sub AddMappingIfNotExists(db As DAO.Database, lngProfile As Long, strExcel As String, strTarget As String)
@@ -286,32 +300,7 @@ Private Function CyrStr(ParamArray codes() As Variant) As String
     CyrStr = s
 End Function
 
-' =============================================
-' @description Adds a new column to tbl_Personnel_Master and tbl_Import_Buffer (LONGTEXT).
-' @param strFieldName [String] Name of the column to add
-' =============================================
-Public Sub AddNewFieldToSchema(ByVal strFieldName As String)
-    On Error GoTo ErrorHandler
-    Dim db As DAO.Database
-    Dim strSQL As String
-    Dim strSafe As String
 
-    strSafe = Trim(strFieldName)
-    If Len(strSafe) = 0 Then Exit Sub
-
-    Set db = CurrentDb
-    strSQL = "ALTER TABLE [tbl_Personnel_Master] ADD COLUMN [" & strSafe & "] LONGTEXT;"
-    db.Execute strSQL, dbFailOnError
-
-    strSQL = "ALTER TABLE [tbl_Import_Buffer] ADD COLUMN [" & strSafe & "] LONGTEXT;"
-    db.Execute strSQL, dbFailOnError
-
-    Set db = Nothing
-    Exit Sub
-ErrorHandler:
-    Debug.Print "AddNewFieldToSchema error: " & Err.Description & " (" & Err.Number & ")"
-    Set db = Nothing
-End Sub
 
 ' =============================================
 ' @description Ensures tbl_Personnel_Master has all canonical English fields.
@@ -353,3 +342,177 @@ Private Function GetAllowedMasterFields() As Collection
     Next i
     Set GetAllowedMasterFields = c
 End Function
+
+
+' =============================================
+' @description Gets field type as friendly string (for UI)
+' =============================================
+Public Function GetFieldTypeFriendly(ByVal strTable As String, ByVal strField As String) As String
+    On Error Resume Next
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    Dim fld As DAO.Field
+
+    Set db = CurrentDb
+    ' CRITICAL: Force Access to clear cache and look at the real linked table
+    db.TableDefs.Refresh
+
+    Set tdf = db.TableDefs(strTable)
+    Set fld = tdf.Fields(strField)
+
+    If Err.Number <> 0 Then
+        GetFieldTypeFriendly = "Unknown"
+        Exit Function
+    End If
+
+    Select Case fld.Type
+        Case 10: GetFieldTypeFriendly = "Text (255)"
+        Case 12: GetFieldTypeFriendly = "Long Text"
+        Case 8:  GetFieldTypeFriendly = "Date/Time"
+        Case 4:  GetFieldTypeFriendly = "Number"
+        Case 1:  GetFieldTypeFriendly = "Yes/No"
+        Case Else: GetFieldTypeFriendly = "Type " & fld.Type
+    End Select
+
+    Set fld = Nothing
+    Set tdf = Nothing
+    Set db = Nothing
+End Function
+
+
+
+' =============================================
+' @description Helper: Gets physical file path of a table if linked.
+' =============================================
+Public Function GetBackendPath(ByVal strTableName As String) As String
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    Dim strConnect As String
+    Dim iPos As Long
+
+    GetBackendPath = ""
+    On Error Resume Next
+    Set db = CurrentDb
+    db.TableDefs.Refresh
+    Set tdf = db.TableDefs(strTableName)
+
+    If Err.Number = 0 Then
+        strConnect = tdf.Connect
+        If Len(strConnect) > 0 Then
+            ' CRITICAL FIX: Case-insensitive search (vbTextCompare) for "DATABASE="
+            iPos = InStr(1, strConnect, "DATABASE=", vbTextCompare)
+            If iPos > 0 Then
+                GetBackendPath = Trim$(Mid$(strConnect, iPos + 9))
+            End If
+        End If
+    End If
+
+    Set tdf = Nothing
+    Set db = Nothing
+    Err.Clear
+End Function
+
+' =============================================
+' @description Alters existing column type in Master and Buffer. Adds column if it is missing.
+' =============================================
+Public Sub AlterFieldType(ByVal strFieldName As String, ByVal strDataType As String)
+    Dim dbLocal As DAO.Database
+    Dim dbBackend As DAO.Database
+    Dim strPath As String
+    Dim strSafe As String
+    Dim blnLocal As Boolean
+    Dim errNum As Long
+    Dim errDesc As String
+    Dim blnExists As Boolean
+    Dim tdfTemp As DAO.TableDef
+    Dim fldTemp As DAO.Field
+
+    On Error GoTo ErrorHandler
+
+    strSafe = Trim$(strFieldName)
+    If Len(strSafe) = 0 Then Exit Sub
+
+    ' Get path to the Back-End file
+    strPath = GetBackendPath("tbl_Personnel_Master")
+
+    If Len(strPath) > 0 Then
+        ' Connected to Split Database Back-End
+        Set dbBackend = DBEngine.Workspaces(0).OpenDatabase(strPath)
+        blnLocal = False
+    Else
+        ' Safety trigger: If it thinks it's local but is actually linked, STOP!
+        If Len(CurrentDb.TableDefs("tbl_Personnel_Master").Connect) > 0 Then
+            Err.Raise vbObjectError + 1, "AlterFieldType", "Failed to resolve Back-End path. Connection string: " & CurrentDb.TableDefs("tbl_Personnel_Master").Connect
+        End If
+        Set dbLocal = CurrentDb
+        Set dbBackend = dbLocal
+        blnLocal = True
+    End If
+
+    ' --- 1. Check and Update MASTER TABLE ---
+    blnExists = False
+    dbBackend.TableDefs.Refresh
+    Set tdfTemp = dbBackend.TableDefs("tbl_Personnel_Master")
+    For Each fldTemp In tdfTemp.Fields
+        If UCase(fldTemp.Name) = UCase(strSafe) Then
+            blnExists = True
+            Exit For
+        End If
+    Next fldTemp
+
+    If blnExists Then
+        dbBackend.Execute "ALTER TABLE [tbl_Personnel_Master] ALTER COLUMN [" & strSafe & "] " & strDataType & ";", dbFailOnError
+    Else
+        dbBackend.Execute "ALTER TABLE [tbl_Personnel_Master] ADD COLUMN [" & strSafe & "] " & strDataType & ";", dbFailOnError
+    End If
+
+    ' --- 2. Check and Update BUFFER TABLE ---
+    blnExists = False
+    Set tdfTemp = dbBackend.TableDefs("tbl_Import_Buffer")
+    For Each fldTemp In tdfTemp.Fields
+        If UCase(fldTemp.Name) = UCase(strSafe) Then
+            blnExists = True
+            Exit For
+        End If
+    Next fldTemp
+
+    If blnExists Then
+        dbBackend.Execute "ALTER TABLE [tbl_Import_Buffer] ALTER COLUMN [" & strSafe & "] " & strDataType & ";", dbFailOnError
+    Else
+        dbBackend.Execute "ALTER TABLE [tbl_Import_Buffer] ADD COLUMN [" & strSafe & "] " & strDataType & ";", dbFailOnError
+    End If
+
+    ' --- 3. Refresh Links ---
+    If Not blnLocal Then
+        dbBackend.Close
+        Set dbBackend = Nothing
+
+        Set dbLocal = CurrentDb
+        dbLocal.TableDefs.Refresh
+        dbLocal.TableDefs("tbl_Personnel_Master").RefreshLink
+        dbLocal.TableDefs("tbl_Import_Buffer").RefreshLink
+    End If
+
+    Set tdfTemp = Nothing
+    Set fldTemp = Nothing
+    If Not dbLocal Is Nothing Then Set dbLocal = Nothing
+    Exit Sub
+
+ErrorHandler:
+    errNum = Err.Number
+    errDesc = Err.Description
+    If Not dbBackend Is Nothing And Not blnLocal Then
+        On Error Resume Next
+        dbBackend.Close
+    End If
+    Set dbBackend = Nothing
+    Set dbLocal = Nothing
+    Err.Raise errNum, "AlterFieldType", errDesc
+End Sub
+
+' =============================================
+' @description Wrapper for adding field (Safe for both new and existing fields)
+' =============================================
+Public Sub AddNewFieldToSchema(ByVal strFieldName As String, Optional ByVal strDataType As String = "VARCHAR(255)")
+    AlterFieldType strFieldName, strDataType
+End Sub

@@ -78,6 +78,10 @@ End Sub
 Public Sub RefreshMappingList()
     On Error GoTo ErrorHandler
     If Not (Me.lstMapping Is Nothing) Then
+        ' Inject our custom function to show Data Type in the 4th column
+        Me.lstMapping.RowSource = "SELECT MappingID, ExcelHeader, TargetField, GetFieldTypeFriendly('tbl_Personnel_Master', TargetField) AS DataType FROM tbl_Import_Mapping WHERE ProfileID = 1 ORDER BY ExcelHeader;"
+        Me.lstMapping.ColumnCount = 4
+        Me.lstMapping.ColumnWidths = "0;2500;2500;2000"
         Me.lstMapping.Requery
     End If
     Exit Sub
@@ -90,7 +94,10 @@ Private Sub btnAddMapping_Click()
     Dim strExcel As String
     Dim strTarget As String
     Dim db As DAO.Database
+    Dim qdf As DAO.QueryDef
     Dim strSQL As String
+    Dim strTypeSelection As String
+    Dim strSqlType As String
 
     strExcel = Trim$(Nz(Me.txtExcelHeader.value, ""))
     strTarget = Trim$(Nz(Me.cboTargetField.value, ""))
@@ -100,14 +107,48 @@ Private Sub btnAddMapping_Click()
         Exit Sub
     End If
 
+    ' --- PHASE 27: Smart Typing (Prompt user for data type) ---
     If Not mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strTarget) Then
-        mod_Schema_Manager.AddNewFieldToSchema strTarget
-        mod_UI_Helpers.ShowMessage "Field [" & strTarget & "] created in the database structure.", vbInformation
+        strTypeSelection = InputBox( _
+            "Field [" & strTarget & "] does not exist in the database." & vbCrLf & vbCrLf & _
+            "Select Data Type (enter number):" & vbCrLf & _
+            "1 - Short Text (255 chars) [Default]" & vbCrLf & _
+            "2 - Date / Time" & vbCrLf & _
+            "3 - Number (Long Integer)" & vbCrLf & _
+            "4 - Long Text (Memo/Notes)" & vbCrLf & _
+            "5 - Yes/No (Boolean)", "Schema Manager", "1")
+
+        If Trim$(strTypeSelection) = "" Then
+            mod_UI_Helpers.ShowMessage "Mapping creation canceled.", vbExclamation
+            Exit Sub
+        End If
+
+        Select Case Trim$(strTypeSelection)
+            Case "2": strSqlType = "DATETIME"
+            Case "3": strSqlType = "LONG"
+            Case "4": strSqlType = "LONGTEXT"
+            Case "5": strSqlType = "BIT"
+            Case Else: strSqlType = "VARCHAR(255)"
+        End Select
+
+        mod_Schema_Manager.AddNewFieldToSchema strTarget, strSqlType
+        mod_UI_Helpers.ShowMessage "Field [" & strTarget & "] created as " & strSqlType & ".", vbInformation
     End If
 
+    ' --- PHASE 26: Parameterized Query for mapping (Safe Insert) ---
     Set db = CurrentDb
-    strSQL = "INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES (1, '" & Replace(strExcel, "'", "''") & "', '" & Replace(strTarget, "'", "''") & "')"
-    db.Execute strSQL, dbFailOnError
+    strSQL = "PARAMETERS prmProfile Long, prmExcel Text (255), prmTarget Text (100); " & _
+             "INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) " & _
+             "VALUES ([prmProfile], [prmExcel], [prmTarget]);"
+
+    Set qdf = db.CreateQueryDef("", strSQL)
+    qdf.Parameters("prmProfile").value = 1
+    qdf.Parameters("prmExcel").value = Left$(strExcel, 255)
+    qdf.Parameters("prmTarget").value = Left$(strTarget, 100)
+
+    qdf.Execute dbFailOnError
+
+    Set qdf = Nothing
     Set db = Nothing
 
     RefreshMappingList
@@ -115,6 +156,7 @@ Private Sub btnAddMapping_Click()
     Me.cboTargetField = ""
     Exit Sub
 ErrorHandler:
+    If Not qdf Is Nothing Then Set qdf = Nothing
     If Not db Is Nothing Then Set db = Nothing
     Debug.Print "btnAddMapping_Click: " & Err.Description
     mod_UI_Helpers.ShowMessage "Add mapping failed: " & Err.Description, vbExclamation
@@ -188,4 +230,49 @@ Private Sub btnRunHealthCheck_Click()
     Exit Sub
 ErrorHandler:
     Debug.Print "btnRunHealthCheck_Click: " & Err.Description
+End Sub
+
+' =============================================
+' @description Double click to change Data Type of an existing field
+' =============================================
+Private Sub lstMapping_DblClick(Cancel As Integer)
+    On Error GoTo ErrorHandler
+    Dim strTarget As String
+    Dim strTypeSelection As String
+    Dim strSqlType As String
+
+    If Me.lstMapping.ListIndex < 0 Then Exit Sub
+
+    ' Get TargetField from the 3rd column (index 2)
+    strTarget = Nz(Me.lstMapping.Column(2), "")
+    If strTarget = "" Then Exit Sub
+
+    If Not mod_UI_Helpers.AskUserYesNo("Do you want to change the data type for field [" & strTarget & "]?" & vbCrLf & vbCrLf & "WARNING: Changing types may clear existing data in this column.", "Change Data Type") Then Exit Sub
+
+    strTypeSelection = InputBox( _
+        "Change Data Type for [" & strTarget & "]" & vbCrLf & vbCrLf & _
+        "Select New Data Type (enter number):" & vbCrLf & _
+        "1 - Short Text (255 chars)" & vbCrLf & _
+        "2 - Date / Time" & vbCrLf & _
+        "3 - Number (Long Integer)" & vbCrLf & _
+        "4 - Long Text (Memo/Notes)" & vbCrLf & _
+        "5 - Yes/No (Boolean)", "Schema Manager", "1")
+
+    If Trim$(strTypeSelection) = "" Then Exit Sub
+
+    Select Case Trim$(strTypeSelection)
+        Case "2": strSqlType = "DATETIME"
+        Case "3": strSqlType = "LONG"
+        Case "4": strSqlType = "LONGTEXT"
+        Case "5": strSqlType = "BIT"
+        Case Else: strSqlType = "VARCHAR(255)"
+    End Select
+
+    mod_Schema_Manager.AlterFieldType strTarget, strSqlType
+    mod_UI_Helpers.ShowMessage "Field [" & strTarget & "] successfully changed to " & strSqlType & ".", vbInformation
+
+    RefreshMappingList
+    Exit Sub
+ErrorHandler:
+    mod_UI_Helpers.ShowMessage "Error changing type: " & Err.Description, vbCritical
 End Sub

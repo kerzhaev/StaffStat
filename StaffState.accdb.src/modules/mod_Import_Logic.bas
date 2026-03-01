@@ -379,27 +379,39 @@ ErrorHandler:
     GetFileModificationDate = Now()
 End Function
 
+' =============================================
+' @description Updates import metadata table using Parameterized QueryDef.
+' =============================================
 Private Sub UpdateImportMetadata(strFilePath As String)
     On Error GoTo ErrorHandler
+
     Dim db As DAO.Database
+    Dim qdf As DAO.QueryDef
     Dim dtFileDate As Date
     Dim strSQL As String
 
     Set db = CurrentDb
     dtFileDate = GetFileModificationDate(strFilePath)
+
     db.Execute "DELETE FROM tbl_Import_Meta;", dbFailOnError
 
-    Dim strFileDate As String, strNowDate As String
-    strFileDate = Month(dtFileDate) & "/" & Day(dtFileDate) & "/" & Year(dtFileDate) & " " & Format(dtFileDate, "hh:nn:ss")
-    strNowDate = Month(Now()) & "/" & Day(Now()) & "/" & Year(Now()) & " " & Format(Now(), "hh:nn:ss")
+    strSQL = "PARAMETERS prmExportDate DateTime, prmImportDate DateTime, prmPath Text (255); " & _
+             "INSERT INTO tbl_Import_Meta (ExportFileDate, ImportRunAt, SourceFilePath) " & _
+             "VALUES ([prmExportDate], [prmImportDate], [prmPath]);"
 
-    strSQL = "INSERT INTO tbl_Import_Meta (ExportFileDate, ImportRunAt, SourceFilePath) " & _
-             "VALUES (#" & strFileDate & "#, #" & strNowDate & "#, '" & Replace(strFilePath, "'", "''") & "');"
-    db.Execute strSQL, dbFailOnError
+    Set qdf = db.CreateQueryDef("", strSQL)
+    qdf.Parameters("prmExportDate").value = dtFileDate
+    qdf.Parameters("prmImportDate").value = Now()
+    qdf.Parameters("prmPath").value = Left$(strFilePath, 255)
+
+    qdf.Execute dbFailOnError
 
     Debug.Print "Import metadata updated. ExportFileDate: " & dtFileDate
+
+    Set qdf = Nothing
     Set db = Nothing
     Exit Sub
+
 ErrorHandler:
     Debug.Print "Warning: Failed to update import metadata: " & Err.Description
 End Sub

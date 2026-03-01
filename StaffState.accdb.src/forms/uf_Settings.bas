@@ -10,7 +10,7 @@ Begin Form
     Width =11565
     DatasheetFontHeight =11
     ItemSuffix =29
-    Right =18390
+    Right =25575
     Bottom =12120
     RecSrcDt = Begin
         0xa95bb271d47ce640
@@ -372,7 +372,7 @@ Begin Form
                                     ForeColor =3484194
                                     Name ="cboLogLevel"
                                     RowSourceType ="Value List"
-                                    RowSource ="DEBUG;INFO;ERROR"
+                                    RowSource ="INFO;DEBUG;ERROR"
                                     FontName ="Calibri"
                                     GridlineColor =10921638
 
@@ -413,6 +413,7 @@ Begin Form
                                     RowSource ="SELECT MappingID, ExcelHeader, TargetField FROM tbl_Import_Mapping WHERE Profile"
                                         "ID = 1 ORDER BY ExcelHeader; "
                                     ColumnWidths ="0;2501;2501"
+                                    OnDblClick ="[Event Procedure]"
                                     FontName ="Calibri"
                                     GridlineColor =10921638
 
@@ -463,7 +464,6 @@ Begin Form
                                     End
                                 End
                                 Begin ComboBox
-                                    LimitToList = NotDefault
                                     RowSourceTypeInt =1
                                     OverlapFlags =247
                                     TextFontCharSet =0

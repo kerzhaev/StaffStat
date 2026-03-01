@@ -180,23 +180,30 @@ End Function
 ' @param errorType [String] Error type (e.g. Duplicate, Orphan, FutureDate, InvalidPersonUID)
 ' @param errorMessage [String] Message (max 255 chars)
 ' =============================================
+' =============================================
+' @description Writes one row to tbl_Validation_Log using Parameterized QueryDef.
+' =============================================
 Public Sub LogValidationError(ByVal recordId As Long, ByVal tableName As String, ByVal errorType As String, ByVal errorMessage As String)
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
+    Dim qdf As DAO.QueryDef
     Dim strSQL As String
-    Dim strSafeTable As String
-    Dim strSafeType As String
-    Dim strSafeMsg As String
 
     Set db = CurrentDb
-    strSafeTable = Replace(Left(Trim$(tableName), 50), "'", "''")
-    strSafeType = Replace(Left(Trim$(errorType), 50), "'", "''")
-    strSafeMsg = Replace(Left(Trim$(errorMessage), 255), "'", "''")
+    strSQL = "PARAMETERS prmRecID Long, prmTable Text (50), prmType Text (50), prmMsg Text (255); " & _
+             "INSERT INTO tbl_Validation_Log (RecordID, TableName, ErrorType, ErrorMessage, CheckDate) " & _
+             "VALUES ([prmRecID], [prmTable], [prmType], [prmMsg], Now());"
 
-    strSQL = "INSERT INTO tbl_Validation_Log (RecordID, TableName, ErrorType, ErrorMessage, CheckDate) VALUES (" & recordId & ", '" & strSafeTable & "', '" & strSafeType & "', '" & strSafeMsg & "', Now());"
-    db.Execute strSQL, dbFailOnError
+    Set qdf = db.CreateQueryDef("", strSQL)
+    qdf.Parameters("prmRecID").value = recordId
+    qdf.Parameters("prmTable").value = Left$(Trim$(tableName), 50)
+    qdf.Parameters("prmType").value = Left$(Trim$(errorType), 50)
+    qdf.Parameters("prmMsg").value = Left$(Trim$(errorMessage), 255)
 
+    qdf.Execute dbFailOnError
+
+    Set qdf = Nothing
     Set db = Nothing
     Exit Sub
 
@@ -289,13 +296,15 @@ Public Function RunDataHealthCheck(Optional ByVal bSilentIfNoErrors As Boolean =
     Dim lngDup As Long
     Dim lngOrphan As Long
     Dim lngFuture As Long
-
+    Dim lngEmpty As Long
+    
     RunDataHealthCheck = 0
     Set db = CurrentDb
     lngTotal = 0
     lngDup = 0
     lngOrphan = 0
     lngFuture = 0
+    lngEmpty = 0
 
     mod_Schema_Manager.CreateValidationLogTable
     db.Execute "DELETE FROM tbl_Validation_Log;", dbFailOnError
@@ -343,15 +352,33 @@ Public Function RunDataHealthCheck(Optional ByVal bSilentIfNoErrors As Boolean =
     Loop
     rs.Close
     Set rs = Nothing
+    
+    ' EMPTY FIELDS: FullName, BirthDate_Text, PersonUID in tbl_Personnel_Master
+    strSQL = "SELECT PersonUID, FullName, BirthDate_Text FROM tbl_Personnel_Master " & _
+             "WHERE Nz(FullName,'')='' OR Nz(BirthDate_Text,'')='' OR Nz(PersonUID,'')='';"
+    Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
+    Do While Not rs.EOF
+        Dim strEmptyDetails As String
+        strEmptyDetails = ""
+        If Nz(rs!FullName, "") = "" Then strEmptyDetails = strEmptyDetails & "FullName "
+        If Nz(rs!BirthDate_Text, "") = "" Then strEmptyDetails = strEmptyDetails & "BirthDate_Text "
+        If Nz(rs!PersonUID, "") = "" Then strEmptyDetails = strEmptyDetails & "PersonUID "
+        
+        LogValidationError 0, "tbl_Personnel_Master", "EmptyRequiredField", "Empty required fields: " & Trim$(strEmptyDetails)
+        lngEmpty = lngEmpty + 1
+        rs.MoveNext
+    Loop
+    rs.Close
+    Set rs = Nothing
 
-    lngTotal = lngDup + lngOrphan + lngFuture
+    lngTotal = lngDup + lngOrphan + lngFuture + lngEmpty
     RunDataHealthCheck = lngTotal
 
     If Not (bSilentIfNoErrors And lngTotal = 0) Then
         Dim strSummary As String
         strSummary = "Health check complete. " & lngTotal & " error(s) found."
         If lngTotal > 0 Then
-            strSummary = strSummary & vbCrLf & "Duplicates: " & lngDup & ", Orphans: " & lngOrphan & ", Future dates: " & lngFuture
+            strSummary = strSummary & vbCrLf & "Duplicates: " & lngDup & ", Orphans: " & lngOrphan & ", Future dates: " & lngFuture & ", Empty fields: " & lngEmpty
         End If
         mod_UI_Helpers.ShowMessage strSummary, vbInformation
     End If
@@ -512,4 +539,34 @@ ErrorHandler:
     Debug.Print "ClearValidationLog error: " & Err.Description & " (" & Err.Number & ")"
     If Not db Is Nothing Then Set db = Nothing
     mod_UI_Helpers.ShowMessage "Clear failed: " & Err.Description, vbExclamation
+End Sub
+
+' =============================================
+' @description Wipes all user data (Master, History, Logs, Buffer).
+'              Used for development and testing.
+' =============================================
+Public Sub FactoryResetData()
+    On Error GoTo ErrorHandler
+
+    If mod_UI_Helpers.AskUserYesNo("WARNING! This will delete ALL personnel data, history, and logs. Are you sure?", "Factory Reset") = False Then
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    ' Delete all records from linked tables
+    db.Execute "DELETE FROM tbl_Personnel_Master;", dbFailOnError
+    db.Execute "DELETE FROM tbl_History_Log;", dbFailOnError
+    db.Execute "DELETE FROM tbl_Import_Buffer;", dbFailOnError
+    db.Execute "DELETE FROM tbl_Validation_Log;", dbFailOnError
+
+    mod_UI_Helpers.ShowMessage "Database cleared successfully!", vbInformation
+
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    mod_UI_Helpers.ShowMessage "Error clearing data: " & Err.Description, vbCritical
+    If Not db Is Nothing Then Set db = Nothing
 End Sub

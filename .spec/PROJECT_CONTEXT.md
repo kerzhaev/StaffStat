@@ -1,15 +1,20 @@
 ﻿# PROJECT CONTEXT: StaffState (Штаты) - MS Access/VBA
 
 ## Current State
-- **Phase 25 (Split DB into FE/BE + Auto-Relinker)** is completed.
-  - Database successfully split: `StaffState.accdb` (Front-End, UI + queries) and `StaffState_BE.accdb` (Back-End, data tables).
-  - All data tables are connected as linked tables from BE into FE.
-  - Module `mod_Table_Relinker.bas` added — automatically relinks tables on startup if the path to BE changes.
-  - Table definitions migrated to `.json` format in VCS.
+- **Phase 27 (Smart DDL Typing & Dynamic Schema)** is completed.
+  - UI-driven data type selection (Text, Date, Number) for new fields.
+  - Dynamic type shifting via double-click in `uf_Settings`.
+  - `mod_Schema_Manager` performs `ALTER TABLE` directly in BE file followed by `RefreshLink` in FE.
+- **Phase 26 (Parameterized SQL Queries)** is completed.
+  - 100% protection against SQL injections and quote encoding errors.
+  - Standardized use of `DAO.QueryDef` with parameters for all DML operations (INSERT/UPDATE).
+- **Phase 25 (Split Database Architecture)** is completed.
+  - Database physically split into Front-End (`StaffState.accdb`) and Back-End (`StaffState_BE.accdb`).
+  - `mod_Table_Relinker` implemented for automatic BE path restoration on startup.
+  - `FactoryResetData` function added for rapid test data cleanup.
 - **Phase 24 (100% English Codebase & Encoding Fix)** is completed.
   - Complete removal of Cyrillic from source files (.bas, .cls).
   - Transition to English system messages and comments to protect encoding with Git and AI agents.
-  - The `AddNewFieldToSchema` function has been successfully returned to `uf_Settings` and `mod_Schema_Manager`.
 - Phase 10 (Change Report) is implemented and working.
 - Dashboard includes start/end date inputs for period reporting.
 - Dashboard date inputs now normalize dot-separated dates and change report SQL uses forced MM/DD/YYYY literals.
@@ -43,27 +48,27 @@
 - uf_PersonCard
 
 ## History
+- **Phase 27 (2026-03-01)**:
+  - Smart DDL Typing: UI for selecting data types (Text, Date, Number).
+  - Dynamic Schema: On-the-fly type modification in `uf_Settings`.
+  - BE Direct Modification: `mod_Schema_Manager` executes `ALTER TABLE` in BE and refreshes FE links.
+- **Phase 26 (2026-03-01)**:
+  - Parameterized SQL Queries: Full migration to `DAO.QueryDef` for DML.
+  - Security: 100% protection against SQL injection and encoding issues.
 - **Phase 25 (2026-03-01)**:
-  - Split database into Front-End (`StaffState.accdb`) and Back-End (`StaffState_BE.accdb`).
-  - All data tables moved to BE; FE uses linked tables pointing to BE.
-  - Added `mod_Table_Relinker.bas` — auto-relinks tables on startup if BE path changes.
-  - Table definitions format migrated from `.sql`/`.xml` to `.json` in VCS source export.
+  - Split Database: Physical separation into FE and BE (`StaffState_BE.accdb`).
+  - Auto-Relinking: Added `mod_Table_Relinker` for path restoration.
+  - Maintenance: Added `FactoryResetData` for test data clearing.
 - **Phase 24 (2026-02-28)**:
   - 100% English Codebase & Encoding Fix.
   - Complete removal of Cyrillic in source files (.bas, .cls).
   - Transition to English system messages and comments to protect encoding when working with Git and AI agents.
-  - Successfully brought back the `AddNewFieldToSchema` function to `uf_Settings` form and `mod_Schema_Manager` module.
 - Phase 10 (2026-02-01):
   - Implemented period change report export with date range filtering.
   - Added dashboard inputs for start/end dates and report action.
   - Export logic generates Excel report for the selected period.
-  - Fixed date parsing/SQL formatting: dashboard date inputs now normalize dot-separated dates and change report SQL uses forced MM/DD/YYYY literals.
-  - Finalized Phase 10 change report updates for merge to main.
 - Phase 9 (2026-02-01):
   - Implemented workflow automation with a full sync pipeline for import, analysis, and history logging.
-  - Updated dashboard UI with a new full sync button and manual controls section.
-  - Period change report specification documented with date range filtering and Excel export.
 - Phase 8 (2026-02-01):
   - Universal Dynamic Search across all business fields (TableDefs-driven).
   - Dynamic Excel Export via Late Binding with auto-formatting and field mapping.
-  - Bugfixes: stabilized CurrentDb object usage and fixed compilation errors.
