@@ -1,9 +1,14 @@
 ﻿# PROJECT CONTEXT: StaffState (Штаты) - MS Access/VBA
 
 ## Current State
+- **Phase 28 (Explicit UI Error Handling)** is completed.
+  - Full removal of `On Error Resume Next` in `uf_PersonCard`.
+  - Explicit `HasField` check for Recordset columns before access.
+  - Complete error logging via `mod_App_Logger` for 100% predictability and data protection.
 - **Phase 27 (Smart DDL Typing & Dynamic Schema)** is completed.
   - UI-driven data type selection (Text, Date, Number) for new fields.
   - Dynamic type shifting via double-click in `uf_Settings`.
+
   - `mod_Schema_Manager` performs `ALTER TABLE` directly in BE file followed by `RefreshLink` in FE.
 - **Phase 26 (Parameterized SQL Queries)** is completed.
   - 100% protection against SQL injections and quote encoding errors.
@@ -48,6 +53,10 @@
 - uf_PersonCard
 
 ## History
+- **Phase 28 (2026-03-01)**:
+  - Explicit UI Error Handling: Full removal of blind error suppression in `uf_PersonCard`.
+  - Field Verification: Integrated `HasField` for safe Recordset access.
+  - Logging: Full integration with `mod_App_Logger` to prevent data loss and ensure UI stability.
 - **Phase 27 (2026-03-01)**:
   - Smart DDL Typing: UI for selecting data types (Text, Date, Number).
   - Dynamic Schema: On-the-fly type modification in `uf_Settings`.
