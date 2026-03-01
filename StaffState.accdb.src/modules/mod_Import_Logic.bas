@@ -3,8 +3,8 @@ Option Compare Database
 Option Explicit
 
 ' =============================================
-' @module mod_Import_Logic (DYNAMIC v3.2 - Interactive Wizard)
-' @description Dynamic auto-detect import + Interactive mapping wizard
+' @module mod_Import_Logic (DYNAMIC v4.2 - Bugfix & Smart Routing)
+' @description Dynamic auto-detect import + Interactive wizard + Content-based routing
 ' @note 100% English version. Safe for modern IDEs.
 ' =============================================
 
@@ -22,7 +22,6 @@ Public Function ImportExcelData(Optional ByVal blnSuppressMsgBox As Boolean = Fa
     strFilePath = SelectExcelFile()
     If strFilePath = "" Then GoTo ExitHandler
 
-    ' --- FIX: FORCE CLOSE TABLE BEFORE OPERATION ---
     DoCmd.Close acTable, "tbl_Import_Buffer", acSaveYes
     DoCmd.Close acTable, "tbl_Personnel_Master", acSaveYes
     DoEvents
@@ -70,6 +69,25 @@ Private Function NormalizeString(ByVal s As String) As String
     NormalizeString = UCase(Trim$(s))
 End Function
 
+' --- ???????? ??????????? ??????? ---
+Private Function IsColumnNumeric(strColName As String) As Boolean
+    On Error Resume Next
+    Dim rs As DAO.Recordset
+    Dim bNumeric As Boolean
+    bNumeric = False
+
+    ' ????? ????? ?????? ???????? ?????? ?? ???? ??????? Excel
+    Set rs = CurrentDb.OpenRecordset("SELECT TOP 1 [" & strColName & "] FROM [" & cstrLinkedTableName & "] WHERE [" & strColName & "] IS NOT NULL", dbOpenSnapshot)
+
+    If Not rs.EOF Then
+        bNumeric = IsNumeric(rs.Fields(0).value)
+    End If
+
+    rs.Close
+    Set rs = Nothing
+    IsColumnNumeric = bNumeric
+End Function
+
 Private Function DetectBestProfile(tdfLink As DAO.TableDef) As Long
     Dim db As DAO.Database
     Dim rsProfiles As DAO.Recordset
@@ -103,9 +121,15 @@ Private Function DetectBestProfile(tdfLink As DAO.TableDef) As Long
 
             For Each fld In tdfLink.Fields
                 normExcel = NormalizeString(fld.Name)
+
+                ' ?????? ??????????
                 If normExcel = normHeader Then
                     matchCount = matchCount + 1
                     If targetField = "PERSONUID" Then hasUID = True
+                    Exit For
+                ' ????????? ????-????????? ?????????? Excel (????, ????1, ????2)
+                ElseIf normHeader = "????" And Left$(normExcel, 4) = "????" Then
+                    matchCount = matchCount + 1
                     Exit For
                 End If
             Next fld
@@ -183,58 +207,100 @@ Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional By
         If Len(strAllColumns) > 0 Then strAllColumns = strAllColumns & ", "
         strAllColumns = strAllColumns & "[" & strExcelField & "]"
 
-        strAccessField = GetMappedFieldFromTable(strExcelField, lngBestProfile)
+        ' ========================================================
+        ' SMART ROUTING (?????? ??????????? ??? ?????????? "????")
+        ' ========================================================
+        If Left$(NormalizeString(strExcelField), 4) = "????" Then
+            If IsColumnNumeric(strExcelField) Then
+                strAccessField = "SourceID"
+            Else
+                strAccessField = "FullName"
+            End If
+        Else
+            ' ??????? ????? ? ????????
+            strAccessField = GetMappedFieldFromTable(strExcelField, lngBestProfile)
+        End If
+        ' ========================================================
+
 
         ' ========================================================
         ' INTERACTIVE MAPPING WIZARD
         ' ========================================================
         If Len(strAccessField) = 0 Then
-            If Not blnSuppressMsgBox Then
-                ' Спрашиваем пользователя: нашли новую колонку, добавить?
-                If mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL") & " [" & strExcelField & "]" & vbCrLf & vbCrLf & mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL2"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL")) Then
 
+            ' ???? ??? ??????? ?????? ?????????? - ?????????? ?????
+            If blnSuppressMsgBox Then
+                If Len(outSkippedColumns) > 0 Then outSkippedColumns = outSkippedColumns & ", "
+                outSkippedColumns = outSkippedColumns & "[" & strExcelField & "]"
+                GoTo NextColumn
+            End If
+
+            Dim strSuggestedName As String
+            Dim blnFieldExists As Boolean
+            Dim qdfAdd As DAO.QueryDef
+
+            strSuggestedName = mod_Schema_Manager.SanitizeFieldName(strExcelField)
+            blnFieldExists = mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strSuggestedName)
+
+            If blnFieldExists Then
+                Dim strPromptRestore As String
+                strPromptRestore = mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK1") & " [" & strExcelField & "]." & vbCrLf & vbCrLf & _
+                                   "???? [" & strSuggestedName & "] " & mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK2") & vbCrLf & _
+                                   mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK3")
+
+                If mod_UI_Helpers.AskUserYesNo(strPromptRestore, mod_UI_Helpers.GetLoc("TITLE_RESTORE_LINK")) Then
+                    Set qdfAdd = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
+                    qdfAdd.Parameters("prmP").value = lngBestProfile
+                    qdfAdd.Parameters("prmE").value = Left$(strExcelField, 255)
+                    qdfAdd.Parameters("prmT").value = Left$(strSuggestedName, 100)
+                    qdfAdd.Execute dbFailOnError
+                    Set qdfAdd = Nothing
+                    strAccessField = strSuggestedName
+                End If
+            Else
+                If mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL") & " [" & strExcelField & "]" & vbCrLf & vbCrLf & mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL2"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL")) Then
                     Dim strNewTarget As String
-                    strNewTarget = InputBox(mod_UI_Helpers.GetLoc("PROMPT_ENTER_EN_NAME"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL"), mod_Schema_Manager.SanitizeFieldName(strExcelField))
+                    strNewTarget = InputBox(mod_UI_Helpers.GetLoc("PROMPT_ENTER_EN_NAME"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL"), strSuggestedName)
 
                     If Len(Trim$(strNewTarget)) > 0 Then
-                        Dim strTypeSel As String
-                        Dim strSqlType As String
-
-                        strTypeSel = InputBox(mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
-                        Select Case Trim$(strTypeSel)
-                            Case "2": strSqlType = "DATETIME"
-                            Case "3": strSqlType = "LONG"
-                            Case "4": strSqlType = "LONGTEXT"
-                            Case "5": strSqlType = "BIT"
-                            Case "": strSqlType = "" ' Отмена
-                            Case Else: strSqlType = "VARCHAR(255)"
-                        End Select
-
-                        If strSqlType <> "" Then
-                            ' 1. Добавляем поле в саму базу
-                            If Not mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strNewTarget) Then
-                                mod_Schema_Manager.AddNewFieldToSchema strNewTarget, strSqlType
-                            End If
-
-                            ' 2. Записываем связь в маппинг
-                            Dim qdfAdd As DAO.QueryDef
+                        If mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strNewTarget) Then
+                            strAccessField = strNewTarget
                             Set qdfAdd = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
                             qdfAdd.Parameters("prmP").value = lngBestProfile
                             qdfAdd.Parameters("prmE").value = Left$(strExcelField, 255)
                             qdfAdd.Parameters("prmT").value = Left$(strNewTarget, 100)
                             qdfAdd.Execute dbFailOnError
                             Set qdfAdd = Nothing
+                        Else
+                            Dim strTypeSel As String
+                            Dim strSqlType As String
 
-                            ' 3. Подхватываем поле и идем дальше!
-                            strAccessField = strNewTarget
+                            strTypeSel = InputBox(mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
+                            Select Case Trim$(strTypeSel)
+                                Case "2": strSqlType = "DATETIME"
+                                Case "3": strSqlType = "LONG"
+                                Case "4": strSqlType = "LONGTEXT"
+                                Case "5": strSqlType = "BIT"
+                                Case "": strSqlType = ""
+                                Case Else: strSqlType = "VARCHAR(255)"
+                            End Select
+
+                            If strSqlType <> "" Then
+                                mod_Schema_Manager.AddNewFieldToSchema strNewTarget, strSqlType
+                                Set qdfAdd = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
+                                qdfAdd.Parameters("prmP").value = lngBestProfile
+                                qdfAdd.Parameters("prmE").value = Left$(strExcelField, 255)
+                                qdfAdd.Parameters("prmT").value = Left$(strNewTarget, 100)
+                                qdfAdd.Execute dbFailOnError
+                                Set qdfAdd = Nothing
+                                strAccessField = strNewTarget
+                            End If
                         End If
                     End If
                 End If
             End If
 
-            ' Если поле так и осталось пустым (пользователь нажал НЕТ) - пропускаем
             If Len(strAccessField) = 0 Then
-                Debug.Print "Skipping unmapped column: " & strExcelField
                 If Len(outSkippedColumns) > 0 Then outSkippedColumns = outSkippedColumns & ", "
                 outSkippedColumns = outSkippedColumns & "[" & strExcelField & "]"
                 GoTo NextColumn
@@ -353,52 +419,99 @@ ErrorHandler:
     If Not blnSuppressMsgBox Then MsgBox "Link error: " & Err.Description, vbCritical, "Error"
 End Function
 
+' ????????????? ?????? ????? EXCEL ????? ADODB
 Private Function GetFirstSheetName(strPath As String) As String
-    Dim dbExcel As DAO.Database
-    Dim tdf As DAO.TableDef
+    Dim conn As Object
+    Dim rs As Object
 
     GetFirstSheetName = ""
     On Error Resume Next
 
-    Dim strConnect As String
+    Set conn = CreateObject("ADODB.Connection")
     If Right(LCase(strPath), 4) = ".xls" Then
-        strConnect = "Excel 8.0;HDR=YES;IMEX=1;"
+        conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & strPath & ";Extended Properties=""Excel 8.0;HDR=YES;"";"
     Else
-        strConnect = "Excel 12.0 Xml;HDR=YES;IMEX=1;"
+        conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & strPath & ";Extended Properties=""Excel 12.0 Xml;HDR=YES;"";"
     End If
 
-    Set dbExcel = DBEngine.Workspaces(0).OpenDatabase(strPath, False, True, strConnect)
+    If Err.Number <> 0 Then
+        Err.Clear
+        conn.Open "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & strPath & ";Extended Properties=""Excel 8.0;HDR=YES;"";"
+    End If
 
-    If Err.Number = 0 Then
-        For Each tdf In dbExcel.TableDefs
-            If Right(tdf.Name, 1) = "$" Or Right(tdf.Name, 2) = "$'" Then
-                GetFirstSheetName = Replace(tdf.Name, "'", "")
-                Exit For
+    If conn.State = 1 Then ' ???? ????????? ???????
+        Set rs = conn.OpenSchema(20)
+        Do While Not rs.EOF
+            Dim sName As String
+            sName = rs.Fields("TABLE_NAME").value
+            If Right(sName, 1) = "$" Or Right(sName, 2) = "$'" Then
+                GetFirstSheetName = Replace(sName, "'", "")
+                Exit Do
             End If
-        Next tdf
-        dbExcel.Close
+            rs.MoveNext
+        Loop
+        rs.Close
+        conn.Close
     End If
 
-    Set tdf = Nothing
-    Set dbExcel = Nothing
+    Set rs = Nothing
+    Set conn = Nothing
+
+    ' Fallback ???? ADODB ???????????? ?? ??
+    If GetFirstSheetName = "" Then
+        Err.Clear
+        Dim xlApp As Object, xlWb As Object
+        Set xlApp = CreateObject("Excel.Application")
+        xlApp.Visible = False
+        Set xlWb = xlApp.Workbooks.Open(strPath, False, True)
+        GetFirstSheetName = xlWb.Sheets(1).Name
+        xlWb.Close False
+        xlApp.Quit
+        Set xlWb = Nothing
+        Set xlApp = Nothing
+    End If
 End Function
 
 Public Function SelectExcelFile() As String
     On Error GoTo ErrorHandler
     Dim fd As Object
     Dim strInitialPath As String
+    Dim fso As Object
+
+    ' 1. Получаем путь из настроек
     strInitialPath = Trim$(Nz(mod_Maintenance_Logic.GetSetting("ImportFolderPath", ""), ""))
+
+    ' 2. УМНАЯ ПРОВЕРКА: существует ли папка физически?
+    If Len(strInitialPath) > 0 Then
+        On Error Resume Next
+        Set fso = CreateObject("Scripting.FileSystemObject")
+        If Not fso.FolderExists(strInitialPath) Then
+            ' Если пользователь опечатался или папку удалили - сбрасываем путь
+            strInitialPath = ""
+            Debug.Print "Warning: Import folder from settings does not exist. Falling back to DB path."
+        End If
+        Set fso = Nothing
+        On Error GoTo ErrorHandler
+    End If
+
+    ' 3. Если путь пустой (или был сброшен из-за ошибки), берем папку, где лежит сама база
     If Len(strInitialPath) = 0 Then strInitialPath = CurrentProject.Path
+
+    ' 4. Форматируем путь (добавляем слеш на конце)
     If Len(strInitialPath) > 0 And Right(strInitialPath, 1) <> "\" Then strInitialPath = strInitialPath & "\"
-    Set fd = Application.FileDialog(3)
+
+    ' 5. Открываем окно выбора файла
+    Set fd = Application.FileDialog(3) ' msoFileDialogFilePicker
     With fd
         .Filters.Clear
         .Filters.Add "Excel files", "*.xls;*.xlsx"
-        If Len(strInitialPath) > 0 Then .InitialFileName = strInitialPath
+        .InitialFileName = strInitialPath
         If .Show = -1 Then SelectExcelFile = .SelectedItems(1)
     End With
+
     Exit Function
 ErrorHandler:
+    Debug.Print "SelectExcelFile error: " & Err.Description & " (" & Err.Number & ")"
     SelectExcelFile = ""
 End Function
 

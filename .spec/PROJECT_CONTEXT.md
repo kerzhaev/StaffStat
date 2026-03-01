@@ -1,12 +1,15 @@
 ﻿# PROJECT CONTEXT: StaffState (Штаты) - MS Access/VBA
 
 ## Current State
-- **Phase 31 (Multi-Profile Mapping & Interactive Wizard)** is completed.
+- **Phase 31 (Smart Multi-Profile Import & Interactive Wizard)** is completed.
   - Внедрена поддержка нескольких профилей маппинга (`tbl_Import_Profiles`). По умолчанию создаются 3 профиля: Основной, Снабжение, Финансы.
   - В `mod_Import_Logic` добавлен умный авто-детект (`DetectBestProfile`): система перед импортом сканирует заголовки Excel и сама выбирает подходящий профиль, где есть привязка `PersonUID` и максимальное совпадение колонок.
-  - Реализован «Интерактивный мастер импорта»: при нахождении неизвестной колонки система предлагает пользователю прямо на лету создать новое поле в базе (`ALTER TABLE`), назначить ему тип данных и добавить связь в маппинг.
+  - Анализатор содержимого (Smart Sniffer): система различает колонки с одинаковыми названиями (например, "ЛИЦО"). Проверяет тип данных первой ячейки (`IsNumeric`), направляя цифры в `SourceID`, а текст — в `FullName`.
+  - Интерактивный мастер импорта: предлагает создать новое поле (`ALTER TABLE`) при нахождении неизвестной колонки. Включает функцию "Smart Restore" (Умное восстановление) для восстановления удаленных связей существующих колонок в один клик.
+  - Фоновый режим: при вызове с `blnSuppressMsgBox = True` (для фоновых процессов) мастер молча пропускает неизвестные колонки, не блокируя работу.
   - Добавлен вывод списка пропущенных (неразмеченных) колонок по итогам импорта.
-  - Оптимизирована функция `GetFirstSheetName`: тяжелый запуск `Excel.Application` заменен на мгновенное чтение схемы через DAO.
+  - Радикально ускорено чтение структуры Excel: вызов `Excel.Application` заменен на мгновенный парсинг схемы через ADODB (`OpenSchema(20)`), с авто-fallback на OLEDB.
+  - Добавлена валидация пути в `SelectExcelFile` (через `Scripting.FileSystemObject`): возврат к директории БД (`CurrentProject.Path`) при отсутствии сохраненного пути.
 - **Phase 30 (UI Localization Engine)** is completed.
   - Created `tbl_Localization` table for storing Russian UI translations (DB encoding protection).
   - Implemented a fast caching engine based on `Scripting.Dictionary` (Late Binding) in `mod_UI_Helpers`, loaded into memory at app start (`InitLocalization`).
@@ -74,10 +77,13 @@
 ## History
 - **Phase 31 (2026-03-01)**:
   - Multi-Profile Mapping: Внедрена поддержка нескольких профилей маппинга (`tbl_Import_Profiles`). По умолчанию создаются 3 профиля: Основной, Снабжение, Финансы.
-  - Auto-Detect: В `mod_Import_Logic` добавлен умный авто-детект (`DetectBestProfile`): система перед импортом сканирует заголовки Excel и сама выбирает подходящий профиль, где есть привязка `PersonUID` и максимальное совпадение колонок.
-  - Interactive Wizard: Реализован «Интерактивный мастер импорта»: при нахождении неизвестной колонки система предлагает пользователю прямо на лету создать новое поле в базе (`ALTER TABLE`), назначить ему тип данных и добавить связь в маппинг.
-  - Missed Columns: Добавлен вывод списка пропущенных (неразмеченных) колонок по итогам импорта.
-  - Performance: Оптимизирована функция `GetFirstSheetName`: тяжелый запуск `Excel.Application` заменен на мгновенное чтение схемы через DAO.
+  - Auto-Detect: В `mod_Import_Logic` добавлен умный авто-детект (`DetectBestProfile`): система перед импортом сканирует заголовки Excel и сама выбирает подходящий профиль.
+  - Smart Sniffer: Анализатор содержимого различает дублирующиеся колонки (напр. "ЛИЦО") по типу данных первой ячейки (`IsNumeric`), разделяя `SourceID` и `FullName`.
+  - Interactive Wizard & Smart Restore: Мастер на лету создает поля (`ALTER TABLE`) или в один клик восстанавливает удаленные связи для уже существующих в БД колонок.
+  - Background Mode: Поддержка `blnSuppressMsgBox = True` для тихого пропуска неизвестных колонок при фоновом импорте.
+  - Missed Columns: Добавлен вывод списка пропущенных (неразмеченных) колонок.
+  - Performance: Чтение структуры Excel переведено на мгновенный ADODB (`OpenSchema(20)`) с автоматическим fallback на OLEDB.
+  - Path Validation: В `SelectExcelFile` (через `FileSystemObject`) добавлен откат к `CurrentProject.Path` при несуществующем сохраненном пути вместо папки "Документы".
 - **Phase 30 (2026-03-01)**:
   - UI Localization: Created `tbl_Localization` for safe storage of Russian UI translations.
   - Caching Engine: Implemented `Scripting.Dictionary` caching in `mod_UI_Helpers` (`InitLocalization`, `GetLoc`) for rapid retrieval.

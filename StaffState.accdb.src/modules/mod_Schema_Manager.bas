@@ -771,6 +771,12 @@ Public Sub SeedLocalizationTable()
     UpsertLocKey db, "PROMPT_EDIT_EXCEL_HEADER", "Введите новое точное название заголовка из Excel:", "System"
     UpsertLocKey db, "MSG_MAPPING_UPDATED", "Маппинг успешно обновлен.", "System"
 
+    ' --- Фразы для умного восстановления маппинга ---
+    UpsertLocKey db, "TITLE_RESTORE_LINK", "Восстановление связи", "UI"
+    UpsertLocKey db, "PROMPT_RESTORE_LINK1", "В файле найдена колонка", "System"
+    UpsertLocKey db, "PROMPT_RESTORE_LINK2", "уже существует в базе данных (связь в настройках отсутствует).", "System"
+    UpsertLocKey db, "PROMPT_RESTORE_LINK3", "Восстановить связь для текущего профиля?", "System"
+
     Debug.Print "Localization seeding complete."
     MsgBox "Базовый словарь локализации успешно загружен в таблицу!", vbInformation, "StaffState Init"
 
