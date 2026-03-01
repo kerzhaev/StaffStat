@@ -1,6 +1,10 @@
 ﻿# PROJECT CONTEXT: StaffState (Штаты) - MS Access/VBA
 
 ## Current State
+- **Phase 29 (Batch Transactions & Performance)** is completed.
+  - Implemented batch transactions in `SyncBufferToMaster` (commit every 2000 records) for datasets > 30,000.
+  - Added `DoEvents` for UI responsiveness.
+  - Expanded `dbMaxLocksPerFile` limit to 200,000.
 - **Phase 28 (Explicit UI Error Handling)** is completed.
   - Full removal of `On Error Resume Next` in `uf_PersonCard`.
   - Explicit `HasField` check for Recordset columns before access.
@@ -53,6 +57,10 @@
 - uf_PersonCard
 
 ## History
+- **Phase 29 (2026-03-01)**:
+  - Batch Transactions: Implemented in `SyncBufferToMaster` with commit every 2000 records to prevent MS Access freezing on large sets (> 30k records).
+  - UI Responsiveness: Integrated `DoEvents` to keep the Windows UI thread alive during long operations.
+  - Performance Tuning: Set `dbMaxLocksPerFile` to 200,000 to support large transactional batches.
 - **Phase 28 (2026-03-01)**:
   - Explicit UI Error Handling: Full removal of blind error suppression in `uf_PersonCard`.
   - Field Verification: Integrated `HasField` for safe Recordset access.

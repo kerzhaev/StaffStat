@@ -3,11 +3,8 @@ Option Compare Database
 Option Explicit
 
 ' =============================================
-' @module mod_Analysis_Logic (PRODUCTION)
-' @description Universal data synchronization
-' @note 100% English version.
+' @description Universal data synchronization with Batch Transactions
 ' =============================================
-
 Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Optional ByVal blnSuppressMsgBox As Boolean = False)
     On Error GoTo ErrorHandler
 
@@ -21,6 +18,13 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
     Dim lTotal As Long
     Dim lRecNum As Long
     Dim strOrderDateContext As String
+
+    ' --- PHASE 29: Batch Transaction Variables ---
+    Dim lngTransCount As Long
+    Const c_BatchSize As Long = 2000 ' Commit every 2000 records
+
+    ' Increase system lock limit to prevent RAM crashes on massive imports
+    DAO.DBEngine.SetOption dbMaxLocksPerFile, 200000
 
     DoCmd.Close acTable, "tbl_Personnel_Master", acSaveYes
     DoCmd.Close acTable, "tbl_Import_Buffer", acSaveYes
@@ -49,7 +53,9 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
     outNew = 0
     outUpdated = 0
     lRecNum = 0
+    lngTransCount = 0
 
+    ' Start the first transaction
     DBEngine.Workspaces(0).BeginTrans
 
     Do While Not rsBuffer.EOF
@@ -60,10 +66,7 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
             ' skip empty UID
         ElseIf Not mod_Maintenance_Logic.IsValidPersonUID(strUID) Then
             mod_Maintenance_Logic.LogValidationError 0, "tbl_Import_Buffer", "InvalidPersonUID", "Invalid PersonUID format: " & strUID
-            Debug.Print "Skipped record " & lRecNum & " - invalid UID: " & strUID
         Else
-            Debug.Print "Processing record " & lRecNum & " of " & lTotal & " for UID: " & strUID
-
             strOrderDateContext = GetBufferOrderDateContext(rsBuffer)
 
             rsMaster.FindFirst "PersonUID = '" & Replace(strUID, "'", "''") & "'"
@@ -117,9 +120,22 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
             End If
         End If
 
+        ' --- BATCH TRANSACTION & UI UNFREEZE ---
+        lngTransCount = lngTransCount + 1
+        If lngTransCount >= c_BatchSize Then
+            DBEngine.Workspaces(0).CommitTrans  ' Save the batch
+            DoEvents                            ' Let Windows breathe and UI update
+            DBEngine.Workspaces(0).BeginTrans   ' Start new batch
+            lngTransCount = 0
+
+            ' Optional debug to see progress in Immediate Window
+            Debug.Print "Processed " & lRecNum & " of " & lTotal & " records..."
+        End If
+
         rsBuffer.MoveNext
     Loop
 
+    ' Commit the final remaining batch
     DBEngine.Workspaces(0).CommitTrans
 
 ExitHandler:
@@ -127,9 +143,9 @@ ExitHandler:
     outUpdated = iUpd
 
     If Not blnSuppressMsgBox Then
-        MsgBox "Synchronization completed!" & vbCrLf & _
+        MsgBox "Synchronization completed successfully!" & vbCrLf & _
                "New: " & iNew & vbCrLf & _
-               "Updated: " & iUpd, vbInformation
+               "Updated: " & iUpd, vbInformation, "StaffState Import"
     End If
 
     On Error Resume Next
@@ -141,9 +157,10 @@ ExitHandler:
     Exit Sub
 
 ErrorHandler:
+    ' Rollback only the current uncommitted batch (max 2000 records)
     DBEngine.Workspaces(0).Rollback
     If Not blnSuppressMsgBox Then
-        MsgBox "Analysis error: " & Err.Description, vbCritical
+        MsgBox "Analysis error at record " & lRecNum & ": " & Err.Description, vbCritical
     Else
         Debug.Print "Analysis error: " & Err.Description & " (" & Err.Number & ")"
     End If
