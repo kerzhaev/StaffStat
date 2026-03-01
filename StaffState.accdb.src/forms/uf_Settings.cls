@@ -26,16 +26,31 @@ Private Sub Form_Load()
 
     Me.btnAddMapping.Caption = mod_UI_Helpers.GetLoc("BTN_ADD_MAPPING")
     Me.btnDeleteMapping.Caption = mod_UI_Helpers.GetLoc("BTN_DEL_MAPPING")
+    Me.btnEditMapping.Caption = mod_UI_Helpers.GetLoc("BTN_EDIT_MAPPING")
     Me.btnReSeedMapping.Caption = mod_UI_Helpers.GetLoc("BTN_RESEED_MAPPING")
 
     Me.cmdCreateBackup.Caption = mod_UI_Helpers.GetLoc("BTN_CREATE_BACKUP")
     Me.cmdClearLogs.Caption = mod_UI_Helpers.GetLoc("BTN_CLEAR_LOGS")
     Me.btnRunHealthCheck.Caption = mod_UI_Helpers.GetLoc("BTN_RUN_HEALTH_CHECK")
 
+    ' Перевод новых лейблов маппинга
+    Me.lblExcel.Caption = mod_UI_Helpers.GetLoc("LBL_EXCEL_HEADER")
+    Me.lblDB.Caption = mod_UI_Helpers.GetLoc("LBL_DB_FIELD")
+
     ' Localize Tabs
     Me.pgGeneral.Caption = mod_UI_Helpers.GetLoc("TAB_GENERAL")
     Me.pgMapping.Caption = mod_UI_Helpers.GetLoc("TAB_MAPPING")
     Me.pgMaintenance.Caption = mod_UI_Helpers.GetLoc("TAB_MAINTENANCE")
+    On Error GoTo ErrorHandler
+
+    ' --- PHASE 31: Initialize Profile Combo Box ---
+    On Error Resume Next
+    Me.cboProfile.RowSourceType = "Table/Query"
+    Me.cboProfile.RowSource = "SELECT ProfileID, ProfileID & ' - ' & ProfileName FROM tbl_Import_Profiles ORDER BY ProfileID;"
+    Me.cboProfile.ColumnCount = 2
+    Me.cboProfile.ColumnWidths = "0cm;5cm"
+    Me.cboProfile.BoundColumn = 1
+    If Me.cboProfile.ListCount > 0 Then Me.cboProfile.value = Me.cboProfile.ItemData(0) ' Выбираем первый профиль по умолчанию
     On Error GoTo ErrorHandler
 
     LoadSettingsFromStorage
@@ -44,6 +59,11 @@ Private Sub Form_Load()
     Exit Sub
 ErrorHandler:
     Debug.Print "uf_Settings Form_Load: " & Err.Number & " - " & Err.Description
+End Sub
+
+' --- PHASE 31: Change mapping list when profile is selected ---
+Private Sub cboProfile_Change()
+    RefreshMappingList
 End Sub
 
 ' Refresh mapping list when user switches to Mapping tab (pgMapping = page index 1).
@@ -101,9 +121,16 @@ End Sub
 ' --- Mapping tab (pgMapping): list is bound; Requery refreshes. ---
 Public Sub RefreshMappingList()
     On Error GoTo ErrorHandler
+    Dim lngProfile As Long
+
+    ' Получаем выбранный профиль (если комбобокс пуст, используем 1)
+    On Error Resume Next
+    lngProfile = Nz(Me.cboProfile.value, 1)
+    On Error GoTo ErrorHandler
+
     If Not (Me.lstMapping Is Nothing) Then
-        ' Inject our custom function to show Data Type in the 4th column
-        Me.lstMapping.RowSource = "SELECT MappingID, ExcelHeader, TargetField, GetFieldTypeFriendly('tbl_Personnel_Master', TargetField) AS DataType FROM tbl_Import_Mapping WHERE ProfileID = 1 ORDER BY ExcelHeader;"
+        ' Inject our custom function to show Data Type in the 4th column. Filter by ProfileID!
+        Me.lstMapping.RowSource = "SELECT MappingID, ExcelHeader, TargetField, GetFieldTypeFriendly('tbl_Personnel_Master', TargetField) AS DataType FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfile & " ORDER BY ExcelHeader;"
         Me.lstMapping.ColumnCount = 4
         Me.lstMapping.ColumnWidths = "0;2500;2500;2000"
         Me.lstMapping.Requery
@@ -122,9 +149,11 @@ Private Sub btnAddMapping_Click()
     Dim strSQL As String
     Dim strTypeSelection As String
     Dim strSqlType As String
+    Dim lngProfile As Long
 
     strExcel = Trim$(Nz(Me.txtExcelHeader.value, ""))
     strTarget = Trim$(Nz(Me.cboTargetField.value, ""))
+    lngProfile = Nz(Me.cboProfile.value, 1) ' Получаем текущий профиль
 
     If Len(strExcel) = 0 Or Len(strTarget) = 0 Then
         mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_FILL_MAPPING_FIELDS"), vbExclamation
@@ -155,14 +184,14 @@ Private Sub btnAddMapping_Click()
         mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_FIELD_CREATED") & " " & strSqlType & ".", vbInformation
     End If
 
-    ' --- PHASE 26: Parameterized Query for mapping (Safe Insert) ---
+    ' --- PHASE 26 & 31: Parameterized Query for mapping (Safe Insert into selected Profile) ---
     Set db = CurrentDb
     strSQL = "PARAMETERS prmProfile Long, prmExcel Text (255), prmTarget Text (100); " & _
              "INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) " & _
              "VALUES ([prmProfile], [prmExcel], [prmTarget]);"
 
     Set qdf = db.CreateQueryDef("", strSQL)
-    qdf.Parameters("prmProfile").value = 1
+    qdf.Parameters("prmProfile").value = lngProfile
     qdf.Parameters("prmExcel").value = Left$(strExcel, 255)
     qdf.Parameters("prmTarget").value = Left$(strTarget, 100)
 
@@ -182,12 +211,48 @@ ErrorHandler:
     mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("ERR_ADD_MAPPING_FAILED") & " " & Err.Description, vbExclamation
 End Sub
 
+' ========================================================
+' NEW: Edit Header button
+' ========================================================
+Private Sub btnEditMapping_Click()
+    On Error GoTo ErrorHandler
+    Dim varId As Variant
+    Dim strOldHeader As String
+    Dim strNewHeader As String
+    Dim db As DAO.Database
+    Dim qdf As DAO.QueryDef
+
+    If Me.lstMapping.ListIndex < 0 Then
+        mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_SELECT_ROW_DELETE"), vbExclamation
+        Exit Sub
+    End If
+
+    varId = Me.lstMapping.Column(0)
+    strOldHeader = Nz(Me.lstMapping.Column(1), "")
+
+    strNewHeader = InputBox(mod_UI_Helpers.GetLoc("PROMPT_EDIT_EXCEL_HEADER"), mod_UI_Helpers.GetLoc("TITLE_EDIT_MAPPING"), strOldHeader)
+    If Trim$(strNewHeader) = "" Or strNewHeader = strOldHeader Then Exit Sub
+
+    Set db = CurrentDb
+    Set qdf = db.CreateQueryDef("", "PARAMETERS prmNew Text (255), prmId Long; UPDATE tbl_Import_Mapping SET ExcelHeader = [prmNew] WHERE MappingID = [prmId];")
+    qdf.Parameters("prmNew").value = Left$(Trim$(strNewHeader), 255)
+    qdf.Parameters("prmId").value = CLng(varId)
+    qdf.Execute dbFailOnError
+    Set qdf = Nothing
+    Set db = Nothing
+
+    RefreshMappingList
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_MAPPING_UPDATED"), vbInformation
+    Exit Sub
+ErrorHandler:
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("TITLE_ERROR") & ": " & Err.Description, vbCritical
+End Sub
+
 Private Sub btnDeleteMapping_Click()
     On Error GoTo ErrorHandler
     Dim varId As Variant
     Dim strTarget As String
     Dim db As DAO.Database
-    Dim strSQL As String
 
     If Me.lstMapping.ListIndex < 0 Then
         mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_SELECT_ROW_DELETE"), vbExclamation
@@ -202,20 +267,26 @@ Private Sub btnDeleteMapping_Click()
     End If
 
     Set db = CurrentDb
-    strSQL = "DELETE FROM tbl_Import_Mapping WHERE MappingID = " & CLng(varId)
-    db.Execute strSQL, dbFailOnError
+    db.Execute "DELETE FROM tbl_Import_Mapping WHERE MappingID = " & CLng(varId), dbFailOnError
     Set db = Nothing
 
     RefreshMappingList
     Exit Sub
 ErrorHandler:
-    If Not db Is Nothing Then Set db = Nothing
-    Debug.Print "btnDeleteMapping_Click: " & Err.Description
     mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("ERR_DELETE_FAILED") & " " & Err.Description, vbExclamation
 End Sub
 
 Private Sub btnReSeedMapping_Click()
     On Error GoTo ErrorHandler
+
+    ' Защита от случайного сброса других профилей
+    Dim lngProfile As Long
+    lngProfile = Nz(Me.cboProfile.value, 1)
+    If lngProfile <> 1 Then
+        mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_RESEED_ONLY_MAIN"), vbExclamation
+        Exit Sub
+    End If
+
     If Not mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_RESEED_MAPPING"), mod_UI_Helpers.GetLoc("TITLE_CONFIRM")) Then Exit Sub
 
     mod_Schema_Manager.ReSeedMapping
@@ -223,7 +294,6 @@ Private Sub btnReSeedMapping_Click()
     mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("MSG_MAPPING_RESTORED"), vbInformation
     Exit Sub
 ErrorHandler:
-    Debug.Print "btnReSeedMapping_Click: " & Err.Description
     mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetLoc("ERR_RESEED_FAILED") & " " & Err.Description, vbExclamation
 End Sub
 

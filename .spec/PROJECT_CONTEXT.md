@@ -1,6 +1,12 @@
 ﻿# PROJECT CONTEXT: StaffState (Штаты) - MS Access/VBA
 
 ## Current State
+- **Phase 31 (Multi-Profile Mapping & Interactive Wizard)** is completed.
+  - Внедрена поддержка нескольких профилей маппинга (`tbl_Import_Profiles`). По умолчанию создаются 3 профиля: Основной, Снабжение, Финансы.
+  - В `mod_Import_Logic` добавлен умный авто-детект (`DetectBestProfile`): система перед импортом сканирует заголовки Excel и сама выбирает подходящий профиль, где есть привязка `PersonUID` и максимальное совпадение колонок.
+  - Реализован «Интерактивный мастер импорта»: при нахождении неизвестной колонки система предлагает пользователю прямо на лету создать новое поле в базе (`ALTER TABLE`), назначить ему тип данных и добавить связь в маппинг.
+  - Добавлен вывод списка пропущенных (неразмеченных) колонок по итогам импорта.
+  - Оптимизирована функция `GetFirstSheetName`: тяжелый запуск `Excel.Application` заменен на мгновенное чтение схемы через DAO.
 - **Phase 30 (UI Localization Engine)** is completed.
   - Created `tbl_Localization` table for storing Russian UI translations (DB encoding protection).
   - Implemented a fast caching engine based on `Scripting.Dictionary` (Late Binding) in `mod_UI_Helpers`, loaded into memory at app start (`InitLocalization`).
@@ -60,9 +66,18 @@
 - uf_Dashboard: All hardcoded Russian text (Captions, MsgBox, InputBox) replaced with `GetLoc` calls.
 - uf_Search: All hardcoded Russian text replaced with `GetLoc` calls.
 - uf_Settings: All hardcoded Russian text replaced with `GetLoc` calls.
+  - Добавлен свободный комбобокс `cboProfile` для переключения активного профиля маппинга.
+  - Добавлена кнопка `btnEditMapping` для быстрого редактирования заголовков Excel (изменение опечаток без пересоздания связи).
+  - Подписи `lblExcel` и `lblDB` переведены из формата TextBox в Label и локализованы.
 - uf_PersonCard: All hardcoded Russian text replaced with `GetLoc` calls. Dismissal status check now uses the localization key `STATUS_DISMISSED` instead of assembling the word via `ChrW()`.
 
 ## History
+- **Phase 31 (2026-03-01)**:
+  - Multi-Profile Mapping: Внедрена поддержка нескольких профилей маппинга (`tbl_Import_Profiles`). По умолчанию создаются 3 профиля: Основной, Снабжение, Финансы.
+  - Auto-Detect: В `mod_Import_Logic` добавлен умный авто-детект (`DetectBestProfile`): система перед импортом сканирует заголовки Excel и сама выбирает подходящий профиль, где есть привязка `PersonUID` и максимальное совпадение колонок.
+  - Interactive Wizard: Реализован «Интерактивный мастер импорта»: при нахождении неизвестной колонки система предлагает пользователю прямо на лету создать новое поле в базе (`ALTER TABLE`), назначить ему тип данных и добавить связь в маппинг.
+  - Missed Columns: Добавлен вывод списка пропущенных (неразмеченных) колонок по итогам импорта.
+  - Performance: Оптимизирована функция `GetFirstSheetName`: тяжелый запуск `Excel.Application` заменен на мгновенное чтение схемы через DAO.
 - **Phase 30 (2026-03-01)**:
   - UI Localization: Created `tbl_Localization` for safe storage of Russian UI translations.
   - Caching Engine: Implemented `Scripting.Dictionary` caching in `mod_UI_Helpers` (`InitLocalization`, `GetLoc`) for rapid retrieval.

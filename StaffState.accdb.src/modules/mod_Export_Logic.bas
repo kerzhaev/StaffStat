@@ -85,7 +85,7 @@ Private Function LoadMappingDictionary() As Object
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
 
     Do While Not rs.EOF
-        dict(rs!TargetField.value) = Nz(rs!ExcelHeader.value, "")
+        dict(rs!targetField.value) = Nz(rs!ExcelHeader.value, "")
         rs.MoveNext
     Loop
 

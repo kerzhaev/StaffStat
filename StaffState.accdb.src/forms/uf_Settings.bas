@@ -9,8 +9,8 @@ Begin Form
     GridY =10
     Width =11565
     DatasheetFontHeight =11
-    ItemSuffix =29
-    Right =25320
+    ItemSuffix =35
+    Right =18390
     Bottom =12120
     RecSrcDt = Begin
         0xa95bb271d47ce640
@@ -215,6 +215,7 @@ Begin Form
                     PressedColor =9917743
                     HoverForeColor =4210752
                     PressedForeColor =4210752
+                    Overlaps =1
                 End
                 Begin CommandButton
                     OverlapFlags =85
@@ -242,6 +243,7 @@ Begin Form
                     PressedColor =9917743
                     HoverForeColor =4210752
                     PressedForeColor =4210752
+                    Overlaps =1
                 End
                 Begin Tab
                     OverlapFlags =85
@@ -249,8 +251,8 @@ Begin Form
                     TextFontFamily =0
                     Left =120
                     Top =120
-                    Width =7470
-                    Height =9705
+                    Width =7305
+                    Height =9660
                     TabIndex =2
                     Name ="tabSettings"
                     FontName ="Calibri Light"
@@ -259,8 +261,8 @@ Begin Form
 
                     LayoutCachedLeft =120
                     LayoutCachedTop =120
-                    LayoutCachedWidth =7590
-                    LayoutCachedHeight =9825
+                    LayoutCachedWidth =7425
+                    LayoutCachedHeight =9780
                     BackColor =14277081
                     BorderColor =11573124
                     HoverForeColor =4210752
@@ -269,18 +271,18 @@ Begin Form
                     Begin
                         Begin Page
                             OverlapFlags =87
-                            Left =188
-                            Top =593
-                            Width =7320
-                            Height =9150
+                            Left =195
+                            Top =600
+                            Width =7155
+                            Height =9105
                             BorderColor =10921638
                             Name ="pgGeneral"
                             Caption ="Основные настройки"
                             GridlineColor =10921638
-                            LayoutCachedLeft =188
-                            LayoutCachedTop =593
-                            LayoutCachedWidth =7508
-                            LayoutCachedHeight =9743
+                            LayoutCachedLeft =195
+                            LayoutCachedTop =600
+                            LayoutCachedWidth =7350
+                            LayoutCachedHeight =9705
                             Begin
                                 Begin TextBox
                                     OverlapFlags =215
@@ -387,16 +389,16 @@ Begin Form
                             OverlapFlags =247
                             Left =195
                             Top =600
-                            Width =7320
-                            Height =9150
+                            Width =7155
+                            Height =9110
                             BorderColor =10921638
                             Name ="pgMapping"
                             Caption ="Маппинг импорта"
                             GridlineColor =10921638
                             LayoutCachedLeft =195
                             LayoutCachedTop =600
-                            LayoutCachedWidth =7515
-                            LayoutCachedHeight =9750
+                            LayoutCachedWidth =7350
+                            LayoutCachedHeight =9710
                             Begin
                                 Begin ListBox
                                     ColumnHeads = NotDefault
@@ -404,7 +406,7 @@ Begin Form
                                     ColumnCount =3
                                     Left =268
                                     Top =1093
-                                    Width =6240
+                                    Width =6990
                                     Height =5770
                                     ForeColor =4210752
                                     BorderColor =10921638
@@ -419,7 +421,7 @@ Begin Form
 
                                     LayoutCachedLeft =268
                                     LayoutCachedTop =1093
-                                    LayoutCachedWidth =6508
+                                    LayoutCachedWidth =7258
                                     LayoutCachedHeight =6863
                                 End
                                 Begin TextBox
@@ -427,41 +429,21 @@ Begin Form
                                     TextFontCharSet =0
                                     TextFontFamily =0
                                     IMESentenceMode =3
-                                    Left =2686
-                                    Top =7213
+                                    Left =2154
+                                    Top =7143
                                     Width =3500
                                     Height =390
+                                    TabIndex =1
                                     BorderColor =10921638
                                     ForeColor =4210752
                                     Name ="txtExcelHeader"
                                     FontName ="Calibri"
                                     GridlineColor =10921638
 
-                                    LayoutCachedLeft =2686
-                                    LayoutCachedTop =7213
-                                    LayoutCachedWidth =6186
-                                    LayoutCachedHeight =7603
-                                    Begin
-                                        Begin Label
-                                            OverlapFlags =247
-                                            TextFontCharSet =0
-                                            TextFontFamily =0
-                                            Left =238
-                                            Top =7213
-                                            Width =2280
-                                            Height =315
-                                            BorderColor =8355711
-                                            ForeColor =6710886
-                                            Name ="lblExcel"
-                                            Caption ="Заголовок Excel"
-                                            FontName ="Calibri"
-                                            GridlineColor =10921638
-                                            LayoutCachedLeft =238
-                                            LayoutCachedTop =7213
-                                            LayoutCachedWidth =2518
-                                            LayoutCachedHeight =7528
-                                        End
-                                    End
+                                    LayoutCachedLeft =2154
+                                    LayoutCachedTop =7143
+                                    LayoutCachedWidth =5654
+                                    LayoutCachedHeight =7533
                                 End
                                 Begin ComboBox
                                     RowSourceTypeInt =1
@@ -469,10 +451,11 @@ Begin Form
                                     TextFontCharSet =0
                                     TextFontFamily =0
                                     IMESentenceMode =3
-                                    Left =2686
-                                    Top =7683
+                                    Left =2154
+                                    Top =7613
                                     Width =3500
                                     Height =390
+                                    TabIndex =2
                                     BorderColor =10921638
                                     ForeColor =3484194
                                     Name ="cboTargetField"
@@ -490,31 +473,10 @@ Begin Form
                                     FontName ="Calibri"
                                     GridlineColor =10921638
 
-                                    LayoutCachedLeft =2686
-                                    LayoutCachedTop =7683
-                                    LayoutCachedWidth =6186
-                                    LayoutCachedHeight =8073
-                                    Begin
-                                        Begin Label
-                                            OverlapFlags =247
-                                            TextFontCharSet =0
-                                            TextFontFamily =0
-                                            Left =238
-                                            Top =7683
-                                            Width =2280
-                                            Height =315
-                                            BorderColor =8355711
-                                            ForeColor =6710886
-                                            Name ="lblDB"
-                                            Caption ="Поле в базе"
-                                            FontName ="Calibri"
-                                            GridlineColor =10921638
-                                            LayoutCachedLeft =238
-                                            LayoutCachedTop =7683
-                                            LayoutCachedWidth =2518
-                                            LayoutCachedHeight =7998
-                                        End
-                                    End
+                                    LayoutCachedLeft =2154
+                                    LayoutCachedTop =7613
+                                    LayoutCachedWidth =5654
+                                    LayoutCachedHeight =8003
                                 End
                                 Begin CommandButton
                                     OverlapFlags =247
@@ -522,8 +484,9 @@ Begin Form
                                     TextFontFamily =0
                                     Left =295
                                     Top =8517
-                                    Width =2202
+                                    Width =1362
                                     Height =794
+                                    TabIndex =3
                                     ForeColor =4210752
                                     Name ="btnAddMapping"
                                     Caption ="Добавить связь"
@@ -533,7 +496,7 @@ Begin Form
 
                                     LayoutCachedLeft =295
                                     LayoutCachedTop =8517
-                                    LayoutCachedWidth =2497
+                                    LayoutCachedWidth =1657
                                     LayoutCachedHeight =9311
                                     BackColor =14461583
                                     BorderColor =14461583
@@ -546,10 +509,11 @@ Begin Form
                                     OverlapFlags =247
                                     TextFontCharSet =0
                                     TextFontFamily =0
-                                    Left =2595
-                                    Top =8517
-                                    Width =2202
-                                    Height =794
+                                    Left =1870
+                                    Top =8560
+                                    Width =1317
+                                    Height =734
+                                    TabIndex =4
                                     ForeColor =4210752
                                     Name ="btnDeleteMapping"
                                     Caption ="Удалить связь"
@@ -557,10 +521,10 @@ Begin Form
                                     FontName ="Calibri"
                                     GridlineColor =10921638
 
-                                    LayoutCachedLeft =2595
-                                    LayoutCachedTop =8517
-                                    LayoutCachedWidth =4797
-                                    LayoutCachedHeight =9311
+                                    LayoutCachedLeft =1870
+                                    LayoutCachedTop =8560
+                                    LayoutCachedWidth =3187
+                                    LayoutCachedHeight =9294
                                     BackColor =14461583
                                     BorderColor =14461583
                                     HoverColor =15189940
@@ -574,8 +538,9 @@ Begin Form
                                     TextFontFamily =0
                                     Left =4943
                                     Top =8517
-                                    Width =2202
+                                    Width =1932
                                     Height =794
+                                    TabIndex =5
                                     ForeColor =4210752
                                     Name ="btnReSeedMapping"
                                     Caption ="Восстановить по умолчанию"
@@ -585,7 +550,7 @@ Begin Form
 
                                     LayoutCachedLeft =4943
                                     LayoutCachedTop =8517
-                                    LayoutCachedWidth =7145
+                                    LayoutCachedWidth =6875
                                     LayoutCachedHeight =9311
                                     BackColor =14461583
                                     BorderColor =14461583
@@ -613,22 +578,103 @@ Begin Form
                                     LayoutCachedWidth =2638
                                     LayoutCachedHeight =951
                                 End
+                                Begin ComboBox
+                                    OverlapFlags =247
+                                    IMESentenceMode =3
+                                    Left =2948
+                                    Top =680
+                                    Width =3583
+                                    Height =315
+                                    TabIndex =6
+                                    BorderColor =10921638
+                                    ForeColor =3484194
+                                    Name ="cboProfile"
+                                    RowSourceType ="Table/Query"
+                                    FontName ="Calibri"
+                                    OnChange ="[Event Procedure]"
+                                    GridlineColor =10921638
+
+                                    LayoutCachedLeft =2948
+                                    LayoutCachedTop =680
+                                    LayoutCachedWidth =6531
+                                    LayoutCachedHeight =995
+                                End
+                                Begin CommandButton
+                                    OverlapFlags =247
+                                    TextFontCharSet =0
+                                    Left =3344
+                                    Top =8560
+                                    Width =1317
+                                    Height =734
+                                    TabIndex =9
+                                    ForeColor =4210752
+                                    Name ="btnEditMapping"
+                                    Caption ="Изменить связь"
+                                    OnClick ="[Event Procedure]"
+                                    FontName ="Calibri"
+                                    GridlineColor =10921638
+
+                                    LayoutCachedLeft =3344
+                                    LayoutCachedTop =8560
+                                    LayoutCachedWidth =4661
+                                    LayoutCachedHeight =9294
+                                    BackColor =14461583
+                                    BorderColor =14461583
+                                    HoverColor =15189940
+                                    PressedColor =9917743
+                                    HoverForeColor =4210752
+                                    PressedForeColor =4210752
+                                End
+                                Begin Label
+                                    OverlapFlags =247
+                                    Left =348
+                                    Top =7161
+                                    Width =1744
+                                    Height =379
+                                    BorderColor =8355711
+                                    ForeColor =6710886
+                                    Name ="lblExcel"
+                                    Caption ="Заголовок"
+                                    FontName ="Calibri"
+                                    GridlineColor =10921638
+                                    LayoutCachedLeft =348
+                                    LayoutCachedTop =7161
+                                    LayoutCachedWidth =2092
+                                    LayoutCachedHeight =7540
+                                End
+                                Begin Label
+                                    OverlapFlags =247
+                                    Left =348
+                                    Top =7596
+                                    Width =1740
+                                    Height =405
+                                    BorderColor =8355711
+                                    ForeColor =6710886
+                                    Name ="lblDB"
+                                    Caption ="Поле в базе"
+                                    FontName ="Calibri"
+                                    GridlineColor =10921638
+                                    LayoutCachedLeft =348
+                                    LayoutCachedTop =7596
+                                    LayoutCachedWidth =2088
+                                    LayoutCachedHeight =8001
+                                End
                             End
                         End
                         Begin Page
                             OverlapFlags =247
                             Left =195
                             Top =600
-                            Width =7320
-                            Height =9150
+                            Width =7155
+                            Height =9105
                             BorderColor =10921638
                             Name ="pgMaintenance"
                             Caption ="Обслуживание"
                             GridlineColor =10921638
                             LayoutCachedLeft =195
                             LayoutCachedTop =600
-                            LayoutCachedWidth =7515
-                            LayoutCachedHeight =9750
+                            LayoutCachedWidth =7350
+                            LayoutCachedHeight =9705
                             Begin
                                 Begin CommandButton
                                     OverlapFlags =247

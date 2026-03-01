@@ -3,8 +3,8 @@ Option Compare Database
 Option Explicit
 
 ' =============================================
-' @module mod_Import_Logic (DYNAMIC v2.0)
-' @description Dynamic import of any columns from Excel
+' @module mod_Import_Logic (DYNAMIC v3.2 - Interactive Wizard)
+' @description Dynamic auto-detect import + Interactive mapping wizard
 ' @note 100% English version. Safe for modern IDEs.
 ' =============================================
 
@@ -16,6 +16,9 @@ Public Function ImportExcelData(Optional ByVal blnSuppressMsgBox As Boolean = Fa
     ImportExcelData = False
 
     Dim strFilePath As String
+    Dim strSkipped As String
+    Dim strFinalMsg As String
+
     strFilePath = SelectExcelFile()
     If strFilePath = "" Then GoTo ExitHandler
 
@@ -30,8 +33,8 @@ Public Function ImportExcelData(Optional ByVal blnSuppressMsgBox As Boolean = Fa
     ' 2. Link
     If Not LinkExcelFile(strFilePath, blnSuppressMsgBox) Then GoTo ExitHandler
 
-    ' 3. Dynamic import
-    If Not RunDynamicImport(blnSuppressMsgBox) Then GoTo ExitHandler
+    ' 3. Dynamic import (with Auto-Detect and Interactive Wizard)
+    If Not RunDynamicImport(strSkipped, blnSuppressMsgBox) Then GoTo ExitHandler
 
     ' 4. Save import metadata
     UpdateImportMetadata strFilePath
@@ -39,7 +42,15 @@ Public Function ImportExcelData(Optional ByVal blnSuppressMsgBox As Boolean = Fa
     ImportExcelData = True
 
     If Not blnSuppressMsgBox Then
-        MsgBox "Import completed successfully. Only mapped English columns were filled.", vbInformation, "StaffState Import"
+        strFinalMsg = mod_UI_Helpers.GetLoc("MSG_IMPORT_SUCCESS")
+
+        If Len(strSkipped) > 0 Then
+            strFinalMsg = strFinalMsg & vbCrLf & vbCrLf & _
+                          mod_UI_Helpers.GetLoc("MSG_SKIPPED_COLS") & vbCrLf & _
+                          strSkipped
+        End If
+
+        MsgBox strFinalMsg, vbInformation, mod_UI_Helpers.GetLoc("TITLE_INFO")
     End If
 
 ExitHandler:
@@ -48,7 +59,7 @@ ExitHandler:
 
 ErrorHandler:
     If Not blnSuppressMsgBox Then
-        MsgBox "Critical Error during import: " & Err.Description, vbCritical, "System Error"
+        MsgBox mod_UI_Helpers.GetLoc("TITLE_ERROR") & " " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     Else
         Debug.Print "Import error: " & Err.Description & " (" & Err.Number & ")"
     End If
@@ -59,7 +70,66 @@ Private Function NormalizeString(ByVal s As String) As String
     NormalizeString = UCase(Trim$(s))
 End Function
 
-Private Function RunDynamicImport(Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
+Private Function DetectBestProfile(tdfLink As DAO.TableDef) As Long
+    Dim db As DAO.Database
+    Dim rsProfiles As DAO.Recordset
+    Dim rsMapping As DAO.Recordset
+    Dim fld As DAO.Field
+    Dim currentProfile As Long
+    Dim matchCount As Long
+    Dim maxMatches As Long
+    Dim bestProfile As Long
+    Dim hasUID As Boolean
+    Dim normExcel As String
+    Dim normHeader As String
+    Dim targetField As String
+
+    Set db = CurrentDb
+    Set rsProfiles = db.OpenRecordset("SELECT DISTINCT ProfileID FROM tbl_Import_Profiles", dbOpenSnapshot)
+
+    bestProfile = 0
+    maxMatches = 0
+
+    Do While Not rsProfiles.EOF
+        currentProfile = rsProfiles!ProfileID
+        matchCount = 0
+        hasUID = False
+
+        Set rsMapping = db.OpenRecordset("SELECT ExcelHeader, TargetField FROM tbl_Import_Mapping WHERE ProfileID = " & currentProfile, dbOpenSnapshot)
+
+        Do While Not rsMapping.EOF
+            normHeader = NormalizeString(Nz(rsMapping!ExcelHeader, ""))
+            targetField = NormalizeString(Nz(rsMapping!targetField, ""))
+
+            For Each fld In tdfLink.Fields
+                normExcel = NormalizeString(fld.Name)
+                If normExcel = normHeader Then
+                    matchCount = matchCount + 1
+                    If targetField = "PERSONUID" Then hasUID = True
+                    Exit For
+                End If
+            Next fld
+            rsMapping.MoveNext
+        Loop
+        rsMapping.Close
+
+        If hasUID And matchCount > maxMatches Then
+            maxMatches = matchCount
+            bestProfile = currentProfile
+        End If
+
+        rsProfiles.MoveNext
+    Loop
+    rsProfiles.Close
+
+    Set rsProfiles = Nothing
+    Set rsMapping = Nothing
+    Set db = Nothing
+
+    DetectBestProfile = bestProfile
+End Function
+
+Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -72,29 +142,39 @@ Private Function RunDynamicImport(Optional ByVal blnSuppressMsgBox As Boolean = 
     Dim strPersonUIDExcelName As String
     Dim strAllColumns As String
     Dim colUsedFields As Collection
+    Dim lngBestProfile As Long
 
+    outSkippedColumns = ""
     strPersonUIDExcelName = ""
     strAllColumns = ""
     Set colUsedFields = New Collection
     Set db = CurrentDb
 
-    ' --- EARLY VALIDATE: tbl_Import_Mapping must exist ---
     If Not mod_Schema_Manager.TableExists("tbl_Import_Mapping") Then
-        If Not blnSuppressMsgBox Then
-            MsgBox "Import failed: tbl_Import_Mapping table is missing. Run InitDatabaseStructure or create the table and run SeedImportMappingProfile1.", vbCritical, "Import Error"
-        End If
-        RunDynamicImport = False
-        Exit Function
-    End If
-    If GetMappingCountForProfile(1) = 0 Then
-        If Not blnSuppressMsgBox Then
-            MsgBox "Import failed: tbl_Import_Mapping is empty for Profile 1. Run mod_Schema_Manager.SeedImportMappingProfile1.", vbCritical, "Import Error"
-        End If
+        If Not blnSuppressMsgBox Then MsgBox "tbl_Import_Mapping table is missing.", vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
         RunDynamicImport = False
         Exit Function
     End If
 
     Set tdfLink = db.TableDefs(cstrLinkedTableName)
+
+    lngBestProfile = DetectBestProfile(tdfLink)
+
+    If lngBestProfile = 0 Then
+        For Each fld In tdfLink.Fields
+            strAllColumns = strAllColumns & "[" & fld.Name & "] "
+        Next fld
+
+        If Not blnSuppressMsgBox Then
+            MsgBox "Import failed: Could not auto-detect a matching mapping profile." & vbCrLf & _
+                   "Ensure mapping exists for PersonUID." & vbCrLf & vbCrLf & _
+                   "Columns found: " & Left(strAllColumns, 400), vbCritical, "Auto-Detect Failed"
+        End If
+        RunDynamicImport = False
+        Exit Function
+    End If
+
+    strAllColumns = ""
 
     ' --- LOOP THROUGH ALL EXCEL COLUMNS ---
     For Each fld In tdfLink.Fields
@@ -103,15 +183,67 @@ Private Function RunDynamicImport(Optional ByVal blnSuppressMsgBox As Boolean = 
         If Len(strAllColumns) > 0 Then strAllColumns = strAllColumns & ", "
         strAllColumns = strAllColumns & "[" & strExcelField & "]"
 
-        strAccessField = GetMappedFieldFromTable(strExcelField, 1)
+        strAccessField = GetMappedFieldFromTable(strExcelField, lngBestProfile)
+
+        ' ========================================================
+        ' INTERACTIVE MAPPING WIZARD
+        ' ========================================================
         If Len(strAccessField) = 0 Then
-            Debug.Print "Skipping unmapped column: " & strExcelField
-            GoTo NextColumn
+            If Not blnSuppressMsgBox Then
+                ' Спрашиваем пользователя: нашли новую колонку, добавить?
+                If mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL") & " [" & strExcelField & "]" & vbCrLf & vbCrLf & mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL2"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL")) Then
+
+                    Dim strNewTarget As String
+                    strNewTarget = InputBox(mod_UI_Helpers.GetLoc("PROMPT_ENTER_EN_NAME"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL"), mod_Schema_Manager.SanitizeFieldName(strExcelField))
+
+                    If Len(Trim$(strNewTarget)) > 0 Then
+                        Dim strTypeSel As String
+                        Dim strSqlType As String
+
+                        strTypeSel = InputBox(mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
+                        Select Case Trim$(strTypeSel)
+                            Case "2": strSqlType = "DATETIME"
+                            Case "3": strSqlType = "LONG"
+                            Case "4": strSqlType = "LONGTEXT"
+                            Case "5": strSqlType = "BIT"
+                            Case "": strSqlType = "" ' Отмена
+                            Case Else: strSqlType = "VARCHAR(255)"
+                        End Select
+
+                        If strSqlType <> "" Then
+                            ' 1. Добавляем поле в саму базу
+                            If Not mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strNewTarget) Then
+                                mod_Schema_Manager.AddNewFieldToSchema strNewTarget, strSqlType
+                            End If
+
+                            ' 2. Записываем связь в маппинг
+                            Dim qdfAdd As DAO.QueryDef
+                            Set qdfAdd = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
+                            qdfAdd.Parameters("prmP").value = lngBestProfile
+                            qdfAdd.Parameters("prmE").value = Left$(strExcelField, 255)
+                            qdfAdd.Parameters("prmT").value = Left$(strNewTarget, 100)
+                            qdfAdd.Execute dbFailOnError
+                            Set qdfAdd = Nothing
+
+                            ' 3. Подхватываем поле и идем дальше!
+                            strAccessField = strNewTarget
+                        End If
+                    End If
+                End If
+            End If
+
+            ' Если поле так и осталось пустым (пользователь нажал НЕТ) - пропускаем
+            If Len(strAccessField) = 0 Then
+                Debug.Print "Skipping unmapped column: " & strExcelField
+                If Len(outSkippedColumns) > 0 Then outSkippedColumns = outSkippedColumns & ", "
+                outSkippedColumns = outSkippedColumns & "[" & strExcelField & "]"
+                GoTo NextColumn
+            End If
         End If
+        ' ========================================================
 
         If Len(strPersonUIDExcelName) = 0 And NormalizeString(strAccessField) = "PERSONUID" Then
             strPersonUIDExcelName = strExcelField
-            Debug.Print "PersonUID column: " & strExcelField
         End If
 
         If Not RegisterDestField(colUsedFields, strAccessField) Then
@@ -129,35 +261,23 @@ Private Function RunDynamicImport(Optional ByVal blnSuppressMsgBox As Boolean = 
 NextColumn:
     Next fld
 
-    Debug.Print "All Excel columns: " & strAllColumns
-
-    ' --- VALIDATE: at least one mapped column ---
     If Len(strInsertPart) = 0 Then
-        If Not blnSuppressMsgBox Then
-            MsgBox "No mapped columns. Your Excel headers did not match any row in tbl_Import_Mapping (Profile 1)." & vbCrLf & vbCrLf & _
-                   "Excel columns in file: " & Left(strAllColumns, 400), vbCritical, "Import Error"
-        End If
+        If Not blnSuppressMsgBox Then MsgBox "No mapped columns matched.", vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
         RunDynamicImport = False
         Exit Function
     End If
 
-    ' --- VALIDATE: PersonUID column must be present ---
     If Len(strPersonUIDExcelName) = 0 Then
-        If Not blnSuppressMsgBox Then
-            MsgBox "CRITICAL: No Excel column maps to PersonUID. Add a mapping in tbl_Import_Mapping." & vbCrLf & vbCrLf & _
-                   "Excel columns in your file: " & Left(strAllColumns, 400), vbCritical, "Import Error"
-        End If
+        If Not blnSuppressMsgBox Then MsgBox "CRITICAL: No column mapped to PersonUID.", vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
         RunDynamicImport = False
         Exit Function
     End If
 
-    ' --- FINAL SQL ---
     Dim strSQL As String
     strSQL = "INSERT INTO tbl_Import_Buffer (" & strInsertPart & ") " & _
              "SELECT " & strSelectPart & " " & _
              "FROM [" & cstrLinkedTableName & "] " & _
              "WHERE [" & strPersonUIDExcelName & "] IS NOT NULL;"
-    Debug.Print "Dynamic SQL generated: " & strSQL
     db.Execute strSQL, dbFailOnError
 
     RunDynamicImport = True
@@ -165,48 +285,23 @@ NextColumn:
 
 ErrorHandler:
     If Not blnSuppressMsgBox Then
-        MsgBox "Import error: " & Err.Description & vbCrLf & "Error number: " & Err.Number, vbCritical, "Dynamic Import Error"
-    Else
-        Debug.Print "Dynamic import error: " & Err.Description & " (" & Err.Number & ")"
+        MsgBox "Import error: " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     End If
-End Function
-
-Private Function GetMappingCountForProfile(lngProfileID As Long) As Long
-    On Error GoTo ErrorHandler
-    Dim db As DAO.Database
-    Dim rs As DAO.Recordset
-    GetMappingCountForProfile = 0
-    If Not mod_Schema_Manager.TableExists("tbl_Import_Mapping") Then Exit Function
-    Set db = CurrentDb
-    Set rs = db.OpenRecordset("SELECT COUNT(*) AS Cnt FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfileID, dbOpenSnapshot)
-    If Not rs.EOF Then GetMappingCountForProfile = Nz(rs!Cnt, 0)
-    rs.Close
-    Set rs = Nothing
-    Set db = Nothing
-    Exit Function
-ErrorHandler:
-    If Not rs Is Nothing Then On Error Resume Next: rs.Close: Set rs = Nothing
-    If Not db Is Nothing Then Set db = Nothing
-    GetMappingCountForProfile = 0
+    RunDynamicImport = False
 End Function
 
 Private Function GetMappedFieldFromTable(strExcelField As String, lngProfileID As Long) As String
     On Error GoTo ErrorHandler
-    Dim db As DAO.Database
-    Dim rs As DAO.Recordset
-    Dim strSQL As String
+    Dim db As DAO.Database, rs As DAO.Recordset
     Dim strNormExcel As String
 
     GetMappedFieldFromTable = ""
-    If Not mod_Schema_Manager.TableExists("tbl_Import_Mapping") Then Exit Function
-
     strNormExcel = NormalizeString(strExcelField)
     Set db = CurrentDb
-    strSQL = "SELECT ExcelHeader, TargetField FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfileID
-    Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT ExcelHeader, TargetField FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfileID, dbOpenSnapshot)
     Do While Not rs.EOF
         If NormalizeString(Nz(rs!ExcelHeader, "")) = strNormExcel Then
-            GetMappedFieldFromTable = Trim$(Nz(rs!TargetField, ""))
+            GetMappedFieldFromTable = Trim$(Nz(rs!targetField, ""))
             Exit Do
         End If
         rs.MoveNext
@@ -216,13 +311,7 @@ Private Function GetMappedFieldFromTable(strExcelField As String, lngProfileID A
     Set db = Nothing
     Exit Function
 ErrorHandler:
-    If Not rs Is Nothing Then
-        On Error Resume Next
-        rs.Close
-        Set rs = Nothing
-    End If
-    If Not db Is Nothing Then Set db = Nothing
-    GetMappedFieldFromTable = ""
+    On Error Resume Next: rs.Close: Set rs = Nothing: Set db = Nothing
 End Function
 
 Private Function RegisterDestField(colUsed As Collection, strFieldName As String) As Boolean
@@ -233,63 +322,6 @@ Private Function RegisterDestField(colUsed As Collection, strFieldName As String
 AlreadyExists:
     RegisterDestField = False
     Err.Clear
-End Function
-
-' --- RUSSIAN MAPPINGS (fuzzy by patterns) - Kept for legacy fallback if mapping table fails ---
-Private Function MapFieldName(strExcelField As String) As String
-    Dim s As String
-    s = LCase(strExcelField)
-
-    If s = "personuid" Or s = "uid" Then MapFieldName = "PersonUID": Exit Function
-    If s = "sourceid" Then MapFieldName = "SourceID": Exit Function
-    If s = "fullname" Then MapFieldName = "FullName": Exit Function
-    If s = "rank" Then MapFieldName = "RankName": Exit Function
-    If s = "birthdate" Then MapFieldName = "BirthDate_Text": Exit Function
-    If s = "workstatus" Then MapFieldName = "WorkStatus": Exit Function
-    If s = "poscode" Then MapFieldName = "PosCode": Exit Function
-    If s = "posname" Then MapFieldName = "PosName": Exit Function
-    If s = "orderdate" Then MapFieldName = "OrderDate_Text": Exit Function
-    If s = "ordernum" Or s = "ordernumber" Then MapFieldName = "OrderNumber": Exit Function
-
-    If ContainsCyrillic(strExcelField) Then
-        ' Legacy pattern mapping preserved using ChrW to avoid IDE breaking
-        If MatchCyrPattern(s, Array(1083, 1080, 1094, 1086)) And Len(s) < 6 Then MapFieldName = "SourceID": Exit Function
-        If MatchCyrPattern(s, Array(1092, 1080, 1086)) Then MapFieldName = "FullName": Exit Function
-        If MatchCyrPattern(s, Array(1079, 1074, 1072, 1085, 1080, 1077)) Then MapFieldName = "RankName": Exit Function
-        If MatchCyrPattern(s, Array(1088, 1086, 1078, 1076, 1077, 1085, 1080, 1103)) Then MapFieldName = "BirthDate_Text": Exit Function
-    End If
-
-    MapFieldName = mod_Schema_Manager.SanitizeFieldName(strExcelField)
-End Function
-
-Private Function ContainsCyrillic(s As String) As Boolean
-    Dim i As Long
-    Dim c As Long
-
-    For i = 1 To Len(s)
-        c = AscW(Mid(s, i, 1))
-        If c >= 1024 And c <= 1279 Then
-            ContainsCyrillic = True
-            Exit Function
-        End If
-        If c >= 192 And c <= 255 Then
-            ContainsCyrillic = True
-            Exit Function
-        End If
-    Next i
-    ContainsCyrillic = False
-End Function
-
-Private Function MatchCyrPattern(s As String, pattern As Variant) As Boolean
-    Dim patternStr As String
-    Dim i As Long
-
-    patternStr = ""
-    For i = LBound(pattern) To UBound(pattern)
-        patternStr = patternStr & ChrW(pattern(i))
-    Next i
-
-    MatchCyrPattern = (InStr(LCase(s), LCase(patternStr)) > 0)
 End Function
 
 Private Function LinkExcelFile(strPath As String, Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
@@ -318,30 +350,43 @@ Private Function LinkExcelFile(strPath As String, Optional ByVal blnSuppressMsgB
     LinkExcelFile = True
     Exit Function
 ErrorHandler:
-    If Not blnSuppressMsgBox Then
-        MsgBox "Link error: " & Err.Description, vbCritical, "Error"
-    Else
-        Debug.Print "Link error: " & Err.Description & " (" & Err.Number & ")"
-    End If
+    If Not blnSuppressMsgBox Then MsgBox "Link error: " & Err.Description, vbCritical, "Error"
 End Function
 
 Private Function GetFirstSheetName(strPath As String) As String
-    Dim xlApp As Object, xlWb As Object
+    Dim dbExcel As DAO.Database
+    Dim tdf As DAO.TableDef
+
+    GetFirstSheetName = ""
     On Error Resume Next
-    Set xlApp = CreateObject("Excel.Application")
-    xlApp.Visible = False
-    Set xlWb = xlApp.Workbooks.Open(strPath, False, True)
-    GetFirstSheetName = xlWb.Sheets(1).Name
-    xlWb.Close False: xlApp.Quit
-    Set xlApp = Nothing: Set xlWb = Nothing
+
+    Dim strConnect As String
+    If Right(LCase(strPath), 4) = ".xls" Then
+        strConnect = "Excel 8.0;HDR=YES;IMEX=1;"
+    Else
+        strConnect = "Excel 12.0 Xml;HDR=YES;IMEX=1;"
+    End If
+
+    Set dbExcel = DBEngine.Workspaces(0).OpenDatabase(strPath, False, True, strConnect)
+
+    If Err.Number = 0 Then
+        For Each tdf In dbExcel.TableDefs
+            If Right(tdf.Name, 1) = "$" Or Right(tdf.Name, 2) = "$'" Then
+                GetFirstSheetName = Replace(tdf.Name, "'", "")
+                Exit For
+            End If
+        Next tdf
+        dbExcel.Close
+    End If
+
+    Set tdf = Nothing
+    Set dbExcel = Nothing
 End Function
 
 Public Function SelectExcelFile() As String
     On Error GoTo ErrorHandler
-
     Dim fd As Object
     Dim strInitialPath As String
-
     strInitialPath = Trim$(Nz(mod_Maintenance_Logic.GetSetting("ImportFolderPath", ""), ""))
     If Len(strInitialPath) = 0 Then strInitialPath = CurrentProject.Path
     If Len(strInitialPath) > 0 And Right(strInitialPath, 1) <> "\" Then strInitialPath = strInitialPath & "\"
@@ -352,10 +397,8 @@ Public Function SelectExcelFile() As String
         If Len(strInitialPath) > 0 Then .InitialFileName = strInitialPath
         If .Show = -1 Then SelectExcelFile = .SelectedItems(1)
     End With
-
     Exit Function
 ErrorHandler:
-    Debug.Print "SelectExcelFile error: " & Err.Description & " (" & Err.Number & ")"
     SelectExcelFile = ""
 End Function
 
@@ -366,9 +409,7 @@ End Sub
 
 Private Function GetFileModificationDate(strFilePath As String) As Date
     On Error GoTo ErrorHandler
-    Dim fso As Object
-    Dim oFile As Object
-
+    Dim fso As Object, oFile As Object
     Set fso = CreateObject("Scripting.FileSystemObject")
     Set oFile = fso.GetFile(strFilePath)
     GetFileModificationDate = oFile.DateLastModified
@@ -379,39 +420,14 @@ ErrorHandler:
     GetFileModificationDate = Now()
 End Function
 
-' =============================================
-' @description Updates import metadata table using Parameterized QueryDef.
-' =============================================
 Private Sub UpdateImportMetadata(strFilePath As String)
-    On Error GoTo ErrorHandler
-
-    Dim db As DAO.Database
-    Dim qdf As DAO.QueryDef
-    Dim dtFileDate As Date
-    Dim strSQL As String
-
+    On Error Resume Next
+    Dim db As DAO.Database, qdf As DAO.QueryDef
     Set db = CurrentDb
-    dtFileDate = GetFileModificationDate(strFilePath)
-
     db.Execute "DELETE FROM tbl_Import_Meta;", dbFailOnError
-
-    strSQL = "PARAMETERS prmExportDate DateTime, prmImportDate DateTime, prmPath Text (255); " & _
-             "INSERT INTO tbl_Import_Meta (ExportFileDate, ImportRunAt, SourceFilePath) " & _
-             "VALUES ([prmExportDate], [prmImportDate], [prmPath]);"
-
-    Set qdf = db.CreateQueryDef("", strSQL)
-    qdf.Parameters("prmExportDate").value = dtFileDate
-    qdf.Parameters("prmImportDate").value = Now()
-    qdf.Parameters("prmPath").value = Left$(strFilePath, 255)
-
+    Set qdf = db.CreateQueryDef("", "PARAMETERS prmE DateTime, prmI DateTime, prmP Text(255); INSERT INTO tbl_Import_Meta (ExportFileDate, ImportRunAt, SourceFilePath) VALUES ([prmE], [prmI], [prmP]);")
+    qdf.Parameters("prmE").value = GetFileModificationDate(strFilePath)
+    qdf.Parameters("prmI").value = Now()
+    qdf.Parameters("prmP").value = Left$(strFilePath, 255)
     qdf.Execute dbFailOnError
-
-    Debug.Print "Import metadata updated. ExportFileDate: " & dtFileDate
-
-    Set qdf = Nothing
-    Set db = Nothing
-    Exit Sub
-
-ErrorHandler:
-    Debug.Print "Warning: Failed to update import metadata: " & Err.Description
 End Sub

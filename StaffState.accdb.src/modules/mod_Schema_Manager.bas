@@ -155,13 +155,20 @@ ErrorHandler:
 End Function
 
 ' =============================================
-' @description Creates Import Mapping Tables
+' @description Creates Import Mapping Tables & Multiple Profiles
 ' =============================================
 Public Sub CreateImportProfilesTable()
     On Error GoTo ErrorHandler
-    If TableExists("tbl_Import_Profiles") Then Exit Sub
-    CurrentDb.Execute "CREATE TABLE [tbl_Import_Profiles] ([ProfileID] LONG CONSTRAINT [PK_Import_Profiles] PRIMARY KEY, [ProfileName] TEXT(100), [IdStrategy] TEXT(20));", dbFailOnError
-    CurrentDb.Execute "INSERT INTO tbl_Import_Profiles (ProfileID, ProfileName, IdStrategy) VALUES (1, 'Default', 'PersonUID');", dbFailOnError
+    If Not TableExists("tbl_Import_Profiles") Then
+        CurrentDb.Execute "CREATE TABLE [tbl_Import_Profiles] ([ProfileID] LONG CONSTRAINT [PK_Import_Profiles] PRIMARY KEY, [ProfileName] TEXT(100), [IdStrategy] TEXT(20));", dbFailOnError
+    End If
+
+    ' Phase 31: Ensure default profiles exist
+    On Error Resume Next
+    CurrentDb.Execute "INSERT INTO tbl_Import_Profiles (ProfileID, ProfileName, IdStrategy) VALUES (1, 'Main (Default)', 'PersonUID');"
+    CurrentDb.Execute "INSERT INTO tbl_Import_Profiles (ProfileID, ProfileName, IdStrategy) VALUES (2, 'Logistics/Supply', 'PersonUID');"
+    CurrentDb.Execute "INSERT INTO tbl_Import_Profiles (ProfileID, ProfileName, IdStrategy) VALUES (3, 'Finance/Banking', 'PersonUID');"
+    On Error GoTo ErrorHandler
     Exit Sub
 ErrorHandler:
     Debug.Print "CreateImportProfilesTable error: " & Err.Description
@@ -190,7 +197,7 @@ Public Sub SeedImportMappingProfile1()
     End If
 
     ' Personal Data
-    AddMappingIfNotExists db, 1, CyrStr(1051, 1083, 1094, 1086), "SourceID"
+    AddMappingIfNotExists db, 1, CyrStr(1051, 1048, 1094, 1086), "SourceID"
     AddMappingIfNotExists db, 1, CyrStr(1051, 1080, 1095, 1085, 1099, 1081, 32, 1085, 1086, 1084, 1077, 1088), "PersonUID"
     AddMappingIfNotExists db, 1, CyrStr(1042, 1086, 1080, 1085, 1089, 1082, 1086, 1077, 32, 1079, 1074, 1072, 1085, 1080, 1077), "RankName"
     AddMappingIfNotExists db, 1, CyrStr(1060, 1048, 1054), "FullName"
@@ -300,8 +307,6 @@ Private Function CyrStr(ParamArray codes() As Variant) As String
     CyrStr = s
 End Function
 
-
-
 ' =============================================
 ' @description Ensures tbl_Personnel_Master has all canonical English fields.
 ' =============================================
@@ -343,7 +348,6 @@ Private Function GetAllowedMasterFields() As Collection
     Set GetAllowedMasterFields = c
 End Function
 
-
 ' =============================================
 ' @description Gets field type as friendly string (for UI)
 ' =============================================
@@ -378,8 +382,6 @@ Public Function GetFieldTypeFriendly(ByVal strTable As String, ByVal strField As
     Set tdf = Nothing
     Set db = Nothing
 End Function
-
-
 
 ' =============================================
 ' @description Helper: Gets physical file path of a table if linked.
@@ -648,6 +650,9 @@ Public Sub SeedLocalizationTable()
     UpsertLocKey db, "TAB_GENERAL", "Основные настройки", "UI"
     UpsertLocKey db, "TAB_MAPPING", "Маппинг импорта", "UI"
     UpsertLocKey db, "TAB_MAINTENANCE", "Обслуживание", "UI"
+    UpsertLocKey db, "MSG_RESEED_ONLY_MAIN", "Восстановление по умолчанию доступно только для основного профиля (1).", "System"
+    UpsertLocKey db, "LBL_EXCEL_HEADER", "Заголовок Excel:", "UI"
+    UpsertLocKey db, "LBL_DB_FIELD", "Поле в базе:", "UI"
 
     UpsertLocKey db, "BTN_ADD_MAPPING", "Добавить связь", "UI"
     UpsertLocKey db, "BTN_DEL_MAPPING", "Удалить связь", "UI"
@@ -733,6 +738,7 @@ Public Sub SeedLocalizationTable()
     UpsertLocKey db, "MSG_OPENING_DUPLICATES", "Открытие инструмента поиска дубликатов...", "System"
     UpsertLocKey db, "MSG_DUPLICATES_OPENED", "Поиск дубликатов запущен.", "System"
     UpsertLocKey db, "ERR_OPEN_DUPLICATES", "Не удалось открыть поиск дубликатов: ", "Error"
+    UpsertLocKey db, "MSG_SKIPPED_COLS", "Следующие колонки были пропущены (нет маппинга):", "System"
 
     ' Отчеты
     UpsertLocKey db, "ERR_ENTER_DATES", "Пожалуйста, введите начальную и конечную даты.", "Error"
@@ -754,6 +760,16 @@ Public Sub SeedLocalizationTable()
     UpsertLocKey db, "BTN_FIND_DUPLICATES", "Поиск дубликатов", "UI"
     UpsertLocKey db, "BTN_CHANGE_REPORT", "Changes Report", "UI"
     UpsertLocKey db, "BTN_SNAPSHOT", "Штатный срез", "UI"
+
+    ' --- Новые ключи для интерактивного импорта и редактирования ---
+    UpsertLocKey db, "BTN_EDIT_MAPPING", "Изменить заголовок", "UI"
+    UpsertLocKey db, "TITLE_NEW_COL", "Новая колонка", "UI"
+    UpsertLocKey db, "PROMPT_MAP_NEW_COL", "В файле найдена новая колонка:", "System"
+    UpsertLocKey db, "PROMPT_MAP_NEW_COL2", "Добавить ее в базу данных и связать с профилем прямо сейчас?", "System"
+    UpsertLocKey db, "PROMPT_ENTER_EN_NAME", "Введите техническое (английское) имя поля для БД (без пробелов):", "System"
+    UpsertLocKey db, "TITLE_EDIT_MAPPING", "Редактирование маппинга", "UI"
+    UpsertLocKey db, "PROMPT_EDIT_EXCEL_HEADER", "Введите новое точное название заголовка из Excel:", "System"
+    UpsertLocKey db, "MSG_MAPPING_UPDATED", "Маппинг успешно обновлен.", "System"
 
     Debug.Print "Localization seeding complete."
     MsgBox "Базовый словарь локализации успешно загружен в таблицу!", vbInformation, "StaffState Init"

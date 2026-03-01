@@ -25,5 +25,5 @@ Public Sub InitialSetup_Phase19_Test()
 End Sub
 
 Private Sub AddMap(rs As DAO.Recordset, pID As Long, hExc As String, fTarg As String)
-    rs.AddNew: rs!ProfileID = pID: rs!ExcelHeader = hExc: rs!TargetField = fTarg: rs.Update
+    rs.AddNew: rs!ProfileID = pID: rs!ExcelHeader = hExc: rs!targetField = fTarg: rs.Update
 End Sub
