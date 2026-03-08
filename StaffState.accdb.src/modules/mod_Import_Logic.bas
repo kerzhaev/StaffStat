@@ -25,7 +25,6 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     Dim strSkipped As String
     Dim strErrorMessage As String
     Dim actionRequest As Variant
-    Dim initResult As Object
 
     Set result = CreateImportResult()
 
@@ -45,15 +44,7 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     DoEvents
 
     ' Self-heal schema before touching import tables or mappings.
-    Set initResult = mod_App_Init.InitDatabaseStructureResult()
-    If Not CBool(initResult("Success")) Then
-        result("ErrorNumber") = CLng(Nz(initResult("ErrorNumber"), 0))
-        result("ErrorMessage") = CStr(Nz(initResult("Message"), "Initialization error."))
-        result("Message") = CStr(result("ErrorMessage"))
-        Set initResult = Nothing
-        GoTo ExitHandler
-    End If
-    Set initResult = Nothing
+    mod_App_Init.InitDatabaseStructure True
 
     ' 1. Clear buffer
     CurrentDb.Execute "DELETE FROM tbl_Import_Buffer;", dbFailOnError
@@ -85,7 +76,6 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
 
 ExitHandler:
     DeleteExcelLink
-    Set initResult = Nothing
     Set ImportExcelDataResult = result
     Exit Function
 
@@ -699,12 +689,12 @@ Private Sub EnsureImportMapping(ByVal lngProfileID As Long, ByVal strExcelField 
     Dim db As DAO.Database
     Dim qdf As DAO.QueryDef
     Dim rs As DAO.Recordset
-    Dim strSql As String
+    Dim strSQL As String
 
     Set db = CurrentDb
-    strSql = "SELECT MappingID FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfileID & _
+    strSQL = "SELECT MappingID FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfileID & _
              " AND ExcelHeader = '" & Replace(strExcelField, "'", "''") & "'"
-    Set rs = db.OpenRecordset(strSql, dbOpenSnapshot)
+    Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
     If rs.EOF Then
         Set qdf = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
         qdf.Parameters("prmP").value = lngProfileID

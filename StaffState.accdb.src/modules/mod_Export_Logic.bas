@@ -110,17 +110,8 @@ End Function
 ' @return True if success
 ' =============================================
 Public Function ExportFullSearchToExcel() As Boolean
-    Dim result As Object
-
-    Set result = ExportFullSearchToExcelResult()
-    ExportFullSearchToExcel = CBool(result("Success")) And CStr(Nz(result("Status"), "")) = "SUCCESS"
-    Set result = Nothing
-End Function
-
-Public Function ExportFullSearchToExcelResult() As Object
     On Error GoTo ErrorHandler
 
-    Dim result As Object
     Dim ufSearch As Object
     Dim strSQL As String
     Dim db As DAO.Database
@@ -140,24 +131,18 @@ Public Function ExportFullSearchToExcelResult() As Object
     Dim exportDir As String
     Dim fullPath As String
 
-    Set result = CreateExportResult()
-
     ' Get SQL from uf_Search (without TOP 50)
     strSQL = Forms!uf_Search.GetSearchSQL(bAddTop50:=False)
     If strSQL = "" Then
-        result("Success") = True
-        result("Status") = "NO_DATA"
-        result("Message") = "No data to export."
-        GoTo Cleanup
+        mod_UI_Helpers.ShowMessage "No data to export.", vbExclamation
+        Exit Function
     End If
 
     ' Resolve export folder: CurrentProject.Path\Exports (create if missing)
     exportDir = CurrentProject.Path & "\Exports"
     If Len(CurrentProject.Path) = 0 Then
-        result("Status") = "VALIDATION_ERROR"
-        result("ErrorMessage") = "Database path not found. Please open the database from a trusted folder."
-        result("Message") = CStr(result("ErrorMessage"))
-        GoTo Cleanup
+        mod_UI_Helpers.ShowMessage "Database path not found. Please open the database from a trusted folder.", vbExclamation
+        Exit Function
     End If
     If Dir(exportDir, vbDirectory) = "" Then
         MkDir exportDir
@@ -168,9 +153,7 @@ Public Function ExportFullSearchToExcelResult() As Object
     Set db = CurrentDb
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
     If rs.EOF Then
-        result("Success") = True
-        result("Status") = "NO_DATA"
-        result("Message") = "No data to export."
+        mod_UI_Helpers.ShowMessage "No data to export.", vbExclamation
         GoTo Cleanup
     End If
 
@@ -235,11 +218,8 @@ Public Function ExportFullSearchToExcelResult() As Object
     xlWb.SaveAs fullPath, xlOpenXMLWorkbook
     Debug.Print "Export saved: " & fullPath
 
-    result("Success") = True
-    result("Status") = "SUCCESS"
-    result("RecordCount") = recCount
-    result("ExportPath") = fullPath
-    result("Message") = mod_UI_Helpers.GetMsgExportCompleted(recCount)
+    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetMsgExportCompleted(recCount), vbInformation
+    ExportFullSearchToExcel = True
 
 Cleanup:
     On Error Resume Next
@@ -257,16 +237,11 @@ Cleanup:
         xlApp.DisplayAlerts = True
         Set xlApp = Nothing
     End If
-    Set ExportFullSearchToExcelResult = result
     Exit Function
 
 ErrorHandler:
-    Debug.Print "ExportFullSearchToExcel error: " & Err.Description & " (" & Err.Number & ")"
-    result("Success") = False
-    result("Status") = "ERROR"
-    result("ErrorNumber") = Err.Number
-    result("ErrorMessage") = "Export error: " & Err.Description
-    result("Message") = CStr(result("ErrorMessage"))
+    mod_UI_Helpers.ShowMessage "Export error: " & Err.Description, vbCritical
+    ExportFullSearchToExcel = False
     GoTo Cleanup
 End Function
 
@@ -276,17 +251,8 @@ End Function
 ' @return True if success
 ' =============================================
 Public Function ExportSearchToExcel(ByVal rs As DAO.Recordset) As Boolean
-    Dim result As Object
-
-    Set result = ExportSearchToExcelResult(rs)
-    ExportSearchToExcel = CBool(result("Success")) And CStr(Nz(result("Status"), "")) = "SUCCESS"
-    Set result = Nothing
-End Function
-
-Public Function ExportSearchToExcelResult(ByVal rs As DAO.Recordset) As Object
     On Error GoTo ErrorHandler
 
-    Dim result As Object
     Dim xlApp     As Object
     Dim xlWb      As Object
     Dim xlWs      As Object
@@ -295,22 +261,16 @@ Public Function ExportSearchToExcelResult(ByVal rs As DAO.Recordset) As Object
     Dim cap       As String
     Dim recCount  As Long
 
-    Set result = CreateExportResult()
-
     If rs Is Nothing Then
-        result("Status") = "VALIDATION_ERROR"
-        result("ErrorMessage") = "No recordset to export."
-        result("Message") = CStr(result("ErrorMessage"))
-        GoTo Cleanup
+        MsgBox "No recordset to export.", vbExclamation
+        Exit Function
     End If
 
     colCount = rs.Fields.count
 
     If colCount = 0 Then
-        result("Status") = "VALIDATION_ERROR"
-        result("ErrorMessage") = "No exportable columns."
-        result("Message") = CStr(result("ErrorMessage"))
-        GoTo Cleanup
+        MsgBox "No exportable columns.", vbExclamation
+        Exit Function
     End If
 
     Set xlApp = CreateObject("Excel.Application")
@@ -342,10 +302,8 @@ Public Function ExportSearchToExcelResult(ByVal rs As DAO.Recordset) As Object
     xlWs.Range(xlWs.Cells(1, 1), xlWs.Cells(1, colCount)).Select
     xlWs.UsedRange.Columns.AutoFit
 
-    result("Success") = True
-    result("Status") = "SUCCESS"
-    result("RecordCount") = recCount
-    result("Message") = "Search results exported: " & recCount & " records."
+    MsgBox "Search results exported: " & recCount & " records.", vbInformation
+    ExportSearchToExcel = True
 
 Cleanup:
     On Error Resume Next
@@ -355,16 +313,11 @@ Cleanup:
         xlApp.DisplayAlerts = True
         Set xlApp = Nothing
     End If
-    Set ExportSearchToExcelResult = result
     Exit Function
 
 ErrorHandler:
-    Debug.Print "ExportSearchToExcel error: " & Err.Description & " (" & Err.Number & ")"
-    result("Success") = False
-    result("Status") = "ERROR"
-    result("ErrorNumber") = Err.Number
-    result("ErrorMessage") = "Export error: " & Err.Description
-    result("Message") = CStr(result("ErrorMessage"))
+    MsgBox "Export error: " & Err.Description, vbCritical
+    ExportSearchToExcel = False
     GoTo Cleanup
 End Function
 
@@ -375,17 +328,8 @@ End Function
 ' @return True if success
 ' =============================================
 Public Function ExportChangeReport(ByVal dtStart As Date, ByVal dtEnd As Date) As Boolean
-    Dim result As Object
-
-    Set result = ExportChangeReportResult(dtStart, dtEnd)
-    ExportChangeReport = CBool(result("Success")) And CStr(Nz(result("Status"), "")) = "SUCCESS"
-    Set result = Nothing
-End Function
-
-Public Function ExportChangeReportResult(ByVal dtStart As Date, ByVal dtEnd As Date) As Object
     On Error GoTo ErrorHandler
 
-    Dim result As Object
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
     Dim strSQL As String
@@ -396,7 +340,6 @@ Public Function ExportChangeReportResult(ByVal dtStart As Date, ByVal dtEnd As D
     Dim strOrgName As String
     Dim lngHeaderRow As Long
 
-    Set result = CreateExportResult()
     Set db = CurrentDb
 
     strSQL = "SELECT " & _
@@ -414,9 +357,7 @@ Public Function ExportChangeReportResult(ByVal dtStart As Date, ByVal dtEnd As D
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
 
     If rs.EOF Then
-        result("Success") = True
-        result("Status") = "NO_DATA"
-        result("Message") = "No changes found for selected period."
+        MsgBox "No changes found for selected period.", vbInformation
         GoTo Cleanup
     End If
 
@@ -458,10 +399,7 @@ Public Function ExportChangeReportResult(ByVal dtStart As Date, ByVal dtEnd As D
     xlApp.ActiveWindow.FreezePanes = True
     xlWs.UsedRange.Columns.AutoFit
 
-    result("Success") = True
-    result("Status") = "SUCCESS"
-    result("RecordCount") = recCount
-    result("Message") = "Change report exported: " & recCount & " record(s)."
+    ExportChangeReport = True
 
 Cleanup:
     On Error Resume Next
@@ -474,16 +412,11 @@ Cleanup:
     End If
     Set rs = Nothing
     Set db = Nothing
-    Set ExportChangeReportResult = result
     Exit Function
 
 ErrorHandler:
-    Debug.Print "ExportChangeReport error: " & Err.Description & " (" & Err.Number & ")"
-    result("Success") = False
-    result("Status") = "ERROR"
-    result("ErrorNumber") = Err.Number
-    result("ErrorMessage") = "Export error: " & Err.Description
-    result("Message") = CStr(result("ErrorMessage"))
+    MsgBox "Export error: " & Err.Description, vbCritical
+    ExportChangeReport = False
     GoTo Cleanup
 End Function
 
@@ -492,20 +425,4 @@ End Function
 ' =============================================
 Private Function FormatDateLiteral(ByVal dtValue As Date) As String
     FormatDateLiteral = "#" & Format(dtValue, "mm\/dd\/yyyy") & "#"
-End Function
-
-Private Function CreateExportResult() As Object
-    Dim d As Object
-
-    Set d = CreateObject("Scripting.Dictionary")
-    d.CompareMode = 1
-    d("Success") = False
-    d("Status") = "PENDING"
-    d("Message") = ""
-    d("ErrorMessage") = ""
-    d("ErrorNumber") = 0
-    d("RecordCount") = 0
-    d("ExportPath") = ""
-
-    Set CreateExportResult = d
 End Function

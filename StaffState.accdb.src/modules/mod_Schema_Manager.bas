@@ -39,13 +39,9 @@ Public Sub EnsureFieldExists(strTableName As String, strFieldName As String, Opt
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim dbBackend As DAO.Database
     Dim tdf As DAO.TableDef
     Dim fld As DAO.Field
     Dim blnExists As Boolean
-    Dim strSQL As String
-    Dim strBackendPath As String
-    Dim strPhysicalTableName As String
 
     Set db = CurrentDb
     Set tdf = db.TableDefs(strTableName)
@@ -59,27 +55,9 @@ Public Sub EnsureFieldExists(strTableName As String, strFieldName As String, Opt
     Next fld
 
     If Not blnExists Then
+        Dim strSQL As String
         strSQL = "ALTER TABLE [" & strTableName & "] ADD COLUMN [" & strFieldName & "] " & strType & ";"
-
-        If Len(Trim$(Nz(tdf.Connect, ""))) > 0 Then
-            strBackendPath = GetBackendPath(strTableName)
-            If Len(strBackendPath) = 0 Then
-                Err.Raise vbObjectError + 2, "EnsureFieldExists", "Failed to resolve Back-End path for linked table [" & strTableName & "]."
-            End If
-
-            strPhysicalTableName = Trim$(Nz(tdf.SourceTableName, strTableName))
-            If Len(strPhysicalTableName) = 0 Then strPhysicalTableName = strTableName
-
-            Set dbBackend = DBEngine.Workspaces(0).OpenDatabase(strBackendPath)
-            dbBackend.Execute "ALTER TABLE [" & strPhysicalTableName & "] ADD COLUMN [" & strFieldName & "] " & strType & ";", dbFailOnError
-            dbBackend.Close
-            Set dbBackend = Nothing
-
-            tdf.RefreshLink
-        Else
-            db.Execute strSQL, dbFailOnError
-        End If
-
+        db.Execute strSQL, dbFailOnError
         Debug.Print "Schema: field added to " & strTableName & ": " & strFieldName
     End If
 
@@ -89,9 +67,6 @@ Public Sub EnsureFieldExists(strTableName As String, strFieldName As String, Opt
     Exit Sub
 ErrorHandler:
     Debug.Print "EnsureFieldExists error: " & Err.Description
-    On Error Resume Next
-    If Not dbBackend Is Nothing Then dbBackend.Close
-    Set dbBackend = Nothing
     Set fld = Nothing
     Set tdf = Nothing
     Set db = Nothing

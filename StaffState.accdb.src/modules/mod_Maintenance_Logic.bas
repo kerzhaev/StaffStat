@@ -310,7 +310,7 @@ Public Function RunDataHealthCheckResult(Optional ByVal bSilentIfNoErrors As Boo
     Dim lngOrphan As Long
     Dim lngFuture As Long
     Dim lngEmpty As Long
-    
+
     Set result = CreateOperationResult()
     result("TotalErrors") = 0
     result("DuplicateCount") = 0
@@ -372,7 +372,7 @@ Public Function RunDataHealthCheckResult(Optional ByVal bSilentIfNoErrors As Boo
     Loop
     rs.Close
     Set rs = Nothing
-    
+
     ' EMPTY FIELDS: FullName, BirthDate_Text, PersonUID in tbl_Personnel_Master
     strSQL = "SELECT PersonUID, FullName, BirthDate_Text FROM tbl_Personnel_Master " & _
              "WHERE Nz(FullName,'')='' OR Nz(BirthDate_Text,'')='' OR Nz(PersonUID,'')='';"
@@ -383,7 +383,7 @@ Public Function RunDataHealthCheckResult(Optional ByVal bSilentIfNoErrors As Boo
         If Nz(rs!FullName, "") = "" Then strEmptyDetails = strEmptyDetails & "FullName "
         If Nz(rs!BirthDate_Text, "") = "" Then strEmptyDetails = strEmptyDetails & "BirthDate_Text "
         If Nz(rs!PersonUID, "") = "" Then strEmptyDetails = strEmptyDetails & "PersonUID "
-        
+
         LogValidationError 0, "tbl_Personnel_Master", "EmptyRequiredField", "Empty required fields: " & Trim$(strEmptyDetails)
         lngEmpty = lngEmpty + 1
         rs.MoveNext

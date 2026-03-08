@@ -12,39 +12,24 @@ Option Explicit
 
 Public Sub InitializeApp()
     On Error GoTo ErrorHandler
-    Dim result As Object
 
     ' 1. Create and verify all database tables
-    Set result = InitDatabaseStructureResult()
-    If Not CBool(result("Success")) Then
-        Err.Raise GetResultErrorNumber(result, vbObjectError + 513), "mod_App_Init.InitializeApp", CStr(Nz(result("Message"), "Initialization failed."))
-    End If
+    InitDatabaseStructure True
 
     ' 2. Initialize Localization Engine (Phase 30)
     ' Loads dictionary into memory before any forms are opened
     Call mod_UI_Helpers.InitLocalization
 
-    Set result = Nothing
     Exit Sub
 ErrorHandler:
-    Set result = Nothing
     Debug.Print "InitializeApp error: " & Err.Description & " (" & Err.Number & ")"
     MsgBox "Initialization failed: " & Err.Description, vbCritical, "StaffState Error"
 End Sub
 
 Public Sub InitDatabaseStructure(Optional ByVal blnSuppressMsgBox As Boolean = False)
-    Dim result As Object
-
-    Set result = InitDatabaseStructureResult()
-    Set result = Nothing
-End Sub
-
-Public Function InitDatabaseStructureResult() As Object
     On Error GoTo ErrorHandler
 
-    Dim result As Object
     Dim db As DAO.Database
-    Set result = CreateAppInitResult()
     Set db = CurrentDb
 
     Debug.Print "--- Init database structure start ---"
@@ -90,38 +75,25 @@ Public Function InitDatabaseStructureResult() As Object
     mod_Schema_Manager.CreateLocalizationTable
 
     Debug.Print "--- Init database structure complete ---"
-    result("Success") = True
-    result("Status") = "SUCCESS"
-    result("Message") = "Database structure created successfully!"
+    If Not blnSuppressMsgBox Then
+        MsgBox "Database structure created successfully!", vbInformation, "StaffState Init"
+    End If
 
-Cleanup:
     Set db = Nothing
-    Set InitDatabaseStructureResult = result
-    Exit Function
+    Exit Sub
 
 ErrorHandler:
-    Debug.Print "InitDatabaseStructure error: " & Err.Description & " (" & Err.Number & ")"
-    result("Success") = False
-    result("Status") = "ERROR"
-    result("ErrorNumber") = Err.Number
-    result("ErrorMessage") = "Initialization error: " & Err.Description
-    result("Message") = CStr(result("ErrorMessage"))
-    Resume Cleanup
-End Function
-
-Public Sub CreatePerformanceIndexes(ByRef outCreated As Long, ByRef outSkipped As Long, Optional ByVal blnSuppressMsgBox As Boolean = False)
-    Dim result As Object
-
-    Set result = CreatePerformanceIndexesResult()
-    outCreated = CLng(Nz(result("CreatedCount"), 0))
-    outSkipped = CLng(Nz(result("SkippedCount"), 0))
-    Set result = Nothing
+    If Not blnSuppressMsgBox Then
+        MsgBox "Initialization error: " & Err.Description, vbCritical, "Error " & Err.Number
+    Else
+        Debug.Print "InitDatabaseStructure error: " & Err.Description & " (" & Err.Number & ")"
+    End If
+    Set db = Nothing
 End Sub
 
-Public Function CreatePerformanceIndexesResult() As Object
+Public Sub CreatePerformanceIndexes(ByRef outCreated As Long, ByRef outSkipped As Long, Optional ByVal blnSuppressMsgBox As Boolean = False)
     On Error GoTo ErrorHandler
 
-    Dim result As Object
     Dim db As DAO.Database
     Dim tdf As DAO.TableDef
     Dim idx As DAO.Index
@@ -129,12 +101,11 @@ Public Function CreatePerformanceIndexesResult() As Object
     Dim iCreated As Long
     Dim iSkipped As Long
 
-    Set result = CreateAppInitResult()
     Set db = CurrentDb
     iCreated = 0
     iSkipped = 0
-    result("CreatedCount") = 0
-    result("SkippedCount") = 0
+    outCreated = 0
+    outSkipped = 0
 
     Debug.Print "--- Creating Performance Indexes ---"
 
@@ -214,30 +185,35 @@ Public Function CreatePerformanceIndexesResult() As Object
     Debug.Print "--- Index Creation Complete ---"
     Debug.Print "Created: " & iCreated & " | Skipped: " & iSkipped
 
-    result("Success") = True
-    result("Status") = "SUCCESS"
-    result("CreatedCount") = iCreated
-    result("SkippedCount") = iSkipped
-    result("Message") = BuildCreateIndexesSummary(iCreated, iSkipped)
+    If Not blnSuppressMsgBox Then
+        MsgBox "Performance indexes created!" & vbCrLf & vbCrLf & _
+               "Created: " & iCreated & vbCrLf & _
+               "Skipped (already exist): " & iSkipped & vbCrLf & vbCrLf & _
+               "Search and import should run faster now.", vbInformation, "System Indexes"
+    End If
 
-Cleanup:
+    outCreated = iCreated
+    outSkipped = iSkipped
+
     Set fld = Nothing
     Set idx = Nothing
     Set tdf = Nothing
     Set db = Nothing
-    Set CreatePerformanceIndexesResult = result
-    Exit Function
+    Exit Sub
 
 ErrorHandler:
     Debug.Print "ERROR: " & Err.Description
-    result("Success") = False
-    result("Status") = "ERROR"
-    result("CreatedCount") = iCreated
-    result("SkippedCount") = iSkipped
-    result("ErrorNumber") = Err.Number
-    result("ErrorMessage") = "Index creation error: " & Err.Description
-    result("Message") = CStr(result("ErrorMessage"))
-    Resume Cleanup
+    If Not blnSuppressMsgBox Then
+        MsgBox "Index creation error: " & Err.Description & vbCrLf & _
+               "Error number: " & Err.Number, vbCritical, "System Error"
+    End If
+    outCreated = iCreated
+    outSkipped = iSkipped
+    Set fld = Nothing
+    Set idx = Nothing
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Sub
 
 IndexAppendError:
     If Err.Number = 3284 Then
@@ -248,7 +224,7 @@ IndexAppendError:
         Resume Next
     End If
     Resume ErrorHandler
-End Function
+End Sub
 
 Private Function IndexExists(strTableName As String, strIndexName As String) As Boolean
     On Error Resume Next
@@ -345,29 +321,3 @@ Private Sub DeleteTableIfExists(strTableName As String)
         Debug.Print "Dropped table: " & strTableName
     End If
 End Sub
-
-Private Function CreateAppInitResult() As Object
-    Dim d As Object
-
-    Set d = CreateObject("Scripting.Dictionary")
-    d.CompareMode = 1
-    d("Success") = False
-    d("Status") = "PENDING"
-    d("Message") = ""
-    d("ErrorMessage") = ""
-    d("ErrorNumber") = 0
-
-    Set CreateAppInitResult = d
-End Function
-
-Private Function BuildCreateIndexesSummary(ByVal iCreated As Long, ByVal iSkipped As Long) As String
-    BuildCreateIndexesSummary = "Performance indexes created!" & vbCrLf & vbCrLf & _
-                                "Created: " & iCreated & vbCrLf & _
-                                "Skipped (already exist): " & iSkipped & vbCrLf & vbCrLf & _
-                                "Search and import should run faster now."
-End Function
-
-Private Function GetResultErrorNumber(ByVal result As Object, ByVal defaultErrorNumber As Long) As Long
-    GetResultErrorNumber = CLng(Nz(result("ErrorNumber"), 0))
-    If GetResultErrorNumber = 0 Then GetResultErrorNumber = defaultErrorNumber
-End Function

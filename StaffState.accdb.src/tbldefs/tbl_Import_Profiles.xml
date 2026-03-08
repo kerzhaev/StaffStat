@@ -42,6 +42,7 @@
               <od:fieldProperty name="TextAlign" type="2" value="0"></od:fieldProperty>
               <od:fieldProperty name="AggregateType" type="4" value="-1"></od:fieldProperty>
               <od:fieldProperty name="CurrencyLCID" type="4" value="0"></od:fieldProperty>
+              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
             </xsd:appinfo>
           </xsd:annotation>
         </xsd:element>
@@ -54,6 +55,7 @@
               <od:fieldProperty name="TextAlign" type="2" value="0"></od:fieldProperty>
               <od:fieldProperty name="AggregateType" type="4" value="-1"></od:fieldProperty>
               <od:fieldProperty name="CurrencyLCID" type="4" value="0"></od:fieldProperty>
+              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
             </xsd:appinfo>
           </xsd:annotation>
           <xsd:simpleType>
@@ -71,6 +73,7 @@
               <od:fieldProperty name="TextAlign" type="2" value="0"></od:fieldProperty>
               <od:fieldProperty name="AggregateType" type="4" value="-1"></od:fieldProperty>
               <od:fieldProperty name="CurrencyLCID" type="4" value="0"></od:fieldProperty>
+              <od:fieldProperty name="Required" type="1" value="0"></od:fieldProperty>
             </xsd:appinfo>
           </xsd:annotation>
           <xsd:simpleType>

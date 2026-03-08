@@ -1,13 +1,13 @@
 ﻿-------------------------------------
 Beginning build from Source
-StaffState.accdb
+StaffState_VCSBackup7.accdb
 VCS Version 4.1.2
-Full Path: C:\Users\Nachfin\Desktop\Projets\StaffState\StaffState.accdb
+Full Path: C:\Users\Nachfin\Desktop\Projets\StaffState\StaffState_VCSBackup7.accdb
 Export Folder: C:\Users\Nachfin\Desktop\Projets\StaffState\StaffState.accdb.src\
-26.02.2026 0:37:58
+09.03.2026 2:02:14
 -------------------------------------
 Saving backup of original database...
-Saved as StaffState_VCSBackup11.accdb.
+Saved as StaffState_VCSBackup7_VCSBackup.accdb.
 Created blank database for import. (v12)
 Removing non built-in references...
   Removed DAO
@@ -51,9 +51,10 @@ Importing modules...
   mod_Maintenance_Logic.bas
   mod_Reports_Logic.bas
   mod_Schema_Manager.bas
+  mod_Table_Relinker.bas
   mod_Test_P19.bas
   mod_UI_Helpers.bas
-[11]
+[12]
 -------------------------------------
 Importing themes...           
   Тема Office.thmx
@@ -64,14 +65,16 @@ Importing db properties...
 [1]
 -------------------------------------
 Importing tables...           
-  tbl_History_Log.xml
-  tbl_Import_Buffer.xml
-  tbl_Import_Mapping.xml
-  tbl_Import_Meta.xml
-  tbl_Personnel_Master.xml
-  tbl_Settings.xml
-  tbl_Validation_Log.xml
-[7]
+  tbl_Import_Profiles.xml
+  tbl_Localization.xml
+  tbl_History_Log.json
+  tbl_Import_Buffer.json
+  tbl_Import_Mapping.json
+  tbl_Import_Meta.json
+  tbl_Personnel_Master.json
+  tbl_Settings.json
+  tbl_Validation_Log.json
+[9]
 -------------------------------------
 Importing forms...            
   uf_Dashboard.bas
@@ -88,65 +91,65 @@ Importing nav pane groups...
   nav-pane-groups.json
 [1]
 -------------------------------------
-Done. (0,95 seconds)
+Done. (0,91 seconds)
 
 --------------------------------------------------
                 PERFORMANCE REPORTS
 --------------------------------------------------
 Category                      Count     Seconds
 --------------------------------------------------
-Forms                         4         0,15
-Modules                       11        0,11
-Tables                        7         0,11
+Forms                         4         0,16
+Modules                       12        0,12
+Tables                        9         0,08
 DB Properties                 1         0,06
-Themes                        1         0,04
+Themes                        1         0,03
 Nav Pane Groups               1         0,02
-Doc Properties                1         0,01
+Doc Properties                1         0,02
 Project                       1         0,01
-VBE References                1         0,01
 VB Project                    1         0,01
+VBE References                1         0,01
 --------------------------------------------------
-TOTALS:                       29        0,51
+TOTALS:                       32        0,53
 --------------------------------------------------
 
 --------------------------------------------------
 Operations                    Count     Seconds
 --------------------------------------------------
-Create new database           1         0,18
-App.LoadFromText()            4         0,10
-Parse JSON ISO Date           63        0,07
-Increment Progress            29        0,06
+Create new database           1         0,17
+App.LoadFromText()            4         0,12
+Increment Progress            32        0,07
 Scan Source Files             1         0,04
 Convert to JSON               191       0,04
-Get File List                 18        0,03
-Import VBE Module             11        0,02
-Read File                     27        0,01
-Get File Property Hash        29        0,01
-Console Updates               3         0,01
+Get File List                 18        0,04
+Import VBE Module             12        0,02
+Get File Property Hash        32        0,01
 modVCSUtility.LoadComponentFr 
 omText                        4         0,01
-Parse JSON                    8         0,01
-Write File                    15        0,01
-Get VBA Hash                  15        0,01
-Parse VBA Module              11        0,01
-Delete File                   25        0,01
+Console Updates               3         0,01
+Parse JSON                    15        0,01
+Write File                    16        0,01
+Get VBA Hash                  16        0,01
 Clear References              1         0,01
-Create MSysResources Table    1         0,01
-Compute SHA256                58        0,00
-Get Modified Date             58        0,00
-modFileAccess.VerifyPath      24        0,00
+Delete File                   26        0,01
+Parse VBA Module              12        0,01
+Read File                     35        0,01
+Create MSysResources Table    1         0,00
+Get Modified Date             66        0,00
+Compute SHA256                64        0,00
+modFileAccess.VerifyPath      25        0,00
 Save Stream to File           4         0,00
-Read File Bytes               12        0,00
+Read File Bytes               14        0,00
 App.SaveAsText()              1         0,00
-Write Binary File             1         0,00
+Parse JSON ISO Date           34        0,00
+Load Stream from File         4         0,00
 Check for linked table        1         0,00
 Add GUID References           2         0,00
-Enc. utf-8 as utf-16          4         0,00
-Load Stream from File         4         0,00
+Write Binary File             1         0,00
 Copy Stream                   4         0,00
 modFileAccess.GetUncPath      1         0,00
+Enc. utf-8 as utf-16          4         0,00
 --------------------------------------------------
-Other Operations                        0,30
+Other Operations                        0,29
 --------------------------------------------------
 
 
