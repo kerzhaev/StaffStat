@@ -117,6 +117,8 @@ Private Function DetectBestProfile(tdfLink As DAO.TableDef) As Long
     Dim normHeader As String
     Dim targetField As String
 
+    mod_Schema_Manager.CreateImportProfilesTable
+
     Set db = CurrentDb
     Set rsProfiles = db.OpenRecordset("SELECT DISTINCT ProfileID FROM tbl_Import_Profiles", dbOpenSnapshot)
 
@@ -498,6 +500,7 @@ Public Function SelectExcelFile() As String
 
     ' 1. Получаем путь из настроек
     strInitialPath = Trim$(Nz(mod_Maintenance_Logic.GetSetting("ImportFolderPath", ""), ""))
+    If UCase$(strInitialPath) = "N/A" Then strInitialPath = ""
 
     ' 2. УМНАЯ ПРОВЕРКА: существует ли папка физически?
     If Len(strInitialPath) > 0 Then

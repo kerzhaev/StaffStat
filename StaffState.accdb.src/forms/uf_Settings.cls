@@ -15,6 +15,8 @@ Option Explicit
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
+    mod_Schema_Manager.CreateImportProfilesTable
+
     ' --- PHASE 30: Apply UI Localization ---
     Me.Caption = mod_UI_Helpers.GetLoc("TITLE_SETTINGS")
 

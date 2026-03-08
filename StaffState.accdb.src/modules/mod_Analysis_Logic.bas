@@ -173,15 +173,19 @@ End Sub
 Public Sub RunFullSyncProcess()
     On Error GoTo ErrorHandler
 
+    Dim importResult As Object
     Dim blnImported As Boolean
     Dim iNew As Long
     Dim iUpd As Long
     Dim iIdxCreated As Long
     Dim iIdxSkipped As Long
     Dim strSummary As String
+    Dim strImportMessage As String
 
     ' 1. Import
-    blnImported = mod_Import_Logic.ImportExcelData(True)
+    Set importResult = mod_Import_Logic.ImportExcelDataResult("", True)
+    blnImported = CBool(importResult("Success"))
+    strImportMessage = Trim$(CStr(Nz(importResult("Message"), "")))
 
     If blnImported Then
         ' 2. Sync
@@ -204,12 +208,19 @@ Public Sub RunFullSyncProcess()
                      "Import: FAILED or CANCELED" & vbCrLf & _
                      "Sync: SKIPPED" & vbCrLf & _
                      "Indexes: SKIPPED"
+
+        If Len(strImportMessage) > 0 Then
+            strSummary = strSummary & vbCrLf & vbCrLf & _
+                         "Import details:" & vbCrLf & strImportMessage
+        End If
     End If
 
     mod_UI_Helpers.ShowMessage strSummary, vbInformation
+    Set importResult = Nothing
     Exit Sub
 
 ErrorHandler:
+    Set importResult = Nothing
     mod_UI_Helpers.ShowMessage "Full Update failed: " & Err.Description, vbCritical
 End Sub
 
