@@ -108,12 +108,35 @@ End Sub
 Private Sub btnImport_Click()
     On Error GoTo ErrorHandler
 
+    Dim decisions As Object
     Dim result As Object
+    Dim lngAttempts As Long
+    Dim strImportFilePath As String
 
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_IMPORT")
     DoEvents
 
-    Set result = mod_Import_Logic.ImportExcelDataResult()
+    Set decisions = mod_Import_Logic.CreateImportDecisionStore()
+
+    Do
+        lngAttempts = lngAttempts + 1
+        Set result = mod_Import_Logic.ImportExcelDataResult(strImportFilePath, False, decisions)
+        strImportFilePath = CStr(Nz(result("FilePath"), strImportFilePath))
+
+        If CBool(result("RequiresUserAction")) Then
+            If Not ResolveImportAction(result, decisions) Then
+                Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_IMPORT_FAILED")
+                Set result = Nothing
+                Exit Do
+            End If
+            Set result = Nothing
+            DoEvents
+        Else
+            Exit Do
+        End If
+    Loop While lngAttempts < 100
+
+    If result Is Nothing Then GoTo ExitHere
 
     If CBool(result("Success")) Then
         Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_IMPORT_SUCCESS")
@@ -127,12 +150,80 @@ Private Sub btnImport_Click()
         mod_UI_Helpers.ShowMessage CStr(Nz(result("Message"), mod_UI_Helpers.GetLoc("MSG_IMPORT_FAILED"))), vbExclamation
     End If
 
+ExitHere:
     Set result = Nothing
+    Set decisions = Nothing
     Exit Sub
 ErrorHandler:
     MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
+
+Private Function ResolveImportAction(ByVal result As Object, ByRef decisions As Object) As Boolean
+    Dim strActionType As String
+    Dim strExcelField As String
+    Dim lngProfileID As Long
+    Dim strSuggestedField As String
+    Dim strNewTarget As String
+    Dim strTypeSelection As String
+    Dim strSqlType As String
+
+    ResolveImportAction = False
+    strActionType = UCase$(Trim$(CStr(Nz(result("ActionType"), ""))))
+    strExcelField = CStr(Nz(result("ExcelField"), ""))
+    lngProfileID = CLng(Nz(result("ProfileID"), 0))
+    strSuggestedField = CStr(Nz(result("SuggestedFieldName"), ""))
+
+    Select Case strActionType
+        Case "RESTORE_MAPPING"
+            If mod_UI_Helpers.AskUserYesNo(CStr(Nz(result("ActionMessage"), "")), CStr(Nz(result("ActionTitle"), mod_UI_Helpers.GetLoc("TITLE_RESTORE_LINK")))) Then
+                mod_Import_Logic.SetRestoreImportDecision decisions, strExcelField, lngProfileID, strSuggestedField
+            Else
+                mod_Import_Logic.SetSkipImportDecision decisions, strExcelField
+            End If
+            ResolveImportAction = True
+        Case "MAP_NEW_COLUMN"
+            If Not mod_UI_Helpers.AskUserYesNo(CStr(Nz(result("ActionMessage"), "")), CStr(Nz(result("ActionTitle"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL")))) Then
+                mod_Import_Logic.SetSkipImportDecision decisions, strExcelField
+                ResolveImportAction = True
+                Exit Function
+            End If
+
+            strNewTarget = Trim$(InputBox(mod_UI_Helpers.GetLoc("PROMPT_ENTER_EN_NAME"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL"), strSuggestedField))
+            If strNewTarget = "" Then
+                mod_Import_Logic.SetSkipImportDecision decisions, strExcelField
+                ResolveImportAction = True
+                Exit Function
+            End If
+
+            If mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strNewTarget) Then
+                mod_Import_Logic.SetMapImportFieldDecision decisions, strExcelField, lngProfileID, strNewTarget
+                ResolveImportAction = True
+                Exit Function
+            End If
+
+            strTypeSelection = InputBox(mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
+            strSqlType = GetSqlTypeFromSelection(strTypeSelection)
+
+            If strSqlType = "" Then
+                mod_Import_Logic.SetSkipImportDecision decisions, strExcelField
+            Else
+                mod_Import_Logic.SetMapImportFieldDecision decisions, strExcelField, lngProfileID, strNewTarget, strSqlType
+            End If
+            ResolveImportAction = True
+    End Select
+End Function
+
+Private Function GetSqlTypeFromSelection(ByVal strTypeSelection As String) As String
+    Select Case Trim$(strTypeSelection)
+        Case "2": GetSqlTypeFromSelection = "DATETIME"
+        Case "3": GetSqlTypeFromSelection = "LONG"
+        Case "4": GetSqlTypeFromSelection = "LONGTEXT"
+        Case "5": GetSqlTypeFromSelection = "BIT"
+        Case "": GetSqlTypeFromSelection = ""
+        Case Else: GetSqlTypeFromSelection = "VARCHAR(255)"
+    End Select
+End Function
 
 Private Sub cmdHealthCheck_Click()
     On Error GoTo ErrorHandler

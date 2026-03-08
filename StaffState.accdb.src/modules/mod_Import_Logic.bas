@@ -18,12 +18,13 @@ Public Function ImportExcelData(Optional ByVal blnSuppressMsgBox As Boolean = Fa
     Set result = Nothing
 End Function
 
-Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "", Optional ByVal blnSuppressMsgBox As Boolean = False) As Object
+Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "", Optional ByVal blnSuppressMsgBox As Boolean = False, Optional ByVal importDecisions As Variant) As Object
     On Error GoTo ErrorHandler
 
     Dim result As Object
     Dim strSkipped As String
     Dim strErrorMessage As String
+    Dim actionRequest As Variant
 
     Set result = CreateImportResult()
 
@@ -53,9 +54,13 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     End If
 
     ' 3. Dynamic import (with Auto-Detect and Interactive Wizard)
-    If Not RunDynamicImport(strSkipped, strErrorMessage, blnSuppressMsgBox) Then
-        result("ErrorMessage") = strErrorMessage
-        result("Message") = strErrorMessage
+    If Not RunDynamicImport(strSkipped, strErrorMessage, actionRequest, blnSuppressMsgBox, importDecisions) Then
+        If IsObject(actionRequest) Then
+            CopyImportActionToResult result, actionRequest
+        Else
+            result("ErrorMessage") = strErrorMessage
+            result("Message") = strErrorMessage
+        End If
         GoTo ExitHandler
     End If
 
@@ -170,7 +175,7 @@ Private Function DetectBestProfile(tdfLink As DAO.TableDef) As Long
     DetectBestProfile = bestProfile
 End Function
 
-Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional ByRef outErrorMessage As String = "", Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
+Private Function RunDynamicImport(ByRef outSkippedColumns As String, ByRef outErrorMessage As String, ByRef outActionRequest As Variant, Optional ByVal blnSuppressMsgBox As Boolean = False, Optional ByVal importDecisions As Variant) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -191,6 +196,7 @@ Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional By
     Set colUsedFields = New Collection
     Set db = CurrentDb
     outErrorMessage = ""
+    outActionRequest = Empty
 
     If Not mod_Schema_Manager.TableExists("tbl_Import_Mapping") Then
         outErrorMessage = "Import mapping table is missing."
@@ -244,82 +250,16 @@ Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional By
         ' ========================================================
         If Len(strAccessField) = 0 Then
 
-            ' ???? ??? ??????? ?????? ?????????? - ?????????? ?????
-            If blnSuppressMsgBox Then
+            If TryApplyImportDecision(importDecisions, lngBestProfile, strExcelField, strAccessField, outSkippedColumns, outErrorMessage) Then
+                If Len(strAccessField) = 0 Then GoTo NextColumn
+            ElseIf blnSuppressMsgBox Then
                 If Len(outSkippedColumns) > 0 Then outSkippedColumns = outSkippedColumns & ", "
                 outSkippedColumns = outSkippedColumns & "[" & strExcelField & "]"
                 GoTo NextColumn
-            End If
-
-            Dim strSuggestedName As String
-            Dim blnFieldExists As Boolean
-            Dim qdfAdd As DAO.QueryDef
-
-            strSuggestedName = mod_Schema_Manager.SanitizeFieldName(strExcelField)
-            blnFieldExists = mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strSuggestedName)
-
-            If blnFieldExists Then
-                Dim strPromptRestore As String
-                strPromptRestore = mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK1") & " [" & strExcelField & "]." & vbCrLf & vbCrLf & _
-                                   "???? [" & strSuggestedName & "] " & mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK2") & vbCrLf & _
-                                   mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK3")
-
-                If mod_UI_Helpers.AskUserYesNo(strPromptRestore, mod_UI_Helpers.GetLoc("TITLE_RESTORE_LINK")) Then
-                    Set qdfAdd = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
-                    qdfAdd.Parameters("prmP").value = lngBestProfile
-                    qdfAdd.Parameters("prmE").value = Left$(strExcelField, 255)
-                    qdfAdd.Parameters("prmT").value = Left$(strSuggestedName, 100)
-                    qdfAdd.Execute dbFailOnError
-                    Set qdfAdd = Nothing
-                    strAccessField = strSuggestedName
-                End If
             Else
-                If mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL") & " [" & strExcelField & "]" & vbCrLf & vbCrLf & mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL2"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL")) Then
-                    Dim strNewTarget As String
-                    strNewTarget = InputBox(mod_UI_Helpers.GetLoc("PROMPT_ENTER_EN_NAME"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL"), strSuggestedName)
-
-                    If Len(Trim$(strNewTarget)) > 0 Then
-                        If mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strNewTarget) Then
-                            strAccessField = strNewTarget
-                            Set qdfAdd = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
-                            qdfAdd.Parameters("prmP").value = lngBestProfile
-                            qdfAdd.Parameters("prmE").value = Left$(strExcelField, 255)
-                            qdfAdd.Parameters("prmT").value = Left$(strNewTarget, 100)
-                            qdfAdd.Execute dbFailOnError
-                            Set qdfAdd = Nothing
-                        Else
-                            Dim strTypeSel As String
-                            Dim strSqlType As String
-
-                            strTypeSel = InputBox(mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
-                            Select Case Trim$(strTypeSel)
-                                Case "2": strSqlType = "DATETIME"
-                                Case "3": strSqlType = "LONG"
-                                Case "4": strSqlType = "LONGTEXT"
-                                Case "5": strSqlType = "BIT"
-                                Case "": strSqlType = ""
-                                Case Else: strSqlType = "VARCHAR(255)"
-                            End Select
-
-                            If strSqlType <> "" Then
-                                mod_Schema_Manager.AddNewFieldToSchema strNewTarget, strSqlType
-                                Set qdfAdd = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
-                                qdfAdd.Parameters("prmP").value = lngBestProfile
-                                qdfAdd.Parameters("prmE").value = Left$(strExcelField, 255)
-                                qdfAdd.Parameters("prmT").value = Left$(strNewTarget, 100)
-                                qdfAdd.Execute dbFailOnError
-                                Set qdfAdd = Nothing
-                                strAccessField = strNewTarget
-                            End If
-                        End If
-                    End If
-                End If
-            End If
-
-            If Len(strAccessField) = 0 Then
-                If Len(outSkippedColumns) > 0 Then outSkippedColumns = outSkippedColumns & ", "
-                outSkippedColumns = outSkippedColumns & "[" & strExcelField & "]"
-                GoTo NextColumn
+                Set outActionRequest = BuildImportActionRequest(lngBestProfile, strExcelField)
+                RunDynamicImport = False
+                Exit Function
             End If
         End If
         ' ========================================================
@@ -566,6 +506,29 @@ Private Sub UpdateImportMetadata(strFilePath As String)
     qdf.Execute dbFailOnError
 End Sub
 
+Public Function CreateImportDecisionStore() As Object
+    Dim d As Object
+
+    Set d = CreateObject("Scripting.Dictionary")
+    d.CompareMode = 1
+    Set CreateImportDecisionStore = d
+End Function
+
+Public Sub SetSkipImportDecision(ByRef decisions As Object, ByVal strExcelField As String)
+    EnsureDecisionStore decisions
+    decisions(NormalizeString(strExcelField)) = "SKIP|||"
+End Sub
+
+Public Sub SetRestoreImportDecision(ByRef decisions As Object, ByVal strExcelField As String, ByVal lngProfileID As Long, ByVal strTargetField As String)
+    EnsureDecisionStore decisions
+    decisions(NormalizeString(strExcelField)) = "RESTORE|" & CStr(lngProfileID) & "|" & strTargetField & "|"
+End Sub
+
+Public Sub SetMapImportFieldDecision(ByRef decisions As Object, ByVal strExcelField As String, ByVal lngProfileID As Long, ByVal strTargetField As String, Optional ByVal strSqlType As String = "")
+    EnsureDecisionStore decisions
+    decisions(NormalizeString(strExcelField)) = "MAP|" & CStr(lngProfileID) & "|" & strTargetField & "|" & strSqlType
+End Sub
+
 Private Function CreateImportResult() As Object
     Dim d As Object
 
@@ -578,6 +541,14 @@ Private Function CreateImportResult() As Object
     d("Message") = ""
     d("ErrorMessage") = ""
     d("ErrorNumber") = 0
+    d("RequiresUserAction") = False
+    d("ActionType") = ""
+    d("ActionTitle") = ""
+    d("ActionMessage") = ""
+    d("ProfileID") = 0
+    d("ExcelField") = ""
+    d("SuggestedFieldName") = ""
+    d("TargetField") = ""
 
     Set CreateImportResult = d
 End Function
@@ -594,3 +565,160 @@ Private Function BuildImportSuccessMessage(ByVal strSkipped As String) As String
 
     BuildImportSuccessMessage = strMessage
 End Function
+
+Private Function TryApplyImportDecision(ByVal importDecisions As Variant, ByVal lngProfileID As Long, ByVal strExcelField As String, ByRef outAccessField As String, ByRef outSkippedColumns As String, ByRef outErrorMessage As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim strDecision As String
+    Dim arrParts As Variant
+    Dim strAction As String
+    Dim lngDecisionProfile As Long
+    Dim strTargetField As String
+    Dim strSqlType As String
+
+    TryApplyImportDecision = False
+    outAccessField = ""
+
+    strDecision = GetImportDecisionSpec(importDecisions, strExcelField)
+    If Len(strDecision) = 0 Then Exit Function
+
+    arrParts = Split(strDecision, "|")
+    If UBound(arrParts) < 3 Then
+        outErrorMessage = "Import decision is malformed for column [" & strExcelField & "]."
+        Exit Function
+    End If
+
+    strAction = UCase$(Trim$(CStr(arrParts(0))))
+    lngDecisionProfile = CLng(Val(CStr(arrParts(1))))
+    strTargetField = Trim$(CStr(arrParts(2)))
+    strSqlType = Trim$(CStr(arrParts(3)))
+
+    Select Case strAction
+        Case "SKIP"
+            AppendSkippedColumn outSkippedColumns, strExcelField
+            TryApplyImportDecision = True
+        Case "RESTORE", "MAP"
+            If lngDecisionProfile <= 0 Then lngDecisionProfile = lngProfileID
+            If strTargetField = "" Then
+                outErrorMessage = "Import decision is missing target field for column [" & strExcelField & "]."
+                Exit Function
+            End If
+
+            If strAction = "MAP" And strSqlType <> "" And Not mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strTargetField) Then
+                mod_Schema_Manager.AddNewFieldToSchema strTargetField, strSqlType
+            End If
+
+            EnsureImportMapping lngDecisionProfile, strExcelField, strTargetField
+            outAccessField = strTargetField
+            TryApplyImportDecision = True
+        Case Else
+            outErrorMessage = "Unsupported import decision [" & strAction & "] for column [" & strExcelField & "]."
+    End Select
+    Exit Function
+
+ErrorHandler:
+    outErrorMessage = "Failed to apply import decision: " & Err.Description
+    TryApplyImportDecision = False
+End Function
+
+Private Function GetImportDecisionSpec(ByVal importDecisions As Variant, ByVal strExcelField As String) As String
+    On Error GoTo ErrorHandler
+
+    If IsObject(importDecisions) Then
+        If Not importDecisions Is Nothing Then
+            If importDecisions.Exists(NormalizeString(strExcelField)) Then
+                GetImportDecisionSpec = CStr(importDecisions(NormalizeString(strExcelField)))
+            End If
+        End If
+    End If
+    Exit Function
+
+ErrorHandler:
+    GetImportDecisionSpec = ""
+End Function
+
+Private Function BuildImportActionRequest(ByVal lngProfileID As Long, ByVal strExcelField As String) As Object
+    Dim d As Object
+    Dim strSuggestedName As String
+    Dim blnFieldExists As Boolean
+
+    Set d = CreateImportResult()
+    strSuggestedName = mod_Schema_Manager.SanitizeFieldName(strExcelField)
+    blnFieldExists = mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strSuggestedName)
+
+    d("RequiresUserAction") = True
+    d("ProfileID") = lngProfileID
+    d("ExcelField") = strExcelField
+    d("SuggestedFieldName") = strSuggestedName
+    d("TargetField") = strSuggestedName
+
+    If blnFieldExists Then
+        d("ActionType") = "RESTORE_MAPPING"
+        d("ActionTitle") = mod_UI_Helpers.GetLoc("TITLE_RESTORE_LINK")
+        d("ActionMessage") = mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK1") & " [" & strExcelField & "]." & vbCrLf & vbCrLf & _
+                             "[" & strSuggestedName & "] " & mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK2") & vbCrLf & _
+                             mod_UI_Helpers.GetLoc("PROMPT_RESTORE_LINK3")
+    Else
+        d("ActionType") = "MAP_NEW_COLUMN"
+        d("ActionTitle") = mod_UI_Helpers.GetLoc("TITLE_NEW_COL")
+        d("ActionMessage") = mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL") & " [" & strExcelField & "]" & vbCrLf & vbCrLf & _
+                             mod_UI_Helpers.GetLoc("PROMPT_MAP_NEW_COL2")
+    End If
+
+    Set BuildImportActionRequest = d
+End Function
+
+Private Sub CopyImportActionToResult(ByRef result As Object, ByVal actionRequest As Object)
+    result("RequiresUserAction") = True
+    result("ActionType") = CStr(Nz(actionRequest("ActionType"), ""))
+    result("ActionTitle") = CStr(Nz(actionRequest("ActionTitle"), ""))
+    result("ActionMessage") = CStr(Nz(actionRequest("ActionMessage"), ""))
+    result("ProfileID") = CLng(Nz(actionRequest("ProfileID"), 0))
+    result("ExcelField") = CStr(Nz(actionRequest("ExcelField"), ""))
+    result("SuggestedFieldName") = CStr(Nz(actionRequest("SuggestedFieldName"), ""))
+    result("TargetField") = CStr(Nz(actionRequest("TargetField"), ""))
+    result("Message") = CStr(Nz(actionRequest("ActionMessage"), ""))
+End Sub
+
+Private Sub EnsureImportMapping(ByVal lngProfileID As Long, ByVal strExcelField As String, ByVal strTargetField As String)
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim qdf As DAO.QueryDef
+    Dim rs As DAO.Recordset
+    Dim strSql As String
+
+    Set db = CurrentDb
+    strSql = "SELECT MappingID FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfileID & _
+             " AND ExcelHeader = '" & Replace(strExcelField, "'", "''") & "'"
+    Set rs = db.OpenRecordset(strSql, dbOpenSnapshot)
+    If rs.EOF Then
+        Set qdf = db.CreateQueryDef("", "PARAMETERS prmP Long, prmE Text(255), prmT Text(100); INSERT INTO tbl_Import_Mapping (ProfileID, ExcelHeader, TargetField) VALUES ([prmP], [prmE], [prmT]);")
+        qdf.Parameters("prmP").value = lngProfileID
+        qdf.Parameters("prmE").value = Left$(strExcelField, 255)
+        qdf.Parameters("prmT").value = Left$(strTargetField, 100)
+        qdf.Execute dbFailOnError
+    End If
+
+Cleanup:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set qdf = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    Resume Cleanup
+End Sub
+
+Private Sub EnsureDecisionStore(ByRef decisions As Object)
+    If decisions Is Nothing Then
+        Set decisions = CreateImportDecisionStore()
+    End If
+End Sub
+
+Private Sub AppendSkippedColumn(ByRef outSkippedColumns As String, ByVal strExcelField As String)
+    If Len(outSkippedColumns) > 0 Then outSkippedColumns = outSkippedColumns & ", "
+    outSkippedColumns = outSkippedColumns & "[" & strExcelField & "]"
+End Sub
