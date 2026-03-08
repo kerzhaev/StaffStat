@@ -12,6 +12,7 @@ Option Explicit
 Private m_fDuplicatesMode As Boolean
 ' Mode string from OpenArgs (e.g. "MODE=DUPLICATES"); empty = normal search
 Private m_strMode As String
+Private m_fDebugSearchLogging As Boolean
 
 ' --- FORM LOAD: delegate to OpenArgs handler ---
 Private Sub Form_Load()
@@ -24,6 +25,7 @@ Private Sub Form_Load()
 
     m_fDuplicatesMode = False
     m_strMode = ""
+    m_fDebugSearchLogging = ShouldWriteDebugSearchLog()
     HandleOpenArgsMode
     If Not m_fDuplicatesMode Then Me.Caption = mod_UI_Helpers.GetLoc("TITLE_SEARCH")
 
@@ -142,7 +144,9 @@ ErrorHandler:
 End Function
 
 Private Sub btnSearch_Click()
-    DebugLog "uf_Search.cls:btnSearch_Click", "btnSearch_Click entry", "H4", "{""event"":""btnSearch_Click""}"
+    If m_fDebugSearchLogging Then
+        DebugLog "uf_Search.cls:btnSearch_Click", "btnSearch_Click entry", "H4", "{""event"":""btnSearch_Click""}"
+    End If
     PerformSearch
 End Sub
 
@@ -176,7 +180,9 @@ End Sub
 
 Private Sub txtFilter_Change()
     If m_fDuplicatesMode Then Exit Sub
-    DebugLog "uf_Search.cls:txtFilter_Change", "txtFilter_Change entry", "H4", "{""event"":""txtFilter_Change""}"
+    If m_fDebugSearchLogging Then
+        DebugLog "uf_Search.cls:txtFilter_Change", "txtFilter_Change entry", "H4", "{""event"":""txtFilter_Change""}"
+    End If
     PerformSearch bSilent:=True
 End Sub
 
@@ -190,7 +196,9 @@ End Sub
 Private Sub txtFilter_KeyUp(KeyCode As Integer, Shift As Integer)
     If m_fDuplicatesMode Then Exit Sub
     If KeyCode <> 13 Then
-        DebugLog "uf_Search.cls:txtFilter_KeyUp", "txtFilter_KeyUp entry", "H4", "{""event"":""txtFilter_KeyUp"",""keyCode"":" & CStr(KeyCode) & "}"
+        If m_fDebugSearchLogging Then
+            DebugLog "uf_Search.cls:txtFilter_KeyUp", "txtFilter_KeyUp entry", "H4", "{""event"":""txtFilter_KeyUp"",""keyCode"":" & CStr(KeyCode) & "}"
+        End If
         PerformSearch bSilent:=True
     End If
 End Sub
@@ -315,7 +323,9 @@ Private Sub PerformSearch(Optional bSilent As Boolean = False)
 
     strSQL = GetSearchSQL(bAddTop50:=True)
 
-    DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after GetSearchSQL", "H2", "{""bSilent"":" & LCase$(CStr(bSilent)) & ",""sqlLen"":" & CStr(Len(strSQL)) & ",""hasSQL"":" & LCase$(CStr(strSQL <> "")) & "}"
+    If m_fDebugSearchLogging Then
+        DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after GetSearchSQL", "H2", "{""bSilent"":" & LCase$(CStr(bSilent)) & ",""sqlLen"":" & CStr(Len(strSQL)) & ",""hasSQL"":" & LCase$(CStr(strSQL <> "")) & "}"
+    End If
 
     If strSQL = "" Then
         Me.lstResults.RowSource = ""
@@ -328,7 +338,9 @@ Private Sub PerformSearch(Optional bSilent As Boolean = False)
     Me.lstResults.RowSource = strSQL
     Me.lstResults.Requery
 
-    DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after Requery", "H3", "{""listCount"":" & CStr(Me.lstResults.ListCount) & "}"
+    If m_fDebugSearchLogging Then
+        DebugLog "uf_Search.cls:PerformSearch", "PerformSearch after Requery", "H3", "{""listCount"":" & CStr(Me.lstResults.ListCount) & "}"
+    End If
 
     If Not bSilent And Me.lstResults.ListCount = 0 Then
         MsgBox mod_UI_Helpers.GetLoc("MSG_NO_EMPLOYEES"), vbExclamation, mod_UI_Helpers.GetLoc("TITLE_SEARCH")
@@ -339,7 +351,9 @@ ErrorHandler:
     If Not bSilent Then
         MsgBox mod_UI_Helpers.GetLoc("TITLE_ERROR") & ": " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     End If
-    DebugLog "uf_Search.cls:PerformSearch", "PerformSearch error", "H2", "{""errNumber"":" & CStr(Err.Number) & ",""hasError"":" & LCase$(CStr(Err.Number <> 0)) & "}"
+    If m_fDebugSearchLogging Then
+        DebugLog "uf_Search.cls:PerformSearch", "PerformSearch error", "H2", "{""errNumber"":" & CStr(Err.Number) & ",""hasError"":" & LCase$(CStr(Err.Number <> 0)) & "}"
+    End If
 End Sub
 
 Public Function GetCurrentFilterText() As String
@@ -348,7 +362,9 @@ Public Function GetCurrentFilterText() As String
     If Err.Number <> 0 Or GetCurrentFilterText = "" Then
         GetCurrentFilterText = Trim$(Nz(Me.txtFilter.value, ""))
     End If
-    DebugLog "uf_Search.cls:GetCurrentFilterText", "GetCurrentFilterText result", "H1", "{""textErr"":" & CStr(Err.Number) & ",""filterLen"":" & CStr(Len(GetCurrentFilterText)) & "}"
+    If m_fDebugSearchLogging Then
+        DebugLog "uf_Search.cls:GetCurrentFilterText", "GetCurrentFilterText result", "H1", "{""textErr"":" & CStr(Err.Number) & ",""filterLen"":" & CStr(Len(GetCurrentFilterText)) & "}"
+    End If
 End Function
 
 Public Function GetSearchSQL(Optional ByVal bAddTop50 As Boolean = False) As String
@@ -420,6 +436,16 @@ ErrorHandler:
     On Error Resume Next
     If f <> 0 Then Close #f
 End Sub
+
+Private Function ShouldWriteDebugSearchLog() As Boolean
+    On Error GoTo ErrorHandler
+
+    ShouldWriteDebugSearchLog = (UCase$(Trim$(CStr(Nz(mod_Maintenance_Logic.GetSetting("LogLevel", "INFO"), "INFO")))) = "DEBUG")
+    Exit Function
+
+ErrorHandler:
+    ShouldWriteDebugSearchLog = False
+End Function
 
 Private Function JsonEscape(ByVal s As String) As String
     On Error GoTo ErrorHandler

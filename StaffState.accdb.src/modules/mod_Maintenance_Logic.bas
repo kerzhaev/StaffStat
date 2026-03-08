@@ -287,8 +287,21 @@ End Function
 ' @return [Long] Number of errors found.
 ' =============================================
 Public Function RunDataHealthCheck(Optional ByVal bSilentIfNoErrors As Boolean = False) As Long
+    Dim result As Object
+
+    Set result = RunDataHealthCheckResult(bSilentIfNoErrors)
+    If CBool(result("Success")) Then
+        RunDataHealthCheck = CLng(result("TotalErrors"))
+    Else
+        RunDataHealthCheck = -1
+    End If
+    Set result = Nothing
+End Function
+
+Public Function RunDataHealthCheckResult(Optional ByVal bSilentIfNoErrors As Boolean = False) As Object
     On Error GoTo ErrorHandler
 
+    Dim result As Object
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
     Dim strSQL As String
@@ -298,7 +311,14 @@ Public Function RunDataHealthCheck(Optional ByVal bSilentIfNoErrors As Boolean =
     Dim lngFuture As Long
     Dim lngEmpty As Long
     
-    RunDataHealthCheck = 0
+    Set result = CreateOperationResult()
+    result("TotalErrors") = 0
+    result("DuplicateCount") = 0
+    result("OrphanCount") = 0
+    result("FutureDateCount") = 0
+    result("EmptyFieldCount") = 0
+    result("ShouldNotifyUser") = False
+
     Set db = CurrentDb
     lngTotal = 0
     lngDup = 0
@@ -372,18 +392,17 @@ Public Function RunDataHealthCheck(Optional ByVal bSilentIfNoErrors As Boolean =
     Set rs = Nothing
 
     lngTotal = lngDup + lngOrphan + lngFuture + lngEmpty
-    RunDataHealthCheck = lngTotal
-
-    If Not (bSilentIfNoErrors And lngTotal = 0) Then
-        Dim strSummary As String
-        strSummary = "Health check complete. " & lngTotal & " error(s) found."
-        If lngTotal > 0 Then
-            strSummary = strSummary & vbCrLf & "Duplicates: " & lngDup & ", Orphans: " & lngOrphan & ", Future dates: " & lngFuture & ", Empty fields: " & lngEmpty
-        End If
-        mod_UI_Helpers.ShowMessage strSummary, vbInformation
-    End If
+    result("Success") = True
+    result("TotalErrors") = lngTotal
+    result("DuplicateCount") = lngDup
+    result("OrphanCount") = lngOrphan
+    result("FutureDateCount") = lngFuture
+    result("EmptyFieldCount") = lngEmpty
+    result("Message") = BuildHealthCheckSummary(lngTotal, lngDup, lngOrphan, lngFuture, lngEmpty)
+    result("ShouldNotifyUser") = Not (bSilentIfNoErrors And lngTotal = 0)
 
     Set db = Nothing
+    Set RunDataHealthCheckResult = result
     Exit Function
 
 ErrorHandler:
@@ -393,8 +412,13 @@ ErrorHandler:
         Set rs = Nothing
     End If
     Set db = Nothing
-    mod_UI_Helpers.ShowMessage "Health check failed: " & Err.Description, vbExclamation
-    RunDataHealthCheck = -1
+    result("Success") = False
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = "Health check failed: " & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
+    result("TotalErrors") = -1
+    result("ShouldNotifyUser") = True
+    Set RunDataHealthCheckResult = result
 End Function
 
 ' =============================================
@@ -402,8 +426,17 @@ End Function
 ' @return [Boolean] True if success
 ' =============================================
 Public Function ExportValidationLogToExcel() As Boolean
+    Dim result As Object
+
+    Set result = ExportValidationLogResult()
+    ExportValidationLogToExcel = CBool(result("Success")) And CBool(result("HasData"))
+    Set result = Nothing
+End Function
+
+Public Function ExportValidationLogResult() As Object
     On Error GoTo ErrorHandler
 
+    Dim result As Object
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
     Dim strSQL As String
@@ -413,7 +446,10 @@ Public Function ExportValidationLogToExcel() As Boolean
     Dim colCount As Long
     Dim recCount As Long
 
-    ExportValidationLogToExcel = False
+    Set result = CreateOperationResult()
+    result("HasData") = False
+    result("RecordCount") = 0
+
     mod_Schema_Manager.CreateValidationLogTable
     Set db = CurrentDb
 
@@ -421,10 +457,12 @@ Public Function ExportValidationLogToExcel() As Boolean
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
 
     If rs.EOF Then
-        mod_UI_Helpers.ShowMessage "No validation log records to export.", vbInformation
+        result("Success") = True
+        result("Message") = "No validation log records to export."
         rs.Close
         Set rs = Nothing
         Set db = Nothing
+        Set ExportValidationLogResult = result
         Exit Function
     End If
 
@@ -454,8 +492,10 @@ Public Function ExportValidationLogToExcel() As Boolean
     xlWs.Range(xlWs.Cells(1, 1), xlWs.Cells(1, colCount)).Select
     xlWs.UsedRange.Columns.AutoFit
 
-    mod_UI_Helpers.ShowMessage "Validation log exported: " & recCount & " record(s).", vbInformation
-    ExportValidationLogToExcel = True
+    result("Success") = True
+    result("HasData") = True
+    result("RecordCount") = recCount
+    result("Message") = "Validation log exported: " & recCount & " record(s)."
 
 Cleanup:
     On Error Resume Next
@@ -468,12 +508,15 @@ Cleanup:
     End If
     Set rs = Nothing
     Set db = Nothing
+    Set ExportValidationLogResult = result
     Exit Function
 
 ErrorHandler:
     Debug.Print "ExportValidationLogToExcel error: " & Err.Description & " (" & Err.Number & ")"
-    mod_UI_Helpers.ShowMessage "Export failed: " & Err.Description, vbExclamation
-    ExportValidationLogToExcel = False
+    result("Success") = False
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = "Export failed: " & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
     GoTo Cleanup
 End Function
 
@@ -482,16 +525,29 @@ End Function
 ' @return [Boolean] True on success
 ' =============================================
 Public Function CreateDatabaseBackup() As Boolean
+    Dim result As Object
+
+    Set result = CreateDatabaseBackupResult()
+    CreateDatabaseBackup = CBool(result("Success"))
+    Set result = Nothing
+End Function
+
+Public Function CreateDatabaseBackupResult() As Object
     On Error GoTo ErrorHandler
 
+    Dim result As Object
     Dim strBackupDir As String
     Dim strDestPath As String
     Dim fso As Object
 
-    CreateDatabaseBackup = False
+    Set result = CreateOperationResult()
+    result("BackupPath") = ""
+
     strBackupDir = CurrentProject.Path & "\Backups"
     If Len(CurrentProject.Path) = 0 Or Len(CurrentProject.FullName) = 0 Then
-        mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetMsgBackupPathUndefined(), vbExclamation
+        result("ErrorMessage") = mod_UI_Helpers.GetMsgBackupPathUndefined()
+        result("Message") = CStr(result("ErrorMessage"))
+        Set CreateDatabaseBackupResult = result
         Exit Function
     End If
 
@@ -505,54 +561,74 @@ Public Function CreateDatabaseBackup() As Boolean
     fso.CopyFile CurrentProject.FullName, strDestPath, True
     Set fso = Nothing
 
-    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetMsgBackupSaved(strDestPath), vbInformation
-    CreateDatabaseBackup = True
+    result("Success") = True
+    result("BackupPath") = strDestPath
+    result("Message") = mod_UI_Helpers.GetMsgBackupSaved(strDestPath)
+    Set CreateDatabaseBackupResult = result
     Exit Function
 
 ErrorHandler:
     Debug.Print "CreateDatabaseBackup error: " & Err.Description & " (" & Err.Number & ")"
+    result("Success") = False
+    result("ErrorNumber") = Err.Number
     If Err.Number = 70 Then
-        mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetMsgBackupError70(), vbExclamation
+        result("ErrorMessage") = mod_UI_Helpers.GetMsgBackupError70()
     Else
-        mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetMsgBackupFailedGeneric(Err.Description), vbExclamation
+        result("ErrorMessage") = mod_UI_Helpers.GetMsgBackupFailedGeneric(Err.Description)
     End If
+    result("Message") = CStr(result("ErrorMessage"))
     If Not fso Is Nothing Then Set fso = Nothing
+    Set CreateDatabaseBackupResult = result
 End Function
 
 ' =============================================
-' @description Clears tbl_Validation_Log after user confirmation.
+' @description Clears tbl_Validation_Log.
 ' =============================================
-Public Sub ClearValidationLog()
+Public Function ClearValidationLog() As Boolean
+    Dim result As Object
+
+    Set result = ClearValidationLogResult()
+    ClearValidationLog = CBool(result("Success"))
+    Set result = Nothing
+End Function
+
+Public Function ClearValidationLogResult() As Object
     On Error GoTo ErrorHandler
 
+    Dim result As Object
     Dim db As DAO.Database
 
-    If Not mod_UI_Helpers.AskUserYesNo("Are you sure you want to clear the validation log?", "StaffState") Then Exit Sub
+    Set result = CreateOperationResult()
 
     Set db = CurrentDb
     db.Execute "DELETE * FROM tbl_Validation_Log", dbFailOnError
     Set db = Nothing
-    mod_UI_Helpers.ShowMessage mod_UI_Helpers.GetMsgValidationLogCleared(), vbInformation
-    Exit Sub
+    result("Success") = True
+    result("Message") = mod_UI_Helpers.GetMsgValidationLogCleared()
+    Set ClearValidationLogResult = result
+    Exit Function
 
 ErrorHandler:
     Debug.Print "ClearValidationLog error: " & Err.Description & " (" & Err.Number & ")"
     If Not db Is Nothing Then Set db = Nothing
-    mod_UI_Helpers.ShowMessage "Clear failed: " & Err.Description, vbExclamation
-End Sub
+    result("Success") = False
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = "Clear failed: " & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
+    Set ClearValidationLogResult = result
+End Function
 
 ' =============================================
 ' @description Wipes all user data (Master, History, Logs, Buffer).
 '              Used for development and testing.
 ' =============================================
-Public Sub FactoryResetData()
+Public Function FactoryResetDataResult() As Object
     On Error GoTo ErrorHandler
 
-    If mod_UI_Helpers.AskUserYesNo("WARNING! This will delete ALL personnel data, history, and logs. Are you sure?", "Factory Reset") = False Then
-        Exit Sub
-    End If
-
+    Dim result As Object
     Dim db As DAO.Database
+
+    Set result = CreateOperationResult()
     Set db = CurrentDb
 
     ' Delete all records from linked tables
@@ -561,12 +637,50 @@ Public Sub FactoryResetData()
     db.Execute "DELETE FROM tbl_Import_Buffer;", dbFailOnError
     db.Execute "DELETE FROM tbl_Validation_Log;", dbFailOnError
 
-    mod_UI_Helpers.ShowMessage "Database cleared successfully!", vbInformation
-
+    result("Success") = True
+    result("Message") = "Database cleared successfully!"
     Set db = Nothing
-    Exit Sub
+    Set FactoryResetDataResult = result
+    Exit Function
 
 ErrorHandler:
-    mod_UI_Helpers.ShowMessage "Error clearing data: " & Err.Description, vbCritical
     If Not db Is Nothing Then Set db = Nothing
+    result("Success") = False
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = "Error clearing data: " & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
+    Set FactoryResetDataResult = result
+End Function
+
+Public Sub FactoryResetData()
+    Dim result As Object
+
+    Set result = FactoryResetDataResult()
+    Set result = Nothing
 End Sub
+
+Private Function CreateOperationResult() As Object
+    Dim d As Object
+
+    Set d = CreateObject("Scripting.Dictionary")
+    d.CompareMode = 1
+    d("Success") = False
+    d("Message") = ""
+    d("ErrorMessage") = ""
+    d("ErrorNumber") = 0
+
+    Set CreateOperationResult = d
+End Function
+
+Private Function BuildHealthCheckSummary(ByVal lngTotal As Long, ByVal lngDup As Long, ByVal lngOrphan As Long, ByVal lngFuture As Long, ByVal lngEmpty As Long) As String
+    Dim strSummary As String
+
+    strSummary = "Health check complete. " & lngTotal & " error(s) found."
+    If lngTotal > 0 Then
+        strSummary = strSummary & vbCrLf & _
+                     "Duplicates: " & lngDup & ", Orphans: " & lngOrphan & _
+                     ", Future dates: " & lngFuture & ", Empty fields: " & lngEmpty
+    End If
+
+    BuildHealthCheckSummary = strSummary
+End Function

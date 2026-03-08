@@ -300,7 +300,11 @@ End Sub
 ' --- Maintenance tab (pgMaintenance) ---
 Private Sub cmdCreateBackup_Click()
     On Error GoTo ErrorHandler
-    mod_Maintenance_Logic.CreateDatabaseBackup
+    Dim result As Object
+
+    Set result = mod_Maintenance_Logic.CreateDatabaseBackupResult()
+    mod_UI_Helpers.ShowMessage CStr(result("Message")), IIf(CBool(result("Success")), vbInformation, vbExclamation)
+    Set result = Nothing
     Exit Sub
 ErrorHandler:
     Debug.Print "cmdCreateBackup_Click: " & Err.Description
@@ -308,7 +312,13 @@ End Sub
 
 Private Sub cmdClearLogs_Click()
     On Error GoTo ErrorHandler
-    mod_Maintenance_Logic.ClearValidationLog
+    Dim result As Object
+
+    If Not mod_UI_Helpers.AskUserYesNo("Are you sure you want to clear the validation log?", "StaffState") Then Exit Sub
+
+    Set result = mod_Maintenance_Logic.ClearValidationLogResult()
+    mod_UI_Helpers.ShowMessage CStr(result("Message")), IIf(CBool(result("Success")), vbInformation, vbExclamation)
+    Set result = Nothing
     Exit Sub
 ErrorHandler:
     Debug.Print "cmdClearLogs_Click: " & Err.Description
@@ -316,7 +326,11 @@ End Sub
 
 Private Sub btnRunHealthCheck_Click()
     On Error GoTo ErrorHandler
-    mod_Maintenance_Logic.RunDataHealthCheck False
+    Dim result As Object
+
+    Set result = mod_Maintenance_Logic.RunDataHealthCheckResult(False)
+    mod_UI_Helpers.ShowMessage CStr(result("Message")), IIf(CBool(result("Success")), vbInformation, vbExclamation)
+    Set result = Nothing
     Exit Sub
 ErrorHandler:
     Debug.Print "btnRunHealthCheck_Click: " & Err.Description

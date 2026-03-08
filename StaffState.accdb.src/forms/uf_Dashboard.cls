@@ -108,15 +108,26 @@ End Sub
 Private Sub btnImport_Click()
     On Error GoTo ErrorHandler
 
+    Dim result As Object
+
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_IMPORT")
     DoEvents
 
-    If mod_Import_Logic.ImportExcelData(False) Then
+    Set result = mod_Import_Logic.ImportExcelDataResult()
+
+    If CBool(result("Success")) Then
         Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_IMPORT_SUCCESS")
+        If Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+            mod_UI_Helpers.ShowMessage CStr(result("Message")), vbInformation
+        End If
+    ElseIf CBool(result("Cancelled")) Then
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_IMPORT_FAILED")
     Else
         Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_IMPORT_FAILED")
+        mod_UI_Helpers.ShowMessage CStr(Nz(result("Message"), mod_UI_Helpers.GetLoc("MSG_IMPORT_FAILED"))), vbExclamation
     End If
 
+    Set result = Nothing
     Exit Sub
 ErrorHandler:
     MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
@@ -127,14 +138,32 @@ Private Sub cmdHealthCheck_Click()
     On Error GoTo ErrorHandler
 
     Dim lngErrors As Long
+    Dim result As Object
+    Dim exportResult As Object
+
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_HEALTH")
     DoEvents
 
-    lngErrors = mod_Maintenance_Logic.RunDataHealthCheck(False)
+    Set result = mod_Maintenance_Logic.RunDataHealthCheckResult(False)
+    If Not CBool(result("Success")) Then
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
+        mod_UI_Helpers.ShowMessage CStr(result("Message")), vbExclamation
+        Set result = Nothing
+        Exit Sub
+    End If
+
+    lngErrors = CLng(result("TotalErrors"))
+    If CBool(result("ShouldNotifyUser")) And Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+        mod_UI_Helpers.ShowMessage CStr(result("Message")), vbInformation
+    End If
 
     If lngErrors > 0 Then
         If mod_UI_Helpers.AskUserYesNo(mod_UI_Helpers.GetLoc("PROMPT_EXPORT_ERRORS"), mod_UI_Helpers.GetLoc("TITLE_HEALTH_CHECK")) Then
-            mod_Maintenance_Logic.ExportValidationLogToExcel
+            Set exportResult = mod_Maintenance_Logic.ExportValidationLogResult()
+            If Len(Trim$(CStr(Nz(exportResult("Message"), "")))) > 0 Then
+                mod_UI_Helpers.ShowMessage CStr(exportResult("Message")), IIf(CBool(exportResult("Success")), vbInformation, vbExclamation)
+            End If
+            Set exportResult = Nothing
         End If
     End If
 
@@ -142,6 +171,7 @@ Private Sub cmdHealthCheck_Click()
         Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_HEALTH_DONE") & lngErrors
         RefreshMetrics
     End If
+    Set result = Nothing
     Exit Sub
 
 ErrorHandler:

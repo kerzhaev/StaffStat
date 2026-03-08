@@ -14,7 +14,7 @@ Public Sub InitializeApp()
     On Error GoTo ErrorHandler
 
     ' 1. Create and verify all database tables
-    InitDatabaseStructure
+    InitDatabaseStructure True
 
     ' 2. Initialize Localization Engine (Phase 30)
     ' Loads dictionary into memory before any forms are opened
@@ -26,7 +26,7 @@ ErrorHandler:
     MsgBox "Initialization failed: " & Err.Description, vbCritical, "StaffState Error"
 End Sub
 
-Public Sub InitDatabaseStructure()
+Public Sub InitDatabaseStructure(Optional ByVal blnSuppressMsgBox As Boolean = False)
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -34,19 +34,21 @@ Public Sub InitDatabaseStructure()
 
     Debug.Print "--- Init database structure start ---"
 
-    ' 1. Create BUFFER table (Raw import)
-    ' Delete if exists to clear structure
-    DeleteTableIfExists "tbl_Import_Buffer"
-    CreateBufferTable db
+    ' 1. Create/align BUFFER table (Raw import) without dropping user data
+    If Not TableExists("tbl_Import_Buffer") Then
+        CreateBufferTable db
+    Else
+        Debug.Print "Table 'tbl_Import_Buffer' already exists, syncing structure."
+    End If
+    mod_Schema_Manager.EnsureBufferStructure
 
-    ' 2. Create MASTER table (Registry)
-    ' In production mode there will be Alter Table logic here.
-    ' For now we create from scratch to start.
+    ' 2. Create/align MASTER table (Registry)
     If Not TableExists("tbl_Personnel_Master") Then
         CreateMasterTable db
     Else
         Debug.Print "Table 'tbl_Personnel_Master' already exists, skip."
     End If
+    mod_Schema_Manager.SyncMasterStructure
 
     ' 3. Create HISTORY table
     If Not TableExists("tbl_History_Log") Then
@@ -73,13 +75,19 @@ Public Sub InitDatabaseStructure()
     mod_Schema_Manager.CreateLocalizationTable
 
     Debug.Print "--- Init database structure complete ---"
-    MsgBox "Database structure created successfully!", vbInformation, "StaffState Init"
+    If Not blnSuppressMsgBox Then
+        MsgBox "Database structure created successfully!", vbInformation, "StaffState Init"
+    End If
 
     Set db = Nothing
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Initialization error: " & Err.Description, vbCritical, "Error " & Err.Number
+    If Not blnSuppressMsgBox Then
+        MsgBox "Initialization error: " & Err.Description, vbCritical, "Error " & Err.Number
+    Else
+        Debug.Print "InitDatabaseStructure error: " & Err.Description & " (" & Err.Number & ")"
+    End If
     Set db = Nothing
 End Sub
 
@@ -238,14 +246,15 @@ Private Sub CreateBufferTable(db As DAO.Database)
     sSQL = "CREATE TABLE tbl_Import_Buffer (" & _
            "ID COUNTER CONSTRAINT PK_Buffer PRIMARY KEY, " & _
            "PersonUID TEXT(255), SourceID LONG, FullName TEXT(255), RankName TEXT(255), " & _
-           "BirthDate_Text TEXT(255), WorkStatus TEXT(255), PosCode TEXT(255), PosName LONGTEXT, " & _
+           "BirthDate TEXT(255), BirthDate_Text TEXT(255), WorkStatus TEXT(255), PosCode TEXT(255), PosName LONGTEXT, " & _
            "OrderDate_Text TEXT(255), OrderNumber TEXT(255), EmployeeAge TEXT(255), Gender TEXT(255), " & _
            "MaritalStatus TEXT(255), ChildrenCount TEXT(255), Nationality TEXT(255), Citizenship TEXT(255), " & _
            "ContractType TEXT(255), ContractKind TEXT(255), ContractStartDate TEXT(255), ContractEndDate TEXT(255), " & _
            "ContractYears LONG, ContractMonths LONG, EventType TEXT(255), EventReason TEXT(255), " & _
            "ValidFromDate TEXT(255), ValidToDate TEXT(255), StaffPosition TEXT(255), Position TEXT(255), " & _
-           "VUS TEXT(255), SalaryGrade TEXT(255), PersonnelDivision TEXT(255), BankAccountNumber TEXT(255), " & _
-           "Payee TEXT(255), BankKey TEXT(255), BootSize TEXT(255), HeadSize TEXT(255)" & _
+           "VUS TEXT(255), SalaryGrade TEXT(255), PersonnelDivision TEXT(255), Address LONGTEXT, " & _
+           "BankAccountNumber TEXT(255), Payee TEXT(255), BankKey TEXT(255), BankControlKey TEXT(255), " & _
+           "BootSize TEXT(255), HeadSize TEXT(255)" & _
            ");"
     db.Execute sSQL, dbFailOnError
     Debug.Print "Created table: tbl_Import_Buffer"
@@ -255,18 +264,19 @@ Private Sub CreateMasterTable(db As DAO.Database)
     Dim sSQL As String
     sSQL = "CREATE TABLE tbl_Personnel_Master (" & _
            "PersonUID VARCHAR(50) CONSTRAINT PK_Person PRIMARY KEY, " & _
-           "SourceID LONG, " & _
-           "FullName VARCHAR(150), " & _
-           "RankName VARCHAR(100), " & _
-           "BirthDate DATETIME, " & _
-           "WorkStatus VARCHAR(100), " & _
-           "PosCode VARCHAR(50), " & _
-           "PosName MEMO, " & _
-           "OrderDate DATETIME, " & _
-           "OrderNum VARCHAR(50), " & _
-           "LastUpdated DATETIME, " & _
-           "IsActive BIT " & _
-           ");"
+            "SourceID LONG, " & _
+            "FullName VARCHAR(150), " & _
+            "RankName VARCHAR(100), " & _
+            "BirthDate DATETIME, " & _
+            "BirthDate_Text TEXT(255), " & _
+            "WorkStatus VARCHAR(100), " & _
+            "PosCode VARCHAR(50), " & _
+            "PosName MEMO, " & _
+            "OrderDate_Text TEXT(255), " & _
+            "OrderNumber TEXT(255), " & _
+            "LastUpdated DATETIME, " & _
+            "IsActive BIT " & _
+            ");"
     db.Execute sSQL, dbFailOnError
     Debug.Print "Created table: tbl_Personnel_Master"
 End Sub

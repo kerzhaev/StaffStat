@@ -73,6 +73,26 @@ ErrorHandler:
 End Sub
 
 ' =============================================
+' @description Ensures tbl_Import_Buffer has all canonical raw import fields.
+'              Buffer keeps most external values as text and grows safely over time.
+' =============================================
+Public Sub EnsureBufferStructure()
+    Dim colAllowed As Collection
+    Dim v As Variant
+    Dim strType As String
+
+    If Not TableExists("tbl_Import_Buffer") Then Exit Sub
+
+    Set colAllowed = GetAllowedBufferFields()
+    For Each v In colAllowed
+        strType = GetCanonicalFieldType(CStr(v), True)
+        EnsureFieldExists "tbl_Import_Buffer", CStr(v), strType
+    Next v
+
+    Set colAllowed = Nothing
+End Sub
+
+' =============================================
 ' @description Creates tbl_Settings
 ' =============================================
 Public Sub CreateSettingsTable()
@@ -319,11 +339,7 @@ Public Sub SyncMasterStructure()
 
     Set colAllowed = GetAllowedMasterFields()
     For Each v In colAllowed
-        strType = "TEXT(255)"
-        If v = "ContractYears" Or v = "ContractMonths" Or v = "SourceID" Then strType = "LONG"
-        If v = "PosName" Then strType = "LONGTEXT"
-        If v = "LastUpdated" Then strType = "DATETIME"
-        If v = "IsActive" Then strType = "BIT"
+        strType = GetCanonicalFieldType(CStr(v), False)
         EnsureFieldExists "tbl_Personnel_Master", CStr(v), strType
     Next v
     Set colAllowed = Nothing
@@ -338,7 +354,18 @@ Private Function GetAllowedMasterFields() As Collection
     Dim arr As Variant
     Dim i As Long
 
-    arr = Array("PersonUID", "SourceID", "FullName", "RankName", "BirthDate_Text", "WorkStatus", "PosCode", "PosName", "OrderDate_Text", "OrderNumber", "EmployeeAge", "Gender", "MaritalStatus", "ChildrenCount", "Nationality", "Citizenship", "ContractType", "ContractKind", "ContractStartDate", "ContractEndDate", "ContractYears", "ContractMonths", "EventType", "EventReason", "ValidFromDate", "ValidToDate", "StaffPosition", "Position", "VUS", "SalaryGrade", "PersonnelDivision", "BankAccountNumber", "Payee", "BankKey", "BootSize", "HeadSize", "LastUpdated", "IsActive")
+    arr = Array( _
+        "PersonUID", "SourceID", "FullName", "RankName", "BirthDate", "BirthDate_Text", _
+        "WorkStatus", "PosCode", "PosName", "OrderDate_Text", "OrderNumber", "OrderDate_LS", _
+        "PositionOrderIssuer", "EmployeeAge", "Gender", "MaritalStatus", "ChildrenCount", _
+        "Nationality", "Citizenship", "DismissalDate", "EmployeeGroup", "ContractType", _
+        "ContractKind", "ContractStartDate", "ContractEndDate", "ContractYears", _
+        "ContractMonths", "EventType", "EventReason", "ValidFromDate", "ValidToDate", _
+        "StaffPosition", "StaffPosition1", "Position", "VUS", "SalaryGrade", _
+        "PersonnelDivision", "PersonnelDivision1", "EmploymentStatus", "Address", _
+        "BankAccountNumber", "Payee", "BankKey", "BankControlKey", "BootSize", _
+        "HeadSize", "SizeJacket", "SizePants", "SizeByHeight", "LastUpdated", "IsActive" _
+    )
 
     For i = LBound(arr) To UBound(arr)
         On Error Resume Next
@@ -346,6 +373,61 @@ Private Function GetAllowedMasterFields() As Collection
         On Error GoTo 0
     Next i
     Set GetAllowedMasterFields = c
+End Function
+
+' =============================================
+' @description Canonical raw import fields for tbl_Import_Buffer.
+' =============================================
+Private Function GetAllowedBufferFields() As Collection
+    Dim c As Collection
+    Set c = New Collection
+    Dim arr As Variant
+    Dim i As Long
+
+    arr = Array( _
+        "PersonUID", "SourceID", "FullName", "RankName", "BirthDate", "BirthDate_Text", _
+        "WorkStatus", "PosCode", "PosName", "OrderDate_Text", "OrderNumber", "OrderDate_LS", _
+        "PositionOrderIssuer", "EmployeeAge", "Gender", "MaritalStatus", "ChildrenCount", _
+        "Nationality", "Citizenship", "DismissalDate", "EmployeeGroup", "ContractType", _
+        "ContractKind", "ContractStartDate", "ContractEndDate", "ContractYears", _
+        "ContractMonths", "EventType", "EventReason", "ValidFromDate", "ValidToDate", _
+        "StaffPosition", "StaffPosition1", "Position", "VUS", "SalaryGrade", _
+        "PersonnelDivision", "PersonnelDivision1", "EmploymentStatus", "Address", _
+        "BankAccountNumber", "Payee", "BankKey", "BankControlKey", "BootSize", _
+        "HeadSize", "SizeJacket", "SizePants", "SizeByHeight" _
+    )
+
+    For i = LBound(arr) To UBound(arr)
+        On Error Resume Next
+        c.Add arr(i), UCase(CStr(arr(i)))
+        On Error GoTo 0
+    Next i
+
+    Set GetAllowedBufferFields = c
+End Function
+
+' =============================================
+' @description Returns the canonical data type for a schema field.
+' =============================================
+Private Function GetCanonicalFieldType(ByVal strFieldName As String, ByVal blnBufferTable As Boolean) As String
+    Select Case UCase$(Trim$(strFieldName))
+        Case "SOURCEID", "CONTRACTYEARS", "CONTRACTMONTHS"
+            GetCanonicalFieldType = "LONG"
+        Case "LASTUPDATED"
+            GetCanonicalFieldType = "DATETIME"
+        Case "ISACTIVE"
+            GetCanonicalFieldType = "BIT"
+        Case "BIRTHDATE"
+            If blnBufferTable Then
+                GetCanonicalFieldType = "TEXT(255)"
+            Else
+                GetCanonicalFieldType = "DATETIME"
+            End If
+        Case "POSNAME", "ADDRESS"
+            GetCanonicalFieldType = "LONGTEXT"
+        Case Else
+            GetCanonicalFieldType = "TEXT(255)"
+    End Select
 End Function
 
 ' =============================================

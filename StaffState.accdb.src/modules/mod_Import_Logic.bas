@@ -11,16 +11,32 @@ Option Explicit
 Private Const cstrLinkedTableName As String = "tmp_Excel_Link"
 
 Public Function ImportExcelData(Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
+    Dim result As Object
+
+    Set result = ImportExcelDataResult("", blnSuppressMsgBox)
+    ImportExcelData = CBool(result("Success"))
+    Set result = Nothing
+End Function
+
+Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "", Optional ByVal blnSuppressMsgBox As Boolean = False) As Object
     On Error GoTo ErrorHandler
 
-    ImportExcelData = False
-
-    Dim strFilePath As String
+    Dim result As Object
     Dim strSkipped As String
-    Dim strFinalMsg As String
+    Dim strErrorMessage As String
 
-    strFilePath = SelectExcelFile()
-    If strFilePath = "" Then GoTo ExitHandler
+    Set result = CreateImportResult()
+
+    If Len(Trim$(strFilePath)) = 0 Then
+        strFilePath = SelectExcelFile()
+    End If
+    result("FilePath") = strFilePath
+
+    If strFilePath = "" Then
+        result("Cancelled") = True
+        result("Message") = "Import canceled."
+        GoTo ExitHandler
+    End If
 
     DoCmd.Close acTable, "tbl_Import_Buffer", acSaveYes
     DoCmd.Close acTable, "tbl_Personnel_Master", acSaveYes
@@ -30,38 +46,37 @@ Public Function ImportExcelData(Optional ByVal blnSuppressMsgBox As Boolean = Fa
     CurrentDb.Execute "DELETE FROM tbl_Import_Buffer;", dbFailOnError
 
     ' 2. Link
-    If Not LinkExcelFile(strFilePath, blnSuppressMsgBox) Then GoTo ExitHandler
+    If Not LinkExcelFile(strFilePath, strErrorMessage, blnSuppressMsgBox) Then
+        result("ErrorMessage") = strErrorMessage
+        result("Message") = strErrorMessage
+        GoTo ExitHandler
+    End If
 
     ' 3. Dynamic import (with Auto-Detect and Interactive Wizard)
-    If Not RunDynamicImport(strSkipped, blnSuppressMsgBox) Then GoTo ExitHandler
+    If Not RunDynamicImport(strSkipped, strErrorMessage, blnSuppressMsgBox) Then
+        result("ErrorMessage") = strErrorMessage
+        result("Message") = strErrorMessage
+        GoTo ExitHandler
+    End If
 
     ' 4. Save import metadata
     UpdateImportMetadata strFilePath
 
-    ImportExcelData = True
-
-    If Not blnSuppressMsgBox Then
-        strFinalMsg = mod_UI_Helpers.GetLoc("MSG_IMPORT_SUCCESS")
-
-        If Len(strSkipped) > 0 Then
-            strFinalMsg = strFinalMsg & vbCrLf & vbCrLf & _
-                          mod_UI_Helpers.GetLoc("MSG_SKIPPED_COLS") & vbCrLf & _
-                          strSkipped
-        End If
-
-        MsgBox strFinalMsg, vbInformation, mod_UI_Helpers.GetLoc("TITLE_INFO")
-    End If
+    result("Success") = True
+    result("SkippedColumns") = strSkipped
+    result("Message") = BuildImportSuccessMessage(strSkipped)
 
 ExitHandler:
     DeleteExcelLink
+    Set ImportExcelDataResult = result
     Exit Function
 
 ErrorHandler:
-    If Not blnSuppressMsgBox Then
-        MsgBox mod_UI_Helpers.GetLoc("TITLE_ERROR") & " " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
-    Else
-        Debug.Print "Import error: " & Err.Description & " (" & Err.Number & ")"
-    End If
+    result("Success") = False
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = "Import error: " & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
+    Debug.Print "Import error: " & Err.Description & " (" & Err.Number & ")"
     Resume ExitHandler
 End Function
 
@@ -153,7 +168,7 @@ Private Function DetectBestProfile(tdfLink As DAO.TableDef) As Long
     DetectBestProfile = bestProfile
 End Function
 
-Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
+Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional ByRef outErrorMessage As String = "", Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -173,9 +188,10 @@ Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional By
     strAllColumns = ""
     Set colUsedFields = New Collection
     Set db = CurrentDb
+    outErrorMessage = ""
 
     If Not mod_Schema_Manager.TableExists("tbl_Import_Mapping") Then
-        If Not blnSuppressMsgBox Then MsgBox "tbl_Import_Mapping table is missing.", vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+        outErrorMessage = "Import mapping table is missing."
         RunDynamicImport = False
         Exit Function
     End If
@@ -189,11 +205,9 @@ Private Function RunDynamicImport(ByRef outSkippedColumns As String, Optional By
             strAllColumns = strAllColumns & "[" & fld.Name & "] "
         Next fld
 
-        If Not blnSuppressMsgBox Then
-            MsgBox "Import failed: Could not auto-detect a matching mapping profile." & vbCrLf & _
-                   "Ensure mapping exists for PersonUID." & vbCrLf & vbCrLf & _
-                   "Columns found: " & Left(strAllColumns, 400), vbCritical, "Auto-Detect Failed"
-        End If
+        outErrorMessage = "Import failed: could not auto-detect a matching mapping profile." & vbCrLf & _
+                          "Ensure mapping exists for PersonUID." & vbCrLf & vbCrLf & _
+                          "Columns found: " & Left$(strAllColumns, 400)
         RunDynamicImport = False
         Exit Function
     End If
@@ -328,13 +342,13 @@ NextColumn:
     Next fld
 
     If Len(strInsertPart) = 0 Then
-        If Not blnSuppressMsgBox Then MsgBox "No mapped columns matched.", vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+        outErrorMessage = "No mapped columns matched."
         RunDynamicImport = False
         Exit Function
     End If
 
     If Len(strPersonUIDExcelName) = 0 Then
-        If Not blnSuppressMsgBox Then MsgBox "CRITICAL: No column mapped to PersonUID.", vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
+        outErrorMessage = "Critical import error: no column is mapped to PersonUID."
         RunDynamicImport = False
         Exit Function
     End If
@@ -350,9 +364,8 @@ NextColumn:
     Exit Function
 
 ErrorHandler:
-    If Not blnSuppressMsgBox Then
-        MsgBox "Import error: " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
-    End If
+    outErrorMessage = "Import error: " & Err.Description
+    Debug.Print "RunDynamicImport error: " & Err.Description & " (" & Err.Number & ")"
     RunDynamicImport = False
 End Function
 
@@ -390,16 +403,20 @@ AlreadyExists:
     Err.Clear
 End Function
 
-Private Function LinkExcelFile(strPath As String, Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
+Private Function LinkExcelFile(strPath As String, Optional ByRef outErrorMessage As String = "", Optional ByVal blnSuppressMsgBox As Boolean = False) As Boolean
     On Error GoTo ErrorHandler
     Dim db As DAO.Database, tdf As DAO.TableDef
     Dim strConnect As String, strSheet As String
 
+    outErrorMessage = ""
     DeleteExcelLink
     Set db = CurrentDb
 
     strSheet = GetFirstSheetName(strPath)
-    If strSheet = "" Then Exit Function
+    If strSheet = "" Then
+        outErrorMessage = "Link error: could not detect a worksheet in the selected Excel file."
+        Exit Function
+    End If
     If Right(strSheet, 1) <> "$" Then strSheet = strSheet & "$"
 
     If Right(strPath, 4) = ".xls" Then
@@ -416,7 +433,8 @@ Private Function LinkExcelFile(strPath As String, Optional ByVal blnSuppressMsgB
     LinkExcelFile = True
     Exit Function
 ErrorHandler:
-    If Not blnSuppressMsgBox Then MsgBox "Link error: " & Err.Description, vbCritical, "Error"
+    outErrorMessage = "Link error: " & Err.Description
+    Debug.Print "LinkExcelFile error: " & Err.Description & " (" & Err.Number & ")"
 End Function
 
 ' ????????????? ?????? ????? EXCEL ????? ADODB
@@ -544,3 +562,32 @@ Private Sub UpdateImportMetadata(strFilePath As String)
     qdf.Parameters("prmP").value = Left$(strFilePath, 255)
     qdf.Execute dbFailOnError
 End Sub
+
+Private Function CreateImportResult() As Object
+    Dim d As Object
+
+    Set d = CreateObject("Scripting.Dictionary")
+    d.CompareMode = 1
+    d("Success") = False
+    d("Cancelled") = False
+    d("FilePath") = ""
+    d("SkippedColumns") = ""
+    d("Message") = ""
+    d("ErrorMessage") = ""
+    d("ErrorNumber") = 0
+
+    Set CreateImportResult = d
+End Function
+
+Private Function BuildImportSuccessMessage(ByVal strSkipped As String) As String
+    Dim strMessage As String
+
+    strMessage = mod_UI_Helpers.GetLoc("MSG_IMPORT_SUCCESS")
+    If Len(strSkipped) > 0 Then
+        strMessage = strMessage & vbCrLf & vbCrLf & _
+                     mod_UI_Helpers.GetLoc("MSG_SKIPPED_COLS") & vbCrLf & _
+                     strSkipped
+    End If
+
+    BuildImportSuccessMessage = strMessage
+End Function
