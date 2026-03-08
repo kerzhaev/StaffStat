@@ -11,14 +11,8 @@ Option Explicit
 ' =============================================
 
 ' --- Russian UI strings (ChrW = Unicode, display correctly in Access regardless of file encoding) ---
-Private Function RuPromptStartDate() As String
-    RuPromptStartDate = ChrW(1044) & ChrW(1072) & ChrW(1090) & ChrW(1072) & " " & ChrW(1085) & ChrW(1072) & ChrW(1095) & ChrW(1072) & ChrW(1083) & ChrW(1072) & " " & ChrW(1087) & ChrW(1077) & ChrW(1088) & ChrW(1080) & ChrW(1086) & ChrW(1076) & ChrW(1072) & " (" & ChrW(1044) & ChrW(1044) & "." & ChrW(1052) & ChrW(1052) & "." & ChrW(1043) & ChrW(1043) & ChrW(1043) & " " & ChrW(1080) & ChrW(1083) & ChrW(1080) & " " & ChrW(1044) & ChrW(1044) & "/" & ChrW(1052) & ChrW(1052) & "/" & ChrW(1043) & ChrW(1043) & ChrW(1043) & "):"
-End Function
-Private Function RuPromptEndDate() As String
-    RuPromptEndDate = ChrW(1044) & ChrW(1072) & ChrW(1090) & ChrW(1072) & " " & ChrW(1086) & ChrW(1082) & ChrW(1086) & ChrW(1085) & ChrW(1095) & ChrW(1072) & ChrW(1085) & ChrW(1080) & ChrW(1103) & " " & ChrW(1087) & ChrW(1077) & ChrW(1088) & ChrW(1080) & ChrW(1086) & ChrW(1076) & ChrW(1072) & " (" & ChrW(1044) & ChrW(1044) & "." & ChrW(1052) & ChrW(1052) & "." & ChrW(1043) & ChrW(1043) & ChrW(1043) & " " & ChrW(1080) & ChrW(1083) & ChrW(1080) & " " & ChrW(1044) & ChrW(1044) & "/" & ChrW(1052) & ChrW(1052) & "/" & ChrW(1043) & ChrW(1043) & ChrW(1043) & "):"
-End Function
-Private Function RuTitleAuditPeriod() As String
-    RuTitleAuditPeriod = ChrW(1040) & ChrW(1091) & ChrW(1076) & ChrW(1080) & ChrW(1090) & " " & ChrW(8212) & " " & ChrW(1087) & ChrW(1077) & ChrW(1088) & ChrW(1080) & ChrW(1086) & ChrW(1076)
+Private Function RuAuditDatesRequired() As String
+    RuAuditDatesRequired = ChrW(1059) & ChrW(1082) & ChrW(1072) & ChrW(1078) & ChrW(1080) & ChrW(1090) & ChrW(1077) & " " & ChrW(1076) & ChrW(1072) & ChrW(1090) & ChrW(1091) & " " & ChrW(1085) & ChrW(1072) & ChrW(1095) & ChrW(1072) & ChrW(1083) & ChrW(1072) & " " & ChrW(1080) & " " & ChrW(1076) & ChrW(1072) & ChrW(1090) & ChrW(1091) & " " & ChrW(1086) & ChrW(1082) & ChrW(1086) & ChrW(1085) & ChrW(1095) & ChrW(1072) & ChrW(1085) & ChrW(1080) & ChrW(1103) & " " & ChrW(1087) & ChrW(1077) & ChrW(1088) & ChrW(1080) & ChrW(1086) & ChrW(1076) & ChrW(1072) & "."
 End Function
 Private Function RuInvalidDateFormat() As String
     RuInvalidDateFormat = ChrW(1053) & ChrW(1077) & ChrW(1074) & ChrW(1077) & ChrW(1088) & ChrW(1085) & ChrW(1099) & ChrW(1081) & " " & ChrW(1092) & ChrW(1086) & ChrW(1088) & ChrW(1084) & ChrW(1072) & ChrW(1090) & " " & ChrW(1076) & ChrW(1072) & ChrW(1090) & ChrW(1099) & ". " & ChrW(1059) & ChrW(1082) & ChrW(1072) & ChrW(1078) & ChrW(1080) & ChrW(1090) & ChrW(1077) & " " & ChrW(1076) & ChrW(1072) & ChrW(1090) & ChrW(1099) & " " & ChrW(1074) & " " & ChrW(1092) & ChrW(1086) & ChrW(1088) & ChrW(1084) & ChrW(1072) & ChrW(1090) & ChrW(1077) & " " & ChrW(1044) & ChrW(1044) & "." & ChrW(1052) & ChrW(1052) & "." & ChrW(1043) & ChrW(1043) & ChrW(1043) & "."
@@ -83,19 +77,30 @@ End Function
 
 ' =============================================
 ' @description Exports personnel change history to Excel.
-'              If dtStart/dtEnd provided and valid, use them; else ask via InputBox (e.g. when called without args).
 '              Uses DAO JOIN (tbl_History_Log + tbl_Personnel_Master). Late-binding Excel.
-' @param dtStart [Variant] Optional. Start date (e.g. from form); if both omitted, uses InputBox.
-' @param dtEnd [Variant] Optional. End date (e.g. from form).
+' @param dtStart [Variant] Optional. Start date supplied by UI.
+' @param dtEnd [Variant] Optional. End date supplied by UI.
 ' =============================================
 Public Sub GenerateAuditReport(Optional ByVal dtStart As Variant, Optional ByVal dtEnd As Variant)
+    Dim result As Object
+
+    If IsMissing(dtStart) Or IsMissing(dtEnd) Then
+        Set result = GenerateAuditReportResult()
+    Else
+        Set result = GenerateAuditReportResult(dtStart, dtEnd)
+    End If
+    Set result = Nothing
+End Sub
+
+Public Function GenerateAuditReportResult(Optional ByVal dtStart As Variant, Optional ByVal dtEnd As Variant) As Object
     On Error GoTo ErrorHandler
 
+    Dim result As Object
+    Dim blnHasStart As Boolean
+    Dim blnHasEnd As Boolean
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
     Dim strSQL As String
-    Dim strStart As String
-    Dim strEnd As String
     Dim strStartUS As String
     Dim strEndUS As String
     Dim xlApp As Object
@@ -104,32 +109,11 @@ Public Sub GenerateAuditReport(Optional ByVal dtStart As Variant, Optional ByVal
     Dim lastRow As Long
     Dim rngData As Object
     Dim rngHeaders As Object
-    Dim bUseFormDates As Boolean
 
-    bUseFormDates = (Not IsMissing(dtStart)) And (Not IsMissing(dtEnd)) And IsDate(dtStart) And IsDate(dtEnd) And (CDate(dtStart) <= CDate(dtEnd))
-
-    If bUseFormDates Then
-        dtStart = CDate(dtStart)
-        dtEnd = CDate(dtEnd)
-    Else
-        ' Ask user for dates via InputBox (when called without valid params)
-        strStart = Trim$(InputBox(RuPromptStartDate(), RuTitleAuditPeriod(), Format(Date - 30, "dd.mm.yyyy")))
-        If strStart = "" Then Exit Sub
-        strEnd = Trim$(InputBox(RuPromptEndDate(), RuTitleAuditPeriod(), Format(Date, "dd.mm.yyyy")))
-        If strEnd = "" Then Exit Sub
-        strStart = Replace(strStart, ".", "/")
-        strEnd = Replace(strEnd, ".", "/")
-        If Not IsDate(strStart) Or Not IsDate(strEnd) Then
-            mod_UI_Helpers.ShowMessage RuInvalidDateFormat(), vbExclamation
-            Exit Sub
-        End If
-        dtStart = CDate(strStart)
-        dtEnd = CDate(strEnd)
-        If dtStart > dtEnd Then
-            mod_UI_Helpers.ShowMessage RuStartAfterEnd(), vbExclamation
-            Exit Sub
-        End If
-    End If
+    Set result = CreateReportResult()
+    blnHasStart = Not IsMissing(dtStart)
+    blnHasEnd = Not IsMissing(dtEnd)
+    If Not TryResolveAuditDates(dtStart, dtEnd, blnHasStart, blnHasEnd, result) Then GoTo Cleanup
 
     ' Build SQL with US date literals (Access/Jet)
     strStartUS = "#" & Format(dtStart, "mm\/dd\/yyyy") & "#"
@@ -144,7 +128,10 @@ Public Sub GenerateAuditReport(Optional ByVal dtStart As Variant, Optional ByVal
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
 
     If rs.EOF Then
-        mod_UI_Helpers.ShowMessage RuNoChangesFound(), vbInformation
+        result("Success") = True
+        result("Status") = "NO_DATA"
+        result("HasData") = False
+        result("Message") = RuNoChangesFound()
         GoTo Cleanup
     End If
 
@@ -206,6 +193,11 @@ Public Sub GenerateAuditReport(Optional ByVal dtStart As Variant, Optional ByVal
 
     xlWs.UsedRange.Columns.AutoFit
 
+    result("Success") = True
+    result("Status") = "SUCCESS"
+    result("HasData") = True
+    result("Message") = ""
+
 Cleanup:
     On Error Resume Next
     If Not rs Is Nothing Then rs.Close
@@ -219,13 +211,18 @@ Cleanup:
         xlApp.DisplayAlerts = True
         Set xlApp = Nothing
     End If
-    Exit Sub
+    Set GenerateAuditReportResult = result
+    Exit Function
 
 ErrorHandler:
     Debug.Print "GenerateAuditReport error: " & Err.Description & " (" & Err.Number & ")"
-    mod_UI_Helpers.ShowMessage RuErrorReport() & Err.Description, vbCritical
+    result("Success") = False
+    result("Status") = "ERROR"
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = RuErrorReport() & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
     GoTo Cleanup
-End Sub
+End Function
 
 ' =============================================
 ' @description Exports current personnel (tbl_Personnel_Master) to Excel. Order by FullName.
@@ -233,8 +230,16 @@ End Sub
 '              Style: Bold headers, AutoFilter, FreezePanes, Borders (same as GenerateAuditReport).
 ' =============================================
 Public Sub GenerateCurrentStaffReport()
+    Dim result As Object
+
+    Set result = GenerateCurrentStaffReportResult()
+    Set result = Nothing
+End Sub
+
+Public Function GenerateCurrentStaffReportResult() As Object
     On Error GoTo ErrorHandler
 
+    Dim result As Object
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
     Dim strSQL As String
@@ -245,12 +250,16 @@ Public Sub GenerateCurrentStaffReport()
     Dim rngData As Object
     Dim rngHeaders As Object
 
+    Set result = CreateReportResult()
     Set db = CurrentDb
     strSQL = "SELECT PersonUID, FullName, RankName, PosName, WorkStatus, IsActive FROM tbl_Personnel_Master ORDER BY FullName ASC;"
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
 
     If rs.EOF Then
-        mod_UI_Helpers.ShowMessage RuNoDataSnapshot(), vbInformation
+        result("Success") = True
+        result("Status") = "NO_DATA"
+        result("HasData") = False
+        result("Message") = RuNoDataSnapshot()
         GoTo Cleanup
     End If
 
@@ -303,6 +312,11 @@ Public Sub GenerateCurrentStaffReport()
 
     xlWs.UsedRange.Columns.AutoFit
 
+    result("Success") = True
+    result("Status") = "SUCCESS"
+    result("HasData") = True
+    result("Message") = ""
+
 Cleanup:
     On Error Resume Next
     If Not rs Is Nothing Then rs.Close
@@ -316,10 +330,59 @@ Cleanup:
         xlApp.DisplayAlerts = True
         Set xlApp = Nothing
     End If
-    Exit Sub
+    Set GenerateCurrentStaffReportResult = result
+    Exit Function
 
 ErrorHandler:
     Debug.Print "GenerateCurrentStaffReport error: " & Err.Description & " (" & Err.Number & ")"
-    mod_UI_Helpers.ShowMessage RuErrorReport() & Err.Description, vbCritical
+    result("Success") = False
+    result("Status") = "ERROR"
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = RuErrorReport() & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
     GoTo Cleanup
-End Sub
+End Function
+
+Private Function CreateReportResult() As Object
+    Dim d As Object
+
+    Set d = CreateObject("Scripting.Dictionary")
+    d.CompareMode = 1
+    d("Success") = False
+    d("Status") = "PENDING"
+    d("HasData") = False
+    d("Message") = ""
+    d("ErrorMessage") = ""
+    d("ErrorNumber") = 0
+
+    Set CreateReportResult = d
+End Function
+
+Private Function TryResolveAuditDates(ByRef dtStart As Variant, ByRef dtEnd As Variant, ByVal blnHasStart As Boolean, ByVal blnHasEnd As Boolean, ByRef result As Object) As Boolean
+    TryResolveAuditDates = False
+
+    If Not blnHasStart Or Not blnHasEnd Then
+        result("Status") = "VALIDATION_ERROR"
+        result("ErrorMessage") = RuAuditDatesRequired()
+        result("Message") = CStr(result("ErrorMessage"))
+        Exit Function
+    End If
+
+    If Not IsDate(dtStart) Or Not IsDate(dtEnd) Then
+        result("Status") = "VALIDATION_ERROR"
+        result("ErrorMessage") = RuInvalidDateFormat()
+        result("Message") = CStr(result("ErrorMessage"))
+        Exit Function
+    End If
+
+    dtStart = CDate(dtStart)
+    dtEnd = CDate(dtEnd)
+    If dtStart > dtEnd Then
+        result("Status") = "VALIDATION_ERROR"
+        result("ErrorMessage") = RuStartAfterEnd()
+        result("Message") = CStr(result("ErrorMessage"))
+        Exit Function
+    End If
+
+    TryResolveAuditDates = True
+End Function

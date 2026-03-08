@@ -1,6 +1,6 @@
 # PROJECT CONTEXT: StaffState (Дозор)
 
-**Последнее обновление:** 2026-03-08 (Tech Debt Refactor — Safe Init, UI Decoupling, Import Self-Heal)
+**Последнее обновление:** 2026-03-09 (Tech Debt Refactor — Reports Decoupling, Mapping Alignment, Linked Schema Self-Heal)
 **Разработчик:** Кержаев Евгений
 **Тип проекта:** MS Access VBA Personnel Management System
 
@@ -9,6 +9,8 @@
 - **Version 0.15a (Service/UI Decoupling — Stage 1) — COMPLETED:** `mod_Maintenance_Logic` и верхний уровень `mod_Import_Logic` больше не показывают UI-сообщения напрямую для backup / validation export / health check / clear log / import summary. Добавлены result-based API (`RunDataHealthCheckResult`, `ExportValidationLogResult`, `CreateDatabaseBackupResult`, `ClearValidationLogResult`, `ImportExcelDataResult`), а формы `uf_Dashboard` и `uf_Settings` берут на себя показ сообщений и confirmation-диалогов.
 - **Version 0.15b (Import Recovery & Diagnostics) — COMPLETED:** `mod_Analysis_Logic.RunFullSyncProcess` теперь показывает точную причину сбоя импорта в блоке `Import details`, вместо общего `FAILED or CANCELED`. `SelectExcelFile` трактует `ImportFolderPath = N/A` как пустое значение без ложного warning. Для регрессии с пропавшими профилями добавлен self-heal: `mod_Schema_Manager.CreateImportProfilesTable` вызывается перед auto-detect профиля в импорте и при загрузке `uf_Settings`, что автоматически восстанавливает default profiles 1/2/3.
 - **Version 0.15c (Import Wizard UI Decoupling — Stage 2) — COMPLETED:** Интерактивный import wizard больше не вызывает `AskUserYesNo`/`InputBox` внутри `mod_Import_Logic`. Сервис возвращает `RequiresUserAction`, `ActionType`, `ActionMessage`, `ExcelField`, `SuggestedFieldName`, `ProfileID`, а `uf_Dashboard` управляет циклом решений пользователя и повторным запуском импорта с тем же Excel-файлом. Добавлены decision helpers: `CreateImportDecisionStore`, `SetSkipImportDecision`, `SetRestoreImportDecision`, `SetMapImportFieldDecision`.
+- **Version 0.15d (Reports Decoupling + Schema Self-Heal for Split DB) — COMPLETED:** `mod_Reports_Logic` больше не показывает UI из сервисного слоя: добавлены `GenerateAuditReportResult` и `GenerateCurrentStaffReportResult`, а `uf_Dashboard` сам показывает сообщения и статусы для report flow. Для linked back-end схемы исправлен self-heal: `mod_Schema_Manager.EnsureFieldExists` теперь добавляет отсутствующие поля в physical back-end, а не пытается выполнить DDL по linked table из front-end. `mod_Import_Logic.ImportExcelDataResult` перед импортом вызывает `InitDatabaseStructure True`, поэтому schema drift в `tbl_Import_Buffer` / `tbl_Personnel_Master` больше не должен ломать импорт.
+- **Version 0.15e (Default Mapping Alignment) — COMPLETED:** `SeedImportMappingProfile1` приведён к текущему canonical набору полей `tbl_Personnel_Master`: `Дата рождения -> BirthDate_Text`, `Статус -> WorkStatus`, `Должность -> PosName`. Helper `AddMappingIfNotExists` теперь при reseed не только вставляет отсутствующие строки, но и обновляет устаревший `TargetField` у уже существующего `ExcelHeader`.
 - **Phase 24 (uf_Settings Tab UI & Logic Sync) — COMPLETED:** Форма настроек переведена на Tab Control (`tabSettings` в `uf_Settings.bas`): **pgGeneral** («Основные настройки») — название организации, папка импорта, автопроверка, уровень логов; **pgMapping** («Маппинг импорта») — список маппинга, добавление/удаление связей, «Восстановить по умолчанию»; **pgMaintenance** («Обслуживание») — резервная копия, очистка журнала проверки, «Запустить проверку данных». В `uf_Settings.cls`: загрузка настроек обёрнута в `Nz()` для всех вызовов `GetSetting` в `LoadSettingsFromStorage` (устранена ошибка «Save failed: Invalid use of Null»); при переключении на вкладку «Маппинг импорта» вызывается `tabSettings_Change` → `RefreshMappingList` для актуального списка.
 - **Phase 23 (Person Card UI Overhaul — Tab-Based) — COMPLETED:** Рефакторинг `uf_PersonCard` с использованием Tab Control (`tabMain`) для лучшей организации данных. **Header (всегда видим):** txtFullName, txtPersonUID, txtRank, txtPosition, txtStatus + lblInactiveWarning. **Tab 1 — pgService (Служба):** PersonnelDivision, PersonnelDivision1, StaffPosition, VUS, SalaryGrade, EmployeeGroup. **Tab 2 — pgContract (Контракт):** ContractType, ContractKind, ContractStartDate, ContractEndDate, DismissalDate, EmploymentStatus + txtContractRemains (автоматический расчёт оставшегося времени). **Tab 3 — pgPersonal (Личные данные):** BirthDate, EmployeeAge, Gender, MaritalStatus, ChildrenCount, Nationality, Citizenship, Address. **Tab 4 — pgLogistics (Снабжение):** BootSize, HeadSize, SizeJacket, SizePants, SizeByHeight. **Tab 5 — pgBanking (Банк):** BankAccountNumber, BankKey, BankControlKey, Payee. **Tab 6 — pgHistory (Машина времени):** все фильтры истории (cboFilterHistory, txtDateFrom, txtDateTo, btnResetDates) и lstHistory перенесены на отдельную вкладку, lstHistory расширен на полную высоту/ширину вкладки. **Status-Based Styling:** при WorkStatus содержит "Dismissed" или "Уволен" — txtFullName.ForeColor = vbRed; при IsActive = False — lblInactiveWarning показывает "СОТРУДНИК НЕАКТИВЕН" красным цветом. DAO для загрузки данных; Option Explicit; английские комментарии; Cyrillic строки через ChrW для совместимости с Windows-1251. **Phase 23-Polish:** исправлена кодировка в `SetupHistoryFilters` (использованы английские технические названия: "All", "RankName" и т.д.); улучшен SQL в `ApplyHistoryFilter` для читаемого отображения даты и описания изменений (Old -> New); настроены `lstHistory.ColumnCount = 4` и `ColumnWidths = "2cm;3cm;4cm;4cm"`; удалён временный модуль `mod_Tests_Phase22.bas`.
 - **Phase 22 (Advanced Export with Dynamic Headers) — COMPLETED:** Экспорт результатов поиска с динамическими русскими заголовками из `tbl_Import_Mapping`. Рефакторинг `uf_Search.cls`: создана публичная функция `GetSearchSQL(bAddTop50)` для получения SQL запроса; `GetCurrentFilterText()` сделан публичным для доступа из модуля экспорта; `PerformSearch()` переписан для вызова `GetSearchSQL(True)`; `btnExportExcel_Click()` упрощён для вызова `mod_Export_Logic.ExportFullSearchToExcel()`. В `mod_Export_Logic.bas`: реализована `ExportFullSearchToExcel()` — экспорт всех результатов поиска без TOP 50; `GetHeaderFromMapping()` загружает маппинг из `tbl_Import_Mapping` (ProfileID=1) в static Scripting.Dictionary (lazy load, кешируется на сессию); цепочка fallback для заголовков: Mapping → `GetFieldFriendlyName()` → `Replace("_", " ")`. Excel форматирование: Bold headers, AutoFilter, FreezePanes, Borders, AutoFit, date columns в формате dd.mm.yyyy. Интеграция с MCP AccessDB для проверки структуры БД при разработке.
@@ -19,7 +21,7 @@
 - **Проверка целостности данных:** таблица `tbl_Validation_Log` реализована; проверки (дубликаты, сироты, будущие даты) выполняются через `RunDataHealthCheck` в `mod_Maintenance_Logic`.
 - **Центральный модуль:** `mod_Maintenance_Logic` — единая точка входа для settings / health-check / maintenance logic; UI-диалоги для этих операций постепенно выносятся в формы через result-based API.
 - **Dashboard (Phase 12, Phase 15, Phase 17, Phase 18):** на панели управления — кнопка Health Check с экспортом отчёта об ошибках в Excel; кнопка "Changes Report" формирует аудит-отчёт за период; кнопка **"Поиск дубликатов"** открывает uf_Search в режиме дубликатов; **Phase 18:** метрики (Total/Active/Errors) в lblTotalCount, lblActiveCount, lblErrorCount; кнопка **"Штатный срез"** формирует отчёт текущего состава в Excel.
-- **Аудит-отчёт (Phase 15):** модуль `mod_Reports_Logic` с `GenerateAuditReport` — экспорт истории изменений в Excel (JOIN с `tbl_Personnel_Master`, форматирование, автофильтр, закрепление областей).
+- **Аудит-отчёт (Phase 15):** модуль `mod_Reports_Logic` с `GenerateAuditReport` / `GenerateAuditReportResult` — экспорт истории изменений в Excel (JOIN с `tbl_Personnel_Master`, форматирование, автофильтр, закрепление областей). Report services возвращают result/status/message, а UI-диалоги остаются на уровне формы.
 - **Автоматическая проверка после синхронизации:** при включённой настройке `AutoCheckEnabled` проверка целостности данных выполняется автоматически после завершения процесса Full Update (импорт → синхронизация).
 
 ---
@@ -77,7 +79,7 @@
 - **ProfileID** — профиль (например 1).
 - **ExcelHeader** — заголовок из Excel (кириллица или латиница).
 - **TargetField** — целевое английское поле в Buffer/Master.
-Импорт в `mod_Import_Logic.RunDynamicImport` сопоставляет заголовки Excel с `ExcelHeader` (нормализация UCase+Trim) и пишет данные в соответствующие `TargetField`. Создание/заполнение: `mod_Schema_Manager.CreateImportMappingTable`, `SeedImportMappingProfile1`.
+Импорт в `mod_Import_Logic.RunDynamicImport` сопоставляет заголовки Excel с `ExcelHeader` (нормализация UCase+Trim) и пишет данные в соответствующие `TargetField`. Создание/заполнение: `mod_Schema_Manager.CreateImportMappingTable`, `SeedImportMappingProfile1`. При повторном сидировании default profile устаревшие `TargetField` у существующих записей также выравниваются под текущий canonical schema set.
 
 #### 5. `tbl_Import_Profiles` (Профили импорта) ✅ Phase 19
 - **ProfileID** (PK), **ProfileName**, **IdStrategy** (например 'UID'). Создаётся через `mod_Schema_Manager.CreateImportProfilesTable`; по умолчанию профиль 1.
@@ -315,10 +317,10 @@
 - **Экспорт (Phase 12):** `ExportValidationLogToExcel()` — экспорт `tbl_Validation_Log` в новую книгу Excel (Late Binding, заголовки: ID, RecordID, Table, Error Type, Message, Date; Bold, AutoFit, FreezePanes).
 - **Phase 14:** `CreateDatabaseBackup()` — копирование БД в папку \Backups с меткой времени; `ClearValidationLog()` — очистка журнала проверки с подтверждением. Вызываются из uf_Settings (кнопки «Резервная копия», «Очистить логи»).
 
-### 8. `mod_Reports_Logic` ✅ Phase 15, Phase 18
+### 8. `mod_Reports_Logic` ✅ Phase 15, Phase 18, Version 0.15d
 Модуль отчётов: централизованная генерация отчётов.
-- **Аудит-отчёт:** `GenerateAuditReport([dtStart], [dtEnd])` — экспорт истории изменений за период в Excel. При вызове с датами (например, с Dashboard по полям Start/End Date) использует их; без параметров — запрос через InputBox. SQL JOIN `tbl_History_Log` + `tbl_Personnel_Master` (ФИО в отчёте). Late Binding Excel: заголовки, закрепление областей, автофильтр, формат дат, границы. Русский UI через ChrW().
-- **Штатный срез (Phase 18):** `GenerateCurrentStaffReport()` — экспорт текущего состава из `tbl_Personnel_Master` в Excel (ORDER BY FullName). Колонки: PersonUID, FullName, RankName, PosName, WorkStatus, IsActive. Стиль как в аудит-отчёте (Bold, AutoFilter, FreezePanes, Borders).
+- **Аудит-отчёт:** `GenerateAuditReport([dtStart], [dtEnd])` сохранён как compatibility wrapper. Основной service contract теперь `GenerateAuditReportResult([dtStart], [dtEnd])` — result-object с `Success`, `Status`, `HasData`, `Message`, `ErrorMessage`, `ErrorNumber`. Сервис больше не открывает `InputBox`/`ShowMessage`; даты и сообщения контролируются формой.
+- **Штатный срез (Phase 18):** `GenerateCurrentStaffReport()` сохранён как wrapper; основной API — `GenerateCurrentStaffReportResult()`. Экспортирует `tbl_Personnel_Master` в Excel (ORDER BY FullName), колонки: PersonUID, FullName, RankName, PosName, WorkStatus, IsActive. Стиль как в аудит-отчёте (Bold, AutoFilter, FreezePanes, Borders).
 
 ### 9. `mod_UI_Helpers`
 Вспомогательные UI-функции: `ShowMessage(msg, [msgType])`, `AskUserYesNo(msg, [title])`. Используются в Dashboard (Health Check — запрос на экспорт отчёта), Maintenance (итоги проверки), Settings и др.
@@ -378,6 +380,15 @@
 - ✅ `RunFullSyncProcess` выводит `Import details` при падении импорта, что резко упростило диагностику поломки маппинга/профилей.
 - ✅ Добавлен self-heal для `tbl_Import_Profiles`: default profiles восстанавливаются автоматически перед auto-detect профиля и при открытии `uf_Settings`.
 - ✅ Интерактивный import wizard отвязан от UI: `mod_Import_Logic` возвращает `RequiresUserAction` и action payload, а `uf_Dashboard` принимает решение пользователя и повторяет импорт с тем же Excel-файлом.
+
+### Версия 0.15d (2026-03-09) — Reports Decoupling + Linked Schema Self-Heal ✅
+**Reports Result API + Split DB Schema Alignment**
+- ✅ `mod_Reports_Logic` переведён на result-based API: `GenerateAuditReportResult`, `GenerateCurrentStaffReportResult`; прямые `ShowMessage` / `InputBox` убраны из сервисного слоя.
+- ✅ `uf_Dashboard` теперь сам обрабатывает success/no-data/error для audit report и snapshot report.
+- ✅ `mod_Schema_Manager.EnsureFieldExists` исправлен для split database: при linked tables DDL выполняется в physical back-end, затем делается `RefreshLink`.
+- ✅ `mod_Import_Logic.ImportExcelDataResult` перед импортом вызывает `InitDatabaseStructure True`, чтобы schema drift не ломал `INSERT INTO tbl_Import_Buffer`.
+- ✅ `SeedImportMappingProfile1` приведён к актуальным полям master-схемы: `BirthDate_Text`, `WorkStatus`, `PosName`.
+- ✅ `AddMappingIfNotExists` теперь обновляет устаревший `TargetField` при reseed, а не только вставляет отсутствующие строки.
 - ✅ Decision helpers для import wizard: `CreateImportDecisionStore`, `SetSkipImportDecision`, `SetRestoreImportDecision`, `SetMapImportFieldDecision`.
 
 ### Версия 0.13 (2026-02-08) — Person Card UI Overhaul + Encoding Fix (Phase 23) ✅
@@ -651,7 +662,13 @@ strFieldFilter = TranslateFieldName(Me.cboFilterHistory.Text)
 ### mod_Reports_Logic (Phase 15)
 
 #### `GenerateAuditReport([dtStart], [dtEnd])`
-**Назначение:** Экспорт истории изменений персонала за период в новую книгу Excel. Опциональные параметры — даты начала и конца периода; при вызове с Dashboard передаются из полей Start Date / End Date; без параметров — запрос через InputBox. SQL: JOIN `tbl_History_Log` и `tbl_Personnel_Master` (в отчёте ФИО, личный номер, поле, дата изменения, старое/новое значение). Форматирование: заголовок и подзаголовок периода, закрепление первых 3 строк, автофильтр по заголовкам, формат даты dd.mm.yyyy hh:mm, границы и выравнивание.
+**Назначение:** Compatibility wrapper над `GenerateAuditReportResult([dtStart], [dtEnd])`.
+
+#### `GenerateAuditReportResult([dtStart], [dtEnd])`
+**Назначение:** Экспорт истории изменений персонала за период в новую книгу Excel. Даты передаются из UI; функция возвращает result-object (`Success`, `Status`, `HasData`, `Message`, `ErrorMessage`, `ErrorNumber`) и не показывает UI напрямую. SQL: JOIN `tbl_History_Log` и `tbl_Personnel_Master` (в отчёте ФИО, личный номер, поле, дата изменения, старое/новое значение). Форматирование: заголовок и подзаголовок периода, закрепление первых 3 строк, автофильтр по заголовкам, формат даты dd.mm.yyyy hh:mm, границы и выравнивание.
+
+#### `GenerateCurrentStaffReportResult()`
+**Назначение:** Экспорт текущего состава из `tbl_Personnel_Master` в новую книгу Excel с тем же result-based контрактом без прямых UI-диалогов.
 
 ---
 
@@ -780,4 +797,4 @@ StaffState.accdb.src/
 ---
 
 **Конец документа**  
-Последнее обновление: 2026-02-08 (Phase 24 — uf_Settings tab UI & Null-safe load)
+Последнее обновление: 2026-03-09 (Version 0.15d — reports decoupling, mapping alignment, linked schema self-heal)
