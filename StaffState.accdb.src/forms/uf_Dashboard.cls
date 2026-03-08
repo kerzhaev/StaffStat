@@ -13,12 +13,19 @@ Option Explicit
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
+    Dim relinkResult As Object
 
     ' === PHASE 25: Ensure Back-End is connected before loading dashboard ===
-    If Not mod_Table_Relinker.VerifyAndRelinkTables() Then
+    Set relinkResult = mod_Table_Relinker.VerifyAndRelinkTablesResult()
+    If Not CBool(relinkResult("Success")) Then
+        If Len(Trim$(CStr(Nz(relinkResult("Message"), "")))) > 0 Then
+            mod_UI_Helpers.ShowMessage CStr(relinkResult("Message")), vbCritical
+        End If
+        Set relinkResult = Nothing
         DoCmd.Quit acQuitSaveNone
         Exit Sub
     End If
+    Set relinkResult = Nothing
     ' =======================================================================
 
     ' --- PHASE 30: Apply UI Localization ---
@@ -48,6 +55,7 @@ Private Sub Form_Load()
 
     Exit Sub
 ErrorHandler:
+    Set relinkResult = Nothing
     MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
 End Sub
 
@@ -273,18 +281,30 @@ End Sub
 Private Sub btnAnalyze_Click()
     On Error GoTo ErrorHandler
 
-    Dim iNew As Long
-    Dim iUpd As Long
+    Dim result As Object
 
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_ANALYSIS")
     DoEvents
 
-    mod_Analysis_Logic.SyncBufferToMaster iNew, iUpd, False
+    Set result = mod_Analysis_Logic.SyncBufferToMasterResult()
+    If CBool(result("Success")) Then
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_ANALYSIS_DONE") & _
+                               CLng(Nz(result("NewCount"), 0)) & _
+                               mod_UI_Helpers.GetLoc("LBL_UPDATED") & _
+                               CLng(Nz(result("UpdatedCount"), 0))
+        If Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+            mod_UI_Helpers.ShowMessage CStr(result("Message")), vbInformation
+        End If
+        RefreshMetrics
+    Else
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
+        mod_UI_Helpers.ShowMessage CStr(Nz(result("Message"), mod_UI_Helpers.GetLoc("STATUS_ERROR"))), vbExclamation
+    End If
 
-    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_ANALYSIS_DONE") & iNew & mod_UI_Helpers.GetLoc("LBL_UPDATED") & iUpd
-
+    Set result = Nothing
     Exit Sub
 ErrorHandler:
+    Set result = Nothing
     MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
@@ -301,17 +321,29 @@ End Sub
 
 Private Sub btnCreateIndexes_Click()
     On Error GoTo ErrorHandler
-    Dim iCreated As Long
-    Dim iSkipped As Long
+    Dim result As Object
 
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_CREATING_INDEXES")
     DoEvents
 
-    mod_App_Init.CreatePerformanceIndexes iCreated, iSkipped, False
-    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_INDEXES_DONE") & iCreated & mod_UI_Helpers.GetLoc("LBL_SKIPPED") & iSkipped
+    Set result = mod_App_Init.CreatePerformanceIndexesResult()
+    If CBool(result("Success")) Then
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_INDEXES_DONE") & _
+                               CLng(Nz(result("CreatedCount"), 0)) & _
+                               mod_UI_Helpers.GetLoc("LBL_SKIPPED") & _
+                               CLng(Nz(result("SkippedCount"), 0))
+        If Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+            mod_UI_Helpers.ShowMessage CStr(result("Message")), vbInformation
+        End If
+    Else
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
+        mod_UI_Helpers.ShowMessage CStr(Nz(result("Message"), mod_UI_Helpers.GetLoc("STATUS_ERROR"))), vbExclamation
+    End If
 
+    Set result = Nothing
     Exit Sub
 ErrorHandler:
+    Set result = Nothing
     MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub
@@ -320,16 +352,33 @@ End Sub
 Private Sub btnFullSync_Click()
     On Error GoTo ErrorHandler
 
+    Dim result As Object
+
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_RUNNING_FULL_SYNC")
     DoEvents
 
-    mod_Analysis_Logic.RunFullSyncProcess
+    Set result = mod_Analysis_Logic.RunFullSyncProcessResult()
+    If CBool(result("Success")) Then
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_FULL_SYNC_DONE")
+        If Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+            mod_UI_Helpers.ShowMessage CStr(result("Message")), vbInformation
+        End If
+        RefreshMetrics
+    ElseIf CBool(Nz(result("Cancelled"), False)) Then
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
+        If Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+            mod_UI_Helpers.ShowMessage CStr(result("Message")), vbInformation
+        End If
+    Else
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
+        mod_UI_Helpers.ShowMessage CStr(Nz(result("Message"), mod_UI_Helpers.GetLoc("STATUS_ERROR"))), vbExclamation
+    End If
 
-    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_FULL_SYNC_DONE")
-    RefreshMetrics
+    Set result = Nothing
     Exit Sub
 
 ErrorHandler:
+    Set result = Nothing
     MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
 End Sub

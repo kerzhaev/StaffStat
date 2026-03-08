@@ -25,6 +25,7 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     Dim strSkipped As String
     Dim strErrorMessage As String
     Dim actionRequest As Variant
+    Dim initResult As Object
 
     Set result = CreateImportResult()
 
@@ -44,7 +45,15 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     DoEvents
 
     ' Self-heal schema before touching import tables or mappings.
-    mod_App_Init.InitDatabaseStructure True
+    Set initResult = mod_App_Init.InitDatabaseStructureResult()
+    If Not CBool(initResult("Success")) Then
+        result("ErrorNumber") = CLng(Nz(initResult("ErrorNumber"), 0))
+        result("ErrorMessage") = CStr(Nz(initResult("Message"), "Initialization error."))
+        result("Message") = CStr(result("ErrorMessage"))
+        Set initResult = Nothing
+        GoTo ExitHandler
+    End If
+    Set initResult = Nothing
 
     ' 1. Clear buffer
     CurrentDb.Execute "DELETE FROM tbl_Import_Buffer;", dbFailOnError
@@ -76,6 +85,7 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
 
 ExitHandler:
     DeleteExcelLink
+    Set initResult = Nothing
     Set ImportExcelDataResult = result
     Exit Function
 
