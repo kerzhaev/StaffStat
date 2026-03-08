@@ -39,9 +39,13 @@ Public Sub EnsureFieldExists(strTableName As String, strFieldName As String, Opt
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
+    Dim dbBackend As DAO.Database
     Dim tdf As DAO.TableDef
     Dim fld As DAO.Field
     Dim blnExists As Boolean
+    Dim strSQL As String
+    Dim strBackendPath As String
+    Dim strPhysicalTableName As String
 
     Set db = CurrentDb
     Set tdf = db.TableDefs(strTableName)
@@ -55,9 +59,27 @@ Public Sub EnsureFieldExists(strTableName As String, strFieldName As String, Opt
     Next fld
 
     If Not blnExists Then
-        Dim strSQL As String
         strSQL = "ALTER TABLE [" & strTableName & "] ADD COLUMN [" & strFieldName & "] " & strType & ";"
-        db.Execute strSQL, dbFailOnError
+
+        If Len(Trim$(Nz(tdf.Connect, ""))) > 0 Then
+            strBackendPath = GetBackendPath(strTableName)
+            If Len(strBackendPath) = 0 Then
+                Err.Raise vbObjectError + 2, "EnsureFieldExists", "Failed to resolve Back-End path for linked table [" & strTableName & "]."
+            End If
+
+            strPhysicalTableName = Trim$(Nz(tdf.SourceTableName, strTableName))
+            If Len(strPhysicalTableName) = 0 Then strPhysicalTableName = strTableName
+
+            Set dbBackend = DBEngine.Workspaces(0).OpenDatabase(strBackendPath)
+            dbBackend.Execute "ALTER TABLE [" & strPhysicalTableName & "] ADD COLUMN [" & strFieldName & "] " & strType & ";", dbFailOnError
+            dbBackend.Close
+            Set dbBackend = Nothing
+
+            tdf.RefreshLink
+        Else
+            db.Execute strSQL, dbFailOnError
+        End If
+
         Debug.Print "Schema: field added to " & strTableName & ": " & strFieldName
     End If
 
@@ -67,6 +89,9 @@ Public Sub EnsureFieldExists(strTableName As String, strFieldName As String, Opt
     Exit Sub
 ErrorHandler:
     Debug.Print "EnsureFieldExists error: " & Err.Description
+    On Error Resume Next
+    If Not dbBackend Is Nothing Then dbBackend.Close
+    Set dbBackend = Nothing
     Set fld = Nothing
     Set tdf = Nothing
     Set db = Nothing
@@ -221,7 +246,8 @@ Public Sub SeedImportMappingProfile1()
     AddMappingIfNotExists db, 1, CyrStr(1051, 1080, 1095, 1085, 1099, 1081, 32, 1085, 1086, 1084, 1077, 1088), "PersonUID"
     AddMappingIfNotExists db, 1, CyrStr(1042, 1086, 1080, 1085, 1089, 1082, 1086, 1077, 32, 1079, 1074, 1072, 1085, 1080, 1077), "RankName"
     AddMappingIfNotExists db, 1, CyrStr(1060, 1048, 1054), "FullName"
-    AddMappingIfNotExists db, 1, CyrStr(1044, 1072, 1090, 1072, 32, 1088, 1086, 1078, 1076, 1077, 1085, 1080, 1103), "BirthDate"
+    AddMappingIfNotExists db, 1, CyrStr(1044, 1072, 1090, 1072, 32, 1088, 1086, 1078, 1076, 1077, 1085, 1080, 1103), "BirthDate_Text"
+    AddMappingIfNotExists db, 1, CyrStr(1057, 1090, 1072, 1090, 1091, 1089), "WorkStatus"
     AddMappingIfNotExists db, 1, CyrStr(1042, 1086, 1079, 1088, 1072, 1089, 1090, 32, 1089, 1086, 1090, 1088, 1091, 1076, 1085, 1080, 1082, 1072), "EmployeeAge"
     AddMappingIfNotExists db, 1, CyrStr(1055, 1086, 1083), "Gender"
     AddMappingIfNotExists db, 1, CyrStr(1057, 1077, 1084, 1077, 1081, 1085, 1086, 1077, 32, 1087, 1086, 1083, 1086, 1078, 1077, 1085, 1080, 1077), "MaritalStatus"
@@ -249,7 +275,7 @@ Public Sub SeedImportMappingProfile1()
 
     ' Position
     AddMappingIfNotExists db, 1, CyrStr(1064, 1090, 1072, 1090, 1085, 1072, 1103, 32, 1076, 1086, 1083, 1078, 1085, 1086, 1089, 1090, 1100), "StaffPosition"
-    AddMappingIfNotExists db, 1, CyrStr(1044, 1086, 1083, 1078, 1085, 1086, 1089, 1090, 1100), "Position"
+    AddMappingIfNotExists db, 1, CyrStr(1044, 1086, 1083, 1078, 1085, 1086, 1089, 1090, 1100), "PosName"
     AddMappingIfNotExists db, 1, CyrStr(1042, 1059, 1057), "VUS"
     AddMappingIfNotExists db, 1, CyrStr(1058, 1072, 1088, 1080, 1092, 1085, 1099, 1081, 32, 1088, 1072, 1079, 1088, 1103, 1076), "SalaryGrade"
     AddMappingIfNotExists db, 1, CyrStr(1044, 1072, 1090, 1072, 32, 1087, 1088, 1080, 1082, 1072, 32, 1051, 1057, 1057), "OrderDate_LS"
@@ -307,11 +333,24 @@ End Sub
 Private Sub AddMappingIfNotExists(db As DAO.Database, lngProfile As Long, strExcel As String, strTarget As String)
     Dim strSQL As String
     Dim rs As DAO.Recordset
-    strSQL = "SELECT MappingID FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfile & " AND ExcelHeader = '" & Replace(strExcel, "'", "''") & "'"
+    Dim qdf As DAO.QueryDef
+
+    strSQL = "SELECT MappingID, TargetField FROM tbl_Import_Mapping WHERE ProfileID = " & lngProfile & " AND ExcelHeader = '" & Replace(strExcel, "'", "''") & "'"
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
-    If rs.EOF Then AddMapping db, lngProfile, strExcel, strTarget
+
+    If rs.EOF Then
+        AddMapping db, lngProfile, strExcel, strTarget
+    ElseIf StrComp(Trim$(Nz(rs!targetField, "")), Trim$(strTarget), vbTextCompare) <> 0 Then
+        Set qdf = db.CreateQueryDef("", "PARAMETERS prmTarget Text (100), prmId Long; UPDATE tbl_Import_Mapping SET TargetField = [prmTarget] WHERE MappingID = [prmId];")
+        qdf.Parameters("prmTarget").value = Left$(strTarget, 100)
+        qdf.Parameters("prmId").value = CLng(rs!MappingID)
+        qdf.Execute dbFailOnError
+        Set qdf = Nothing
+    End If
+
     rs.Close
     Set rs = Nothing
+    Set qdf = Nothing
 End Sub
 
 ' =============================================

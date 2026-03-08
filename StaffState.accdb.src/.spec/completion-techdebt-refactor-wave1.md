@@ -1,7 +1,7 @@
 # Completion Summary: tech debt refactor wave 1
 
-**Date:** 2026-03-08  
-**Scope:** safe schema initialization, search debug throttling, service/UI decoupling, import diagnostics, import profile self-heal, import wizard UI extraction
+**Date:** 2026-03-09
+**Scope:** safe schema initialization, search debug throttling, service/UI decoupling, import diagnostics, import profile self-heal, import wizard UI extraction, reports decoupling, mapping alignment, linked backend schema self-heal
 
 ## Why this refactor started
 
@@ -132,6 +132,54 @@ Outcome:
 - the same selected Excel file is reused across repeated wizard steps
 - skipping a new column remains a valid user choice without aborting the full import flow
 
+### Iteration 6: Reports service/UI decoupling
+
+Implemented in:
+- `modules/mod_Reports_Logic.bas`
+- `forms/uf_Dashboard.cls`
+
+Changes:
+- removed direct report-layer UI from `mod_Reports_Logic`
+- added result-style APIs:
+  - `GenerateAuditReportResult`
+  - `GenerateCurrentStaffReportResult`
+- kept legacy `GenerateAuditReport` / `GenerateCurrentStaffReport` as compatibility wrappers
+- `uf_Dashboard` now owns user-facing status/messages for:
+  - audit report generation
+  - current staff snapshot generation
+
+Outcome:
+- report services now follow the same `result/status/message/error` contract used in maintenance/import flows
+- UI dialogs for reports are isolated to form code
+- `mod_Reports_Logic` is no longer a blocker for continued service/UI separation
+
+### Iteration 7: Default mapping alignment and linked schema self-heal
+
+Implemented in:
+- `modules/mod_Schema_Manager.bas`
+- `modules/mod_Import_Logic.bas`
+
+Changes:
+- aligned default profile 1 mapping with the current canonical master fields:
+  - `BirthDate_Text` instead of `BirthDate`
+  - `WorkStatus`
+  - `PosName` instead of `Position` for the main job title field
+- upgraded `AddMappingIfNotExists` so reseed updates stale `TargetField` values for existing `ExcelHeader` rows
+- fixed `EnsureFieldExists` for split databases:
+  - if table is linked, DDL is executed against the physical back-end database
+  - link is refreshed afterward
+- added schema self-heal call before import:
+  - `ImportExcelDataResult` now runs `InitDatabaseStructure True` before buffer work starts
+
+Regression found and fixed:
+- import still failed after mapping changes because schema alignment was attempting `ALTER TABLE` against linked front-end tables
+- this left fields such as `PosName` absent in the physical back-end even though code and mapping expected them
+
+Outcome:
+- default mapping profile now matches the current canonical schema more closely
+- stale profile 1 mappings can be corrected by reseed without manual DB edits
+- schema drift in linked `tbl_Import_Buffer` / `tbl_Personnel_Master` is healed through the back-end instead of silently failing in the front-end
+
 ## Files affected across the wave
 
 - `forms/uf_Dashboard.cls`
@@ -141,6 +189,7 @@ Outcome:
 - `modules/mod_Analysis_Logic.bas`
 - `modules/mod_Import_Logic.bas`
 - `modules/mod_Maintenance_Logic.bas`
+- `modules/mod_Reports_Logic.bas`
 - `modules/mod_Schema_Manager.bas`
 
 ## User-visible effects
@@ -151,6 +200,9 @@ Outcome:
 - `Full Update` shows real import failure reasons
 - missing import profiles are restored automatically
 - import wizard prompts still work, but are now owned by `uf_Dashboard`
+- report success/no-data/error feedback is now also owned by forms
+- reseeding the default mapping can repair stale `TargetField` values
+- schema alignment now works for linked back-end tables instead of failing on front-end DDL
 
 ## Architecture effects
 
@@ -158,11 +210,13 @@ Outcome:
 - `mod_Maintenance_Logic` moved from UI-coupled procedures toward result-returning services
 - `mod_Import_Logic` now exposes service state plus action requests instead of directly running dialogs
 - `uf_Dashboard` became the first orchestrator for interactive import decisions
+- `mod_Reports_Logic` now follows the same result-based service contract direction
+- linked-table schema maintenance now uses a physical back-end path instead of assuming monolithic Access DDL
 
 ## Remaining follow-up work
 
-1. Continue service/UI decoupling in `mod_Reports_Logic`.
-2. Reduce dangerous `On Error Resume Next` in import/sync/schema/export code paths.
-3. Optimize `SyncBufferToMaster` to avoid row-by-row `FindFirst`.
-4. Consolidate logging policy so diagnostics use one logger path and UI errors stay in forms.
-5. Add regression coverage for import, profile self-heal, schema alignment, and full update diagnostics.
+1. Continue service/UI decoupling in `mod_Analysis_Logic`.
+2. Align `uf_Settings` mapping field list with the canonical master/buffer field set so UI choices cannot drift from schema.
+3. Reduce dangerous `On Error Resume Next` in import/sync/schema/export code paths.
+4. Optimize `SyncBufferToMaster` to avoid row-by-row `FindFirst`.
+5. Add regression coverage for import, reseed alignment, linked schema self-heal, and full update diagnostics.

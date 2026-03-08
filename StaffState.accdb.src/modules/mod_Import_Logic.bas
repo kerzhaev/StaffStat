@@ -43,6 +43,9 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     DoCmd.Close acTable, "tbl_Personnel_Master", acSaveYes
     DoEvents
 
+    ' Self-heal schema before touching import tables or mappings.
+    mod_App_Init.InitDatabaseStructure True
+
     ' 1. Clear buffer
     CurrentDb.Execute "DELETE FROM tbl_Import_Buffer;", dbFailOnError
 

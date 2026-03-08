@@ -360,6 +360,7 @@ Private Sub btnGenerateChangeReport_Click()
 
     Dim dtStart As Date
     Dim dtEnd As Date
+    Dim result As Object
     Dim sStart As String
     Dim sEnd As String
 
@@ -382,8 +383,19 @@ Private Sub btnGenerateChangeReport_Click()
 
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_GEN_AUDIT")
     DoEvents
-    mod_Reports_Logic.GenerateAuditReport dtStart, dtEnd
-    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_AUDIT_DONE")
+    Set result = mod_Reports_Logic.GenerateAuditReportResult(dtStart, dtEnd)
+
+    If CBool(result("Success")) Then
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_AUDIT_DONE")
+        If Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+            mod_UI_Helpers.ShowMessage CStr(result("Message")), vbInformation
+        End If
+    Else
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
+        mod_UI_Helpers.ShowMessage CStr(Nz(result("Message"), mod_UI_Helpers.GetLoc("STATUS_ERROR"))), vbExclamation
+    End If
+
+    Set result = Nothing
     Exit Sub
 ErrorHandler:
     MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
@@ -392,10 +404,23 @@ End Sub
 
 Private Sub btnSnapshotReport_Click()
     On Error GoTo ErrorHandler
+    Dim result As Object
+
     Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_GEN_SNAPSHOT")
     DoEvents
-    mod_Reports_Logic.GenerateCurrentStaffReport
-    Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_SNAPSHOT_DONE")
+    Set result = mod_Reports_Logic.GenerateCurrentStaffReportResult()
+
+    If CBool(result("Success")) Then
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("MSG_SNAPSHOT_DONE")
+        If Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+            mod_UI_Helpers.ShowMessage CStr(result("Message")), vbInformation
+        End If
+    Else
+        Me.lblStatus.Caption = mod_UI_Helpers.GetLoc("STATUS_ERROR")
+        mod_UI_Helpers.ShowMessage CStr(Nz(result("Message"), mod_UI_Helpers.GetLoc("STATUS_ERROR"))), vbExclamation
+    End If
+
+    Set result = Nothing
     Exit Sub
 ErrorHandler:
     MsgBox mod_UI_Helpers.GetLoc("ERR_UI") & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
