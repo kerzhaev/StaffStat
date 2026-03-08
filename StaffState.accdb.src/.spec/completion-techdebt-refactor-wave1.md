@@ -1,7 +1,7 @@
 # Completion Summary: tech debt refactor wave 1
 
 **Date:** 2026-03-09
-**Scope:** safe schema initialization, search debug throttling, service/UI decoupling, import diagnostics, import profile self-heal, import wizard UI extraction, reports decoupling, mapping alignment, linked backend schema self-heal
+**Scope:** safe schema initialization, search debug throttling, service/UI decoupling, import diagnostics, import profile self-heal, import wizard UI extraction, reports decoupling, mapping alignment, linked backend schema self-heal, analysis/init/export/relinker/logger decoupling
 
 ## Why this refactor started
 
@@ -220,3 +220,134 @@ Outcome:
 3. Reduce dangerous `On Error Resume Next` in import/sync/schema/export code paths.
 4. Optimize `SyncBufferToMaster` to avoid row-by-row `FindFirst`.
 5. Add regression coverage for import, reseed alignment, linked schema self-heal, and full update diagnostics.
+
+### Iteration 8: Analysis service/UI decoupling
+
+Implemented in:
+- `modules/mod_Analysis_Logic.bas`
+- `forms/uf_Dashboard.cls`
+
+Changes:
+- added result-style APIs:
+  - `SyncBufferToMasterResult`
+  - `RunFullSyncProcessResult`
+- kept legacy `SyncBufferToMaster` / `RunFullSyncProcess` as compatibility wrappers
+- removed direct `MsgBox` / `ShowMessage` from analysis-layer runtime flow
+- `uf_Dashboard` now owns success/error/no-data feedback for:
+  - Analyze
+  - Full Sync
+
+Regression found and fixed:
+- sync errors previously rolled back and then resumed through the normal exit path, which could look like a clean completion to callers
+
+Outcome:
+- analysis logic now reports machine-readable `Success/Status/Message/Error`
+- Full Sync no longer hides sync-stage failures behind a generic success path
+
+### Iteration 9: Init/index result contracts and import pipeline hardening
+
+Implemented in:
+- `modules/mod_App_Init.bas`
+- `modules/mod_Import_Logic.bas`
+- `modules/mod_Analysis_Logic.bas`
+- `forms/uf_Dashboard.cls`
+
+Changes:
+- added result-style APIs:
+  - `InitDatabaseStructureResult`
+  - `CreatePerformanceIndexesResult`
+- kept legacy procedures as wrappers for compatibility
+- `ImportExcelDataResult` now explicitly stops when init/schema self-heal fails
+- `RunFullSyncProcessResult` now uses the index result contract instead of relying on suppress-only behavior
+- `uf_Dashboard` now owns index creation summary/error UI
+
+Outcome:
+- init/index stages became observable by callers
+- import/full-sync no longer silently continue through init/index failures
+
+### Iteration 10: Export module result completion
+
+Implemented in:
+- `modules/mod_Export_Logic.bas`
+- `forms/uf_Search.cls`
+
+Changes:
+- added result-style APIs:
+  - `ExportFullSearchToExcelResult`
+  - `ExportSearchToExcelResult`
+  - `ExportChangeReportResult`
+- kept boolean wrappers returning `True` only for real `SUCCESS`
+- `NO_DATA` is now a first-class non-error status in export flows
+- `uf_Search.btnExportExcel_Click` now shows export feedback in the form layer
+
+Outcome:
+- `mod_Export_Logic` is now result-based across its public entrypoints
+- export services no longer own runtime UI messaging
+
+### Iteration 11: Startup relinker decoupling
+
+Implemented in:
+- `modules/mod_Table_Relinker.bas`
+- `forms/uf_Dashboard.cls`
+
+Changes:
+- added `VerifyAndRelinkTablesResult`
+- kept `VerifyAndRelinkTables` as a boolean wrapper
+- removed direct `ShowMessage` from relinker service
+- `uf_Dashboard.Form_Load` now decides how to show startup relink failures before quitting
+
+Outcome:
+- relinker became a service-only component with explicit statuses:
+  - `OK`
+  - `RELINKED`
+  - `MONOLITHIC`
+  - `NOT_FOUND`
+  - `ERROR`
+
+### Iteration 12: Logger/UI separation
+
+Implemented in:
+- `modules/mod_App_Logger.bas`
+- `forms/uf_PersonCard.cls`
+
+Changes:
+- added `LogErrorResult`
+- kept `LogError` as a compatibility wrapper
+- removed direct `MsgBox` from `mod_App_Logger`
+- moved the only live `bShowUI=True` runtime flow to `uf_PersonCard.LoadPersonData`
+
+Outcome:
+- logger no longer controls UI
+- forms can log first and then decide how to present the message
+
+## Files additionally affected in later iterations
+
+- `forms/uf_PersonCard.cls`
+- `forms/uf_Search.cls`
+- `modules/mod_App_Logger.bas`
+- `modules/mod_Export_Logic.bas`
+- `modules/mod_Table_Relinker.bas`
+
+## Runtime flows now covered by result-based contracts
+
+- maintenance / backup / validation export / health check
+- import top-level flow and interactive import wizard
+- reports
+- analyze / sync
+- full sync
+- init / schema self-heal / index creation
+- full search export / legacy export entrypoints / change report export
+- startup relinker
+- logger error reporting
+
+## Recommended next chat starting point
+
+1. Continue with UI status normalization in forms:
+   - `uf_Dashboard`
+   - `uf_Search`
+   - possibly `uf_PersonCard`
+2. Distinguish `NO_DATA`, `CANCELLED`, `MONOLITHIC`, `RELINKED`, `ERROR` visually instead of routing everything through generic error text.
+3. After UI normalization, clean the remaining utility/admin modules:
+   - `mod_Fix_Startup.bas`
+   - `mod_Schema_Manager.SeedLocalizationTable`
+4. Keep using the established result contract (`Scripting.Dictionary` with `Success/Status/Message/ErrorMessage/ErrorNumber` plus scenario counters).

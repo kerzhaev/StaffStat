@@ -121,13 +121,23 @@ Private Function GetLogLevel() As String
 End Function
 
 Public Sub LogError(ByVal sSource As String, ByVal sMsg As String, Optional ByVal bShowUI As Boolean = True)
+    Dim result As Object
+
+    Set result = LogErrorResult(sSource, sMsg, bShowUI)
+    Set result = Nothing
+End Sub
+
+Public Function LogErrorResult(ByVal sSource As String, ByVal sMsg As String, Optional ByVal bShowUI As Boolean = True) As Object
+    Dim result As Object
+
+    Set result = CreateLogResult()
     Debug.Print "ERROR [" & sSource & "]: " & sMsg
     WriteLogEntry "ERROR", sSource, sMsg
-    If bShowUI Then
-        MsgBox "An error occurred in module: " & sSource & vbCrLf & vbCrLf & _
-               "Details: " & sMsg & vbCrLf & vbCrLf & _
-               "The details were saved in the system log.", vbCritical, "System Error"
-    End If
+    result("Success") = True
+    result("Status") = "LOGGED"
+    result("ShowUI") = bShowUI
+    result("Message") = BuildLogErrorMessage(sSource, sMsg)
+    Set LogErrorResult = result
 End Sub
 
 Public Sub LogInfo(ByVal sMsg As String, Optional ByVal sSource As String = "General")
@@ -143,3 +153,22 @@ Public Sub LogDebug(ByVal sMsg As String, Optional ByVal sSource As String = "Ge
     Debug.Print "DEBUG [" & sSource & "]: " & sMsg
     WriteLogEntry "DEBUG", sSource, sMsg
 End Sub
+
+Private Function CreateLogResult() As Object
+    Dim d As Object
+
+    Set d = CreateObject("Scripting.Dictionary")
+    d.CompareMode = 1
+    d("Success") = False
+    d("Status") = "PENDING"
+    d("Message") = ""
+    d("ShowUI") = False
+
+    Set CreateLogResult = d
+End Function
+
+Private Function BuildLogErrorMessage(ByVal sSource As String, ByVal sMsg As String) As String
+    BuildLogErrorMessage = "An error occurred in module: " & sSource & vbCrLf & vbCrLf & _
+                           "Details: " & sMsg & vbCrLf & vbCrLf & _
+                           "The details were saved in the system log."
+End Function

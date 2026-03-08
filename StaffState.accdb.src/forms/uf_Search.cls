@@ -225,18 +225,22 @@ End Sub
 
 Private Sub btnExportExcel_Click()
     On Error GoTo ErrorHandler
+    Dim result As Object
 
     If m_fDuplicatesMode Then
         ExportDuplicatesToExcel
         Exit Sub
     End If
 
-    If mod_Export_Logic.ExportFullSearchToExcel() Then
-        ' Success message inside logic
+    Set result = mod_Export_Logic.ExportFullSearchToExcelResult()
+    If Len(Trim$(CStr(Nz(result("Message"), "")))) > 0 Then
+        mod_UI_Helpers.ShowMessage CStr(result("Message")), IIf(CBool(result("Success")), vbInformation, vbExclamation)
     End If
+    Set result = Nothing
 
     Exit Sub
 ErrorHandler:
+    Set result = Nothing
     MsgBox mod_UI_Helpers.GetLoc("TITLE_ERROR") & ": " & Err.Description, vbCritical, mod_UI_Helpers.GetLoc("TITLE_ERROR")
 End Sub
 

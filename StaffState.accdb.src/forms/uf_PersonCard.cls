@@ -34,6 +34,7 @@ Public Sub LoadPersonData()
     Dim rs As DAO.Recordset
     Dim strSQL As String
     Dim strDismissed As String
+    Dim logResult As Object
 
     Set db = CurrentDb
     strSQL = "SELECT * FROM tbl_Personnel_Master WHERE PersonUID = '" & Replace(m_strUID, "'", "''") & "'"
@@ -92,7 +93,11 @@ Cleanup:
     Exit Sub
 
 ErrorHandler:
-    mod_App_Logger.LogError "uf_PersonCard.LoadPersonData", Err.Description, True
+    Set logResult = mod_App_Logger.LogErrorResult("uf_PersonCard.LoadPersonData", Err.Description, True)
+    If Len(Trim$(CStr(Nz(logResult("Message"), "")))) > 0 Then
+        mod_UI_Helpers.ShowMessage CStr(logResult("Message")), vbCritical
+    End If
+    Set logResult = Nothing
     Resume Cleanup
 End Sub
 

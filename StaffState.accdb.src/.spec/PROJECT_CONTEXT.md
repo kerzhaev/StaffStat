@@ -1,6 +1,6 @@
 # PROJECT CONTEXT: StaffState (Дозор)
 
-**Последнее обновление:** 2026-03-09 (Tech Debt Refactor — Reports Decoupling, Mapping Alignment, Linked Schema Self-Heal)
+**Последнее обновление:** 2026-03-09 (Tech Debt Refactor — Service/UI Decoupling Stage 3, Export Module Completion, Relinker and Logger Cleanup)
 **Разработчик:** Кержаев Евгений
 **Тип проекта:** MS Access VBA Personnel Management System
 
@@ -11,6 +11,10 @@
 - **Version 0.15c (Import Wizard UI Decoupling — Stage 2) — COMPLETED:** Интерактивный import wizard больше не вызывает `AskUserYesNo`/`InputBox` внутри `mod_Import_Logic`. Сервис возвращает `RequiresUserAction`, `ActionType`, `ActionMessage`, `ExcelField`, `SuggestedFieldName`, `ProfileID`, а `uf_Dashboard` управляет циклом решений пользователя и повторным запуском импорта с тем же Excel-файлом. Добавлены decision helpers: `CreateImportDecisionStore`, `SetSkipImportDecision`, `SetRestoreImportDecision`, `SetMapImportFieldDecision`.
 - **Version 0.15d (Reports Decoupling + Schema Self-Heal for Split DB) — COMPLETED:** `mod_Reports_Logic` больше не показывает UI из сервисного слоя: добавлены `GenerateAuditReportResult` и `GenerateCurrentStaffReportResult`, а `uf_Dashboard` сам показывает сообщения и статусы для report flow. Для linked back-end схемы исправлен self-heal: `mod_Schema_Manager.EnsureFieldExists` теперь добавляет отсутствующие поля в physical back-end, а не пытается выполнить DDL по linked table из front-end. `mod_Import_Logic.ImportExcelDataResult` перед импортом вызывает `InitDatabaseStructure True`, поэтому schema drift в `tbl_Import_Buffer` / `tbl_Personnel_Master` больше не должен ломать импорт.
 - **Version 0.15e (Default Mapping Alignment) — COMPLETED:** `SeedImportMappingProfile1` приведён к текущему canonical набору полей `tbl_Personnel_Master`: `Дата рождения -> BirthDate_Text`, `Статус -> WorkStatus`, `Должность -> PosName`. Helper `AddMappingIfNotExists` теперь при reseed не только вставляет отсутствующие строки, но и обновляет устаревший `TargetField` у уже существующего `ExcelHeader`.
+- **Version 0.15f (Service/UI Decoupling — Stage 3) — COMPLETED:** `mod_Analysis_Logic` переведён на result-based контракты (`SyncBufferToMasterResult`, `RunFullSyncProcessResult`); старые `Sub` оставлены как compatibility wrappers без UI. Исправлена важная регрессия: sync/full-sync больше не маскируют внутренние ошибки как обычное успешное завершение. `uf_Dashboard` теперь сам показывает summary/error для Analyze, Full Sync и Create Indexes.
+- **Version 0.15g (Init/Index/Import Pipeline Hardening) — COMPLETED:** `mod_App_Init` получил `InitDatabaseStructureResult` и `CreatePerformanceIndexesResult`; `mod_Import_Logic.ImportExcelDataResult` теперь останавливает импорт при ошибке schema self-heal/init вместо молчаливого продолжения. `RunFullSyncProcessResult` больше не зависит от suppress-only поведения index слоя и корректно возвращает `INDEX_ERROR` / `SYNC_ERROR`.
+- **Version 0.15h (Export Module Result Contracts) — COMPLETED:** `mod_Export_Logic` полностью переведён на result-based entrypoints: `ExportFullSearchToExcelResult`, `ExportSearchToExcelResult`, `ExportChangeReportResult`. Живой UI-вызов в `uf_Search` теперь показывает успех / no-data / error на уровне формы; export service больше не вызывает `ShowMessage`/`MsgBox` напрямую.
+- **Version 0.15i (Startup Relinker and Logger Decoupling) — COMPLETED:** `mod_Table_Relinker` переведён на `VerifyAndRelinkTablesResult`; startup error показывается в `uf_Dashboard.Form_Load`, а relinker остаётся service-only. `mod_App_Logger` больше не управляет UI: добавлен `LogErrorResult`, а пользовательское сообщение для живого сценария перенесено в `uf_PersonCard.LoadPersonData`.
 - **Phase 24 (uf_Settings Tab UI & Logic Sync) — COMPLETED:** Форма настроек переведена на Tab Control (`tabSettings` в `uf_Settings.bas`): **pgGeneral** («Основные настройки») — название организации, папка импорта, автопроверка, уровень логов; **pgMapping** («Маппинг импорта») — список маппинга, добавление/удаление связей, «Восстановить по умолчанию»; **pgMaintenance** («Обслуживание») — резервная копия, очистка журнала проверки, «Запустить проверку данных». В `uf_Settings.cls`: загрузка настроек обёрнута в `Nz()` для всех вызовов `GetSetting` в `LoadSettingsFromStorage` (устранена ошибка «Save failed: Invalid use of Null»); при переключении на вкладку «Маппинг импорта» вызывается `tabSettings_Change` → `RefreshMappingList` для актуального списка.
 - **Phase 23 (Person Card UI Overhaul — Tab-Based) — COMPLETED:** Рефакторинг `uf_PersonCard` с использованием Tab Control (`tabMain`) для лучшей организации данных. **Header (всегда видим):** txtFullName, txtPersonUID, txtRank, txtPosition, txtStatus + lblInactiveWarning. **Tab 1 — pgService (Служба):** PersonnelDivision, PersonnelDivision1, StaffPosition, VUS, SalaryGrade, EmployeeGroup. **Tab 2 — pgContract (Контракт):** ContractType, ContractKind, ContractStartDate, ContractEndDate, DismissalDate, EmploymentStatus + txtContractRemains (автоматический расчёт оставшегося времени). **Tab 3 — pgPersonal (Личные данные):** BirthDate, EmployeeAge, Gender, MaritalStatus, ChildrenCount, Nationality, Citizenship, Address. **Tab 4 — pgLogistics (Снабжение):** BootSize, HeadSize, SizeJacket, SizePants, SizeByHeight. **Tab 5 — pgBanking (Банк):** BankAccountNumber, BankKey, BankControlKey, Payee. **Tab 6 — pgHistory (Машина времени):** все фильтры истории (cboFilterHistory, txtDateFrom, txtDateTo, btnResetDates) и lstHistory перенесены на отдельную вкладку, lstHistory расширен на полную высоту/ширину вкладки. **Status-Based Styling:** при WorkStatus содержит "Dismissed" или "Уволен" — txtFullName.ForeColor = vbRed; при IsActive = False — lblInactiveWarning показывает "СОТРУДНИК НЕАКТИВЕН" красным цветом. DAO для загрузки данных; Option Explicit; английские комментарии; Cyrillic строки через ChrW для совместимости с Windows-1251. **Phase 23-Polish:** исправлена кодировка в `SetupHistoryFilters` (использованы английские технические названия: "All", "RankName" и т.д.); улучшен SQL в `ApplyHistoryFilter` для читаемого отображения даты и описания изменений (Old -> New); настроены `lstHistory.ColumnCount = 4` и `ColumnWidths = "2cm;3cm;4cm;4cm"`; удалён временный модуль `mod_Tests_Phase22.bas`.
 - **Phase 22 (Advanced Export with Dynamic Headers) — COMPLETED:** Экспорт результатов поиска с динамическими русскими заголовками из `tbl_Import_Mapping`. Рефакторинг `uf_Search.cls`: создана публичная функция `GetSearchSQL(bAddTop50)` для получения SQL запроса; `GetCurrentFilterText()` сделан публичным для доступа из модуля экспорта; `PerformSearch()` переписан для вызова `GetSearchSQL(True)`; `btnExportExcel_Click()` упрощён для вызова `mod_Export_Logic.ExportFullSearchToExcel()`. В `mod_Export_Logic.bas`: реализована `ExportFullSearchToExcel()` — экспорт всех результатов поиска без TOP 50; `GetHeaderFromMapping()` загружает маппинг из `tbl_Import_Mapping` (ProfileID=1) в static Scripting.Dictionary (lazy load, кешируется на сессию); цепочка fallback для заголовков: Mapping → `GetFieldFriendlyName()` → `Replace("_", " ")`. Excel форматирование: Bold headers, AutoFilter, FreezePanes, Borders, AutoFit, date columns в формате dd.mm.yyyy. Интеграция с MCP AccessDB для проверки структуры БД при разработке.
@@ -20,7 +24,8 @@
 - **Settings Manager UI (uf_Settings):** форма настроек полностью реализована (Phase 13, Phase 24). **Tab-based layout (Phase 24):** Tab Control `tabSettings` с тремя вкладками — «Основные настройки», «Маппинг импорта», «Обслуживание». Постоянные настройки (Название организации, Папка импорта, Автопроверка, Уровень логирования) — на вкладке «Основные настройки»; чтение/запись через `mod_Maintenance_Logic.GetSetting`/`SetSetting`; загрузка с защитой от Null (`Nz()` в `LoadSettingsFromStorage`); при переключении на вкладку «Маппинг импорта» список маппинга обновляется (`tabSettings_Change`).
 - **Проверка целостности данных:** таблица `tbl_Validation_Log` реализована; проверки (дубликаты, сироты, будущие даты) выполняются через `RunDataHealthCheck` в `mod_Maintenance_Logic`.
 - **Центральный модуль:** `mod_Maintenance_Logic` — единая точка входа для settings / health-check / maintenance logic; UI-диалоги для этих операций постепенно выносятся в формы через result-based API.
-- **Dashboard (Phase 12, Phase 15, Phase 17, Phase 18):** на панели управления — кнопка Health Check с экспортом отчёта об ошибках в Excel; кнопка "Changes Report" формирует аудит-отчёт за период; кнопка **"Поиск дубликатов"** открывает uf_Search в режиме дубликатов; **Phase 18:** метрики (Total/Active/Errors) в lblTotalCount, lblActiveCount, lblErrorCount; кнопка **"Штатный срез"** формирует отчёт текущего состава в Excel.
+- **Result-based service contract:** в active runtime flows уже используется общий паттерн `Scripting.Dictionary` с ключами вроде `Success`, `Status`, `Message`, `ErrorMessage`, `ErrorNumber` и domain-specific counters (`NewCount`, `UpdatedCount`, `CreatedCount`, `SkippedCount`, `RecordCount`, `ExportPath`). Этим паттерном уже покрыты import, maintenance, reports, analysis, init/index, export, relinker, logger.
+- **Dashboard (Phase 12, Phase 15, Phase 17, Phase 18 + Refactor Stage 3):** на панели управления — кнопка Health Check с экспортом отчёта об ошибках в Excel; кнопка "Changes Report" формирует аудит-отчёт за период; кнопка **"Поиск дубликатов"** открывает uf_Search в режиме дубликатов; **Phase 18:** метрики (Total/Active/Errors) в lblTotalCount, lblActiveCount, lblErrorCount; кнопка **"Штатный срез"** формирует отчёт текущего состава в Excel. После refactor stage 3 `uf_Dashboard` также является UI-owner для Analyze / Full Sync / Create Indexes / startup relinker feedback.
 - **Аудит-отчёт (Phase 15):** модуль `mod_Reports_Logic` с `GenerateAuditReport` / `GenerateAuditReportResult` — экспорт истории изменений в Excel (JOIN с `tbl_Personnel_Master`, форматирование, автофильтр, закрепление областей). Report services возвращают result/status/message, а UI-диалоги остаются на уровне формы.
 - **Автоматическая проверка после синхронизации:** при включённой настройке `AutoCheckEnabled` проверка целостности данных выполняется автоматически после завершения процесса Full Update (импорт → синхронизация).
 
@@ -544,6 +549,15 @@
 
 ## 🎯 Планы развития
 
+### Следующий рекомендованный пакет после текущей волны
+- Привести UI-статусы в формах к machine-readable `Status`, уже возвращаемым сервисами:
+  - в `uf_Dashboard` различать `SUCCESS`, `NO_DATA`, `CANCELLED`, `MONOLITHIC`, `RELINKED`, `ERROR`
+  - убрать случаи, где `NO_DATA` или `CANCELLED` визуально идут через общий `STATUS_ERROR`
+- После этого брать low-risk utility/admin модули:
+  - `mod_Fix_Startup.bas`
+  - `mod_Schema_Manager.SeedLocalizationTable`
+- Отдельной волной можно сокращать старые `blnSuppressMsgBox` compatibility signatures, когда все вызовы будут переведены на `...Result`.
+
 ### Phase 24 — 100% COMPLETED (2026-02-08)
 - ✅ **uf_Settings Tab UI:** Tab Control `tabSettings` с вкладками pgGeneral, pgMapping, pgMaintenance. Загрузка настроек с `Nz()` в `LoadSettingsFromStorage`; обновление списка маппинга при переключении на вкладку «Маппинг импорта» (`tabSettings_Change`).
 
@@ -598,6 +612,7 @@
 ### Текущие:
 - Нет валидации данных при ручном редактировании
 - Нет защиты от одновременного редактирования
+- UI ещё не везде различает `NO_DATA` / `CANCELLED` / `ERROR`, хотя сервисы уже возвращают эти статусы отдельно
 
 ---
 
@@ -669,6 +684,41 @@ strFieldFilter = TranslateFieldName(Me.cboFilterHistory.Text)
 
 #### `GenerateCurrentStaffReportResult()`
 **Назначение:** Экспорт текущего состава из `tbl_Personnel_Master` в новую книгу Excel с тем же result-based контрактом без прямых UI-диалогов.
+
+### mod_Analysis_Logic (Refactor Stage 3)
+
+#### `SyncBufferToMasterResult()`
+**Назначение:** Синхронизация `tbl_Import_Buffer` → `tbl_Personnel_Master` без прямых UI-диалогов. Возвращает result-object с `Success`, `Status`, `Message`, `ErrorMessage`, `ErrorNumber`, `NewCount`, `UpdatedCount`. При ошибке rollback больше не маскируется под обычный success path.
+
+#### `RunFullSyncProcessResult()`
+**Назначение:** Оркестрация full pipeline `Import -> Sync -> Indexes` с machine-readable status. Возвращает counters и итоговое summary, а также отдельные состояния `IMPORT_FAILED`, `CANCELLED`, `SYNC_ERROR`, `INDEX_ERROR`, `ERROR`.
+
+### mod_App_Init (Refactor Stage 3)
+
+#### `InitDatabaseStructureResult()`
+**Назначение:** Безопасная schema initialization / alignment без прямых сообщений пользователю. Используется из startup/import self-heal.
+
+#### `CreatePerformanceIndexesResult()`
+**Назначение:** Создание индексов производительности с возвратом `CreatedCount`, `SkippedCount`, `Success`, `Status`, `Message`.
+
+### mod_Export_Logic (Refactor Stage 3)
+
+#### `ExportFullSearchToExcelResult()`
+**Назначение:** Экспорт всех результатов поиска в Excel с возвратом `RecordCount`, `ExportPath`, `Status`. `NO_DATA` возвращается как отдельный неошибочный статус.
+
+#### `ExportSearchToExcelResult(rs)`
+**Назначение:** Legacy export recordset → Excel без UI внутри сервиса.
+
+#### `ExportChangeReportResult(dtStart, dtEnd)`
+**Назначение:** Экспорт отчёта по изменениям за период в result-based контракте без `MsgBox`.
+
+### mod_Table_Relinker / mod_App_Logger (Refactor Stage 3)
+
+#### `VerifyAndRelinkTablesResult([blnForceRelink])`
+**Назначение:** Проверка/обновление linked tables с возвратом статусов `OK`, `RELINKED`, `MONOLITHIC`, `NOT_FOUND`, `ERROR`.
+
+#### `LogErrorResult(sSource, sMsg, [bShowUI])`
+**Назначение:** Логирует ошибку и возвращает готовое user-facing message, но не показывает UI самостоятельно.
 
 ---
 
@@ -797,4 +847,4 @@ StaffState.accdb.src/
 ---
 
 **Конец документа**  
-Последнее обновление: 2026-03-09 (Version 0.15d — reports decoupling, mapping alignment, linked schema self-heal)
+Последнее обновление: 2026-03-09 (Version 0.15i — analysis/init/export/relinker/logger decoupling wave)

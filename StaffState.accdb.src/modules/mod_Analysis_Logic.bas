@@ -3,11 +3,22 @@ Option Compare Database
 Option Explicit
 
 ' =============================================
-' @description Universal data synchronization with Batch Transactions
+' @description Universal data synchronization with Batch Transactions.
+'              Result-based API without direct UI messaging.
 ' =============================================
 Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Optional ByVal blnSuppressMsgBox As Boolean = False)
+    Dim result As Object
+
+    Set result = SyncBufferToMasterResult()
+    outNew = CLng(Nz(result("NewCount"), 0))
+    outUpdated = CLng(Nz(result("UpdatedCount"), 0))
+    Set result = Nothing
+End Sub
+
+Public Function SyncBufferToMasterResult() As Object
     On Error GoTo ErrorHandler
 
+    Dim result As Object
     Dim db As DAO.Database
     Dim rsBuffer As DAO.Recordset
     Dim rsMaster As DAO.Recordset
@@ -22,6 +33,11 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
     ' --- PHASE 29: Batch Transaction Variables ---
     Dim lngTransCount As Long
     Const c_BatchSize As Long = 2000 ' Commit every 2000 records
+    Dim blnTransactionOpen As Boolean
+
+    Set result = CreateAnalysisResult()
+    result("NewCount") = 0
+    result("UpdatedCount") = 0
 
     ' Increase system lock limit to prevent RAM crashes on massive imports
     DAO.DBEngine.SetOption dbMaxLocksPerFile, 200000
@@ -41,22 +57,21 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
 
     lTotal = GetBufferRecordCount(db)
     If lTotal = 0 Then
-        outNew = 0
-        outUpdated = 0
-        If Not blnSuppressMsgBox Then MsgBox "Synchronization completed! Buffer is empty.", vbInformation
-        Exit Sub
+        result("Success") = True
+        result("Status") = "NO_DATA"
+        result("Message") = "Synchronization completed! Buffer is empty."
+        GoTo ExitHandler
     End If
 
     Set rsBuffer = db.OpenRecordset(GetOrderedBufferSQL(), dbOpenSnapshot)
     Set rsMaster = db.OpenRecordset("tbl_Personnel_Master", dbOpenDynaset)
 
-    outNew = 0
-    outUpdated = 0
     lRecNum = 0
     lngTransCount = 0
 
     ' Start the first transaction
     DBEngine.Workspaces(0).BeginTrans
+    blnTransactionOpen = True
 
     Do While Not rsBuffer.EOF
         lRecNum = lRecNum + 1
@@ -124,8 +139,10 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
         lngTransCount = lngTransCount + 1
         If lngTransCount >= c_BatchSize Then
             DBEngine.Workspaces(0).CommitTrans  ' Save the batch
+            blnTransactionOpen = False
             DoEvents                            ' Let Windows breathe and UI update
             DBEngine.Workspaces(0).BeginTrans   ' Start new batch
+            blnTransactionOpen = True
             lngTransCount = 0
 
             ' Optional debug to see progress in Immediate Window
@@ -137,43 +154,64 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
 
     ' Commit the final remaining batch
     DBEngine.Workspaces(0).CommitTrans
+    blnTransactionOpen = False
 
 ExitHandler:
-    outNew = iNew
-    outUpdated = iUpd
-
-    If Not blnSuppressMsgBox Then
-        MsgBox "Synchronization completed successfully!" & vbCrLf & _
-               "New: " & iNew & vbCrLf & _
-               "Updated: " & iUpd, vbInformation, "StaffState Import"
+    result("NewCount") = iNew
+    result("UpdatedCount") = iUpd
+    If result("Success") = False And result("Status") = "PENDING" Then
+        result("Success") = True
+        result("Status") = "SUCCESS"
+        result("Message") = BuildSyncSummary(iNew, iUpd)
     End If
 
     On Error Resume Next
-    rsBuffer.Close
-    rsMaster.Close
+    If blnTransactionOpen Then
+        DBEngine.Workspaces(0).Rollback
+        blnTransactionOpen = False
+    End If
+    If Not rsBuffer Is Nothing Then rsBuffer.Close
+    If Not rsMaster Is Nothing Then rsMaster.Close
     Set rsBuffer = Nothing
     Set rsMaster = Nothing
     Set db = Nothing
-    Exit Sub
+    Set SyncBufferToMasterResult = result
+    Exit Function
 
 ErrorHandler:
     ' Rollback only the current uncommitted batch (max 2000 records)
-    DBEngine.Workspaces(0).Rollback
-    If Not blnSuppressMsgBox Then
-        MsgBox "Analysis error at record " & lRecNum & ": " & Err.Description, vbCritical
-    Else
-        Debug.Print "Analysis error: " & Err.Description & " (" & Err.Number & ")"
+    On Error Resume Next
+    If blnTransactionOpen Then
+        DBEngine.Workspaces(0).Rollback
+        blnTransactionOpen = False
     End If
+    On Error GoTo 0
+    Debug.Print "Analysis error: " & Err.Description & " (" & Err.Number & ")"
+    result("Success") = False
+    result("Status") = "ERROR"
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = "Analysis error at record " & lRecNum & ": " & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
     Resume ExitHandler
-End Sub
+End Function
 
 ' =============================================
 ' @description Runs the full import -> sync -> index pipeline.
 ' =============================================
 Public Sub RunFullSyncProcess()
+    Dim result As Object
+
+    Set result = RunFullSyncProcessResult()
+    Set result = Nothing
+End Sub
+
+Public Function RunFullSyncProcessResult() As Object
     On Error GoTo ErrorHandler
 
+    Dim result As Object
     Dim importResult As Object
+    Dim syncResult As Object
+    Dim indexResult As Object
     Dim blnImported As Boolean
     Dim iNew As Long
     Dim iUpd As Long
@@ -182,17 +220,49 @@ Public Sub RunFullSyncProcess()
     Dim strSummary As String
     Dim strImportMessage As String
 
+    Set result = CreateAnalysisResult()
+    result("Cancelled") = False
+    result("ImportSuccess") = False
+    result("SyncNewCount") = 0
+    result("SyncUpdatedCount") = 0
+    result("IndexesCreated") = 0
+    result("IndexesSkipped") = 0
+
     ' 1. Import
     Set importResult = mod_Import_Logic.ImportExcelDataResult("", True)
     blnImported = CBool(importResult("Success"))
     strImportMessage = Trim$(CStr(Nz(importResult("Message"), "")))
+    result("ImportSuccess") = blnImported
+    result("ImportMessage") = strImportMessage
 
     If blnImported Then
         ' 2. Sync
-        SyncBufferToMaster iNew, iUpd, True
+        Set syncResult = SyncBufferToMasterResult()
+        If Not CBool(syncResult("Success")) Then
+            result("Status") = "SYNC_ERROR"
+            result("ErrorNumber") = CLng(Nz(syncResult("ErrorNumber"), 0))
+            result("ErrorMessage") = CStr(Nz(syncResult("Message"), "Synchronization failed."))
+            result("Message") = CStr(result("ErrorMessage"))
+            GoTo Cleanup
+        End If
+        iNew = CLng(Nz(syncResult("NewCount"), 0))
+        iUpd = CLng(Nz(syncResult("UpdatedCount"), 0))
+        result("SyncNewCount") = iNew
+        result("SyncUpdatedCount") = iUpd
 
         ' 3. Rebuild Indexes
-        mod_App_Init.CreatePerformanceIndexes iIdxCreated, iIdxSkipped, True
+        Set indexResult = mod_App_Init.CreatePerformanceIndexesResult()
+        If Not CBool(indexResult("Success")) Then
+            result("Status") = "INDEX_ERROR"
+            result("ErrorNumber") = CLng(Nz(indexResult("ErrorNumber"), 0))
+            result("ErrorMessage") = CStr(Nz(indexResult("Message"), "Index creation failed."))
+            result("Message") = CStr(result("ErrorMessage"))
+            GoTo Cleanup
+        End If
+        iIdxCreated = CLng(Nz(indexResult("CreatedCount"), 0))
+        iIdxSkipped = CLng(Nz(indexResult("SkippedCount"), 0))
+        result("IndexesCreated") = iIdxCreated
+        result("IndexesSkipped") = iIdxSkipped
 
         strSummary = "Full Update Summary" & vbCrLf & _
                      "Import: OK" & vbCrLf & _
@@ -203,7 +273,15 @@ Public Sub RunFullSyncProcess()
         If UCase(Trim$(CStr(Nz(mod_Maintenance_Logic.GetSetting("AutoCheckEnabled", "False"), "False")))) = "TRUE" Then
             mod_Maintenance_Logic.RunDataHealthCheck True
         End If
+        result("Success") = True
+        result("Status") = "SUCCESS"
     Else
+        result("Cancelled") = CBool(importResult("Cancelled"))
+        If CBool(result("Cancelled")) Then
+            result("Status") = "CANCELLED"
+        Else
+            result("Status") = "IMPORT_FAILED"
+        End If
         strSummary = "Full Update Summary" & vbCrLf & _
                      "Import: FAILED or CANCELED" & vbCrLf & _
                      "Sync: SKIPPED" & vbCrLf & _
@@ -215,14 +293,32 @@ Public Sub RunFullSyncProcess()
         End If
     End If
 
-    mod_UI_Helpers.ShowMessage strSummary, vbInformation
+    result("Message") = strSummary
     Set importResult = Nothing
-    Exit Sub
+    Set syncResult = Nothing
+    Set indexResult = Nothing
+    Set RunFullSyncProcessResult = result
+    Exit Function
+
+Cleanup:
+    Set importResult = Nothing
+    Set syncResult = Nothing
+    Set indexResult = Nothing
+    Set RunFullSyncProcessResult = result
+    Exit Function
 
 ErrorHandler:
+    Debug.Print "RunFullSyncProcess error: " & Err.Description & " (" & Err.Number & ")"
     Set importResult = Nothing
-    mod_UI_Helpers.ShowMessage "Full Update failed: " & Err.Description, vbCritical
-End Sub
+    Set syncResult = Nothing
+    Set indexResult = Nothing
+    result("Success") = False
+    result("Status") = "ERROR"
+    result("ErrorNumber") = Err.Number
+    result("ErrorMessage") = "Full Update failed: " & Err.Description
+    result("Message") = CStr(result("ErrorMessage"))
+    Resume Cleanup
+End Function
 
 Private Sub CopyAllFields(rsSource As DAO.Recordset, rsDest As DAO.Recordset)
     Dim fldSource As DAO.Field
@@ -381,4 +477,24 @@ End Function
 Private Function IsBufferValueEmpty(v As Variant) As Boolean
     If IsNull(v) Then IsBufferValueEmpty = True: Exit Function
     IsBufferValueEmpty = (Trim$(CStr(v)) = "")
+End Function
+
+Private Function CreateAnalysisResult() As Object
+    Dim d As Object
+
+    Set d = CreateObject("Scripting.Dictionary")
+    d.CompareMode = 1
+    d("Success") = False
+    d("Status") = "PENDING"
+    d("Message") = ""
+    d("ErrorMessage") = ""
+    d("ErrorNumber") = 0
+
+    Set CreateAnalysisResult = d
+End Function
+
+Private Function BuildSyncSummary(ByVal iNew As Long, ByVal iUpd As Long) As String
+    BuildSyncSummary = "Synchronization completed successfully!" & vbCrLf & _
+                       "New: " & iNew & vbCrLf & _
+                       "Updated: " & iUpd
 End Function
