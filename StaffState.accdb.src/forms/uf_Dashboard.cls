@@ -1,4 +1,4 @@
-﻿Attribute VB_GlobalNameSpace = False
+Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
@@ -160,69 +160,7 @@ ErrorHandler:
 End Sub
 
 Private Function ResolveImportAction(ByVal result As Object, ByRef decisions As Object) As Boolean
-    Dim strActionType As String
-    Dim strExcelField As String
-    Dim lngProfileID As Long
-    Dim strSuggestedField As String
-    Dim strNewTarget As String
-    Dim strTypeSelection As String
-    Dim strSqlType As String
-
-    ResolveImportAction = False
-    strActionType = UCase$(Trim$(CStr(Nz(result("ActionType"), ""))))
-    strExcelField = CStr(Nz(result("ExcelField"), ""))
-    lngProfileID = CLng(Nz(result("ProfileID"), 0))
-    strSuggestedField = CStr(Nz(result("SuggestedFieldName"), ""))
-
-    Select Case strActionType
-        Case "RESTORE_MAPPING"
-            If mod_UI_Helpers.AskUserYesNo(CStr(Nz(result("ActionMessage"), "")), CStr(Nz(result("ActionTitle"), mod_UI_Helpers.GetLoc("TITLE_RESTORE_LINK")))) Then
-                mod_Import_Logic.SetRestoreImportDecision decisions, strExcelField, lngProfileID, strSuggestedField
-            Else
-                mod_Import_Logic.SetSkipImportDecision decisions, strExcelField
-            End If
-            ResolveImportAction = True
-        Case "MAP_NEW_COLUMN"
-            If Not mod_UI_Helpers.AskUserYesNo(CStr(Nz(result("ActionMessage"), "")), CStr(Nz(result("ActionTitle"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL")))) Then
-                mod_Import_Logic.SetSkipImportDecision decisions, strExcelField
-                ResolveImportAction = True
-                Exit Function
-            End If
-
-            strNewTarget = Trim$(InputBox(mod_UI_Helpers.GetLoc("PROMPT_ENTER_EN_NAME"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL"), strSuggestedField))
-            If strNewTarget = "" Then
-                mod_Import_Logic.SetSkipImportDecision decisions, strExcelField
-                ResolveImportAction = True
-                Exit Function
-            End If
-
-            If mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strNewTarget) Then
-                mod_Import_Logic.SetMapImportFieldDecision decisions, strExcelField, lngProfileID, strNewTarget
-                ResolveImportAction = True
-                Exit Function
-            End If
-
-            strTypeSelection = InputBox(mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
-            strSqlType = GetSqlTypeFromSelection(strTypeSelection)
-
-            If strSqlType = "" Then
-                mod_Import_Logic.SetSkipImportDecision decisions, strExcelField
-            Else
-                mod_Import_Logic.SetMapImportFieldDecision decisions, strExcelField, lngProfileID, strNewTarget, strSqlType
-            End If
-            ResolveImportAction = True
-    End Select
-End Function
-
-Private Function GetSqlTypeFromSelection(ByVal strTypeSelection As String) As String
-    Select Case Trim$(strTypeSelection)
-        Case "2": GetSqlTypeFromSelection = "DATETIME"
-        Case "3": GetSqlTypeFromSelection = "LONG"
-        Case "4": GetSqlTypeFromSelection = "LONGTEXT"
-        Case "5": GetSqlTypeFromSelection = "BIT"
-        Case "": GetSqlTypeFromSelection = ""
-        Case Else: GetSqlTypeFromSelection = "VARCHAR(255)"
-    End Select
+    ResolveImportAction = mod_Import_Logic.ResolveImportActionInteractive(result, decisions)
 End Function
 
 Private Sub cmdHealthCheck_Click()

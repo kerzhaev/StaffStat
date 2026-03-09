@@ -1,4 +1,4 @@
-﻿Attribute VB_Name = "mod_UI_Helpers"
+Attribute VB_Name = "mod_UI_Helpers"
 Option Compare Database
 Option Explicit
 
@@ -11,6 +11,7 @@ Option Explicit
 ' LOCALIZATION ENGINE (Phase 30)
 ' =============================================
 Private dictLocales As Object ' Scripting.Dictionary
+Private mProgressInitialized As Boolean
 ' =============================================
 ' @description Shows a message to the user (wrapper for MsgBox).
 ' @param msg [String] Message text
@@ -24,6 +25,74 @@ ErrorHandler:
     Debug.Print "ShowMessage error: " & Err.Description
 End Sub
 
+Public Sub SetStatus(ByVal msg As String)
+    On Error GoTo ErrorHandler
+
+    SysCmd acSysCmdSetStatus, msg
+    If CurrentProject.AllForms("uf_Dashboard").IsLoaded Then
+        Forms("uf_Dashboard").Controls("lblStatus").Caption = msg
+        Forms("uf_Dashboard").Repaint
+    End If
+    Exit Sub
+ErrorHandler:
+    Debug.Print "SetStatus error: " & Err.Description
+End Sub
+
+Public Sub InitProgress(ByVal msg As String, ByVal maxValue As Long)
+    On Error GoTo ErrorHandler
+
+    If maxValue < 1 Then maxValue = 1
+    SetStatus msg
+
+    On Error Resume Next
+    SysCmd acSysCmdInitMeter, msg, maxValue
+    mProgressInitialized = (Err.Number = 0)
+    If Err.Number <> 0 Then Debug.Print "InitProgress meter error: " & Err.Description
+    Err.Clear
+    On Error GoTo ErrorHandler
+    Exit Sub
+ErrorHandler:
+    Debug.Print "InitProgress error: " & Err.Description
+End Sub
+
+Public Sub UpdateProgress(ByVal currentValue As Long, Optional ByVal msg As String = "")
+    On Error GoTo ErrorHandler
+
+    If Len(msg) > 0 Then SetStatus msg
+
+    If mProgressInitialized Then
+        On Error Resume Next
+        SysCmd acSysCmdUpdateMeter, currentValue
+        If Err.Number <> 0 Then
+            Debug.Print "UpdateProgress meter error: " & Err.Description
+            mProgressInitialized = False
+            Err.Clear
+        End If
+        On Error GoTo ErrorHandler
+    End If
+    Exit Sub
+ErrorHandler:
+    Debug.Print "UpdateProgress error: " & Err.Description
+End Sub
+
+Public Sub ClearProgress(Optional ByVal msg As String = "")
+    On Error GoTo ErrorHandler
+
+    On Error Resume Next
+    If mProgressInitialized Then SysCmd acSysCmdRemoveMeter
+    mProgressInitialized = False
+    Err.Clear
+    On Error GoTo ErrorHandler
+
+    If Len(msg) > 0 Then
+        SetStatus msg
+    Else
+        SysCmd acSysCmdClearStatus
+    End If
+    Exit Sub
+ErrorHandler:
+    Debug.Print "ClearProgress error: " & Err.Description
+End Sub
 ' --- UI Messages and Captions ---
 
 Public Function GetSearchCaption() As String

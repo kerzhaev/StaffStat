@@ -1,4 +1,4 @@
-﻿Attribute VB_Name = "mod_Maintenance_Logic"
+Attribute VB_Name = "mod_Maintenance_Logic"
 Option Compare Database
 Option Explicit
 
@@ -341,7 +341,9 @@ Public Function RunDataHealthCheckResult(Optional ByVal bSilentIfNoErrors As Boo
     Set rs = Nothing
 
     ' DUPLICATES: FullName + BirthDate
-    strSQL = "SELECT FullName, BirthDate, COUNT(*) AS Cnt FROM tbl_Personnel_Master GROUP BY FullName, BirthDate HAVING COUNT(*)>1;"
+    strSQL = "SELECT FullName, BirthDate, COUNT(*) AS Cnt FROM tbl_Personnel_Master " & _
+             "WHERE Nz(Trim$(FullName),'')<>'' AND BirthDate IS NOT NULL " & _
+             "GROUP BY FullName, BirthDate HAVING COUNT(*)>1;"
     Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
     Do While Not rs.EOF
         LogValidationError 0, "tbl_Personnel_Master", "Duplicate", "Duplicate FullName+BirthDate: " & Nz(rs!FullName, "") & " | " & Format(Nz(rs!BirthDate, ""), "yyyy-mm-dd")

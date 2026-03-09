@@ -1,6 +1,11 @@
-﻿# PROJECT CONTEXT: StaffState (Штаты) - MS Access/VBA
+# PROJECT CONTEXT: StaffState (Штаты) - MS Access/VBA
 
 ## Current State
+- **Phase 32 (Import UX, Validation, and Progress Feedback)** is completed.
+  - Full sync now uses the same interactive import wizard as manual import, so unknown Excel columns can be restored/mapped during dashboard-driven imports instead of being silently skipped.
+  - Duplicate detection in Health Check is tightened: `Duplicate FullName+BirthDate` now requires a non-empty `BirthDate`, so rows with only matching `FullName` are excluded.
+  - Import and synchronization now update both the Access status bar and the dashboard status label with phase text.
+  - Synchronization shows immediate `0 / N` feedback and live processed counters for large datasets, reducing the chance of mistaking long-running work for a freeze.
 - **Phase 31 (Smart Multi-Profile Import & Interactive Wizard)** is completed.
   - Внедрена поддержка нескольких профилей маппинга (`tbl_Import_Profiles`). По умолчанию создаются 3 профиля: Основной, Снабжение, Финансы.
   - В `mod_Import_Logic` добавлен умный авто-детект (`DetectBestProfile`): система перед импортом сканирует заголовки Excel и сама выбирает подходящий профиль, где есть привязка `PersonUID` и максимальное совпадение колонок.
@@ -75,6 +80,10 @@
 - uf_PersonCard: All hardcoded Russian text replaced with `GetLoc` calls. Dismissal status check now uses the localization key `STATUS_DISMISSED` instead of assembling the word via `ChrW()`.
 
 ## History
+- **Phase 32 (2026-03-09)**:
+  - Full Sync Import Wizard: dashboard-driven full sync now reuses the same interactive import action flow as manual import.
+  - Duplicate Health Check Fix: `Duplicate FullName+BirthDate` ignores records without a real `BirthDate`.
+  - Progress Feedback: import and sync now publish phase/status progress to the Access status bar and dashboard label, including immediate `0 / N` and running counters for large sync jobs.
 - **Phase 31 (2026-03-01)**:
   - Multi-Profile Mapping: Внедрена поддержка нескольких профилей маппинга (`tbl_Import_Profiles`). По умолчанию создаются 3 профиля: Основной, Снабжение, Финансы.
   - Auto-Detect: В `mod_Import_Logic` добавлен умный авто-детект (`DetectBestProfile`): система перед импортом сканирует заголовки Excel и сама выбирает подходящий профиль.

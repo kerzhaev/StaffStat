@@ -1,4 +1,4 @@
-﻿Attribute VB_Name = "mod_Import_Logic"
+Attribute VB_Name = "mod_Import_Logic"
 Option Compare Database
 Option Explicit
 
@@ -43,13 +43,17 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     DoCmd.Close acTable, "tbl_Personnel_Master", acSaveYes
     DoEvents
 
+    mod_UI_Helpers.InitProgress "Import: preparing file...", 5
+
     ' Self-heal schema before touching import tables or mappings.
     mod_App_Init.InitDatabaseStructure True
 
     ' 1. Clear buffer
+    mod_UI_Helpers.UpdateProgress 1, "Import: clearing buffer..."
     CurrentDb.Execute "DELETE FROM tbl_Import_Buffer;", dbFailOnError
 
     ' 2. Link
+    mod_UI_Helpers.UpdateProgress 2, "Import: linking Excel file..."
     If Not LinkExcelFile(strFilePath, strErrorMessage, blnSuppressMsgBox) Then
         result("ErrorMessage") = strErrorMessage
         result("Message") = strErrorMessage
@@ -57,6 +61,7 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     End If
 
     ' 3. Dynamic import (with Auto-Detect and Interactive Wizard)
+    mod_UI_Helpers.UpdateProgress 3, "Import: analyzing columns and mapping..."
     If Not RunDynamicImport(strSkipped, strErrorMessage, actionRequest, blnSuppressMsgBox, importDecisions) Then
         If IsObject(actionRequest) Then
             CopyImportActionToResult result, actionRequest
@@ -68,14 +73,17 @@ Public Function ImportExcelDataResult(Optional ByVal strFilePath As String = "",
     End If
 
     ' 4. Save import metadata
+    mod_UI_Helpers.UpdateProgress 4, "Import: saving metadata..."
     UpdateImportMetadata strFilePath
 
+    mod_UI_Helpers.UpdateProgress 5, "Import: completed."
     result("Success") = True
     result("SkippedColumns") = strSkipped
     result("Message") = BuildImportSuccessMessage(strSkipped)
 
 ExitHandler:
     DeleteExcelLink
+    mod_UI_Helpers.ClearProgress
     Set ImportExcelDataResult = result
     Exit Function
 
@@ -90,6 +98,32 @@ End Function
 
 Private Function NormalizeString(ByVal s As String) As String
     NormalizeString = UCase(Trim$(s))
+End Function
+
+Private Function CyrStr(ParamArray codes() As Variant) As String
+    Dim i As Long
+    Dim s As String
+
+    s = ""
+    For i = LBound(codes) To UBound(codes)
+        s = s & ChrW(CLng(codes(i)))
+    Next i
+
+    CyrStr = s
+End Function
+
+Private Function FaceHeaderPrefix() As String
+    FaceHeaderPrefix = NormalizeString(CyrStr(1051, 1080, 1094, 1086))
+End Function
+
+Private Function IsFaceHeader(ByVal strHeader As String) As Boolean
+    Dim strNormHeader As String
+    Dim strPrefix As String
+
+    strNormHeader = NormalizeString(strHeader)
+    strPrefix = FaceHeaderPrefix()
+
+    IsFaceHeader = (Len(strNormHeader) >= Len(strPrefix) And Left$(strNormHeader, Len(strPrefix)) = strPrefix)
 End Function
 
 ' --- ???????? ??????????? ??????? ---
@@ -153,7 +187,7 @@ Private Function DetectBestProfile(tdfLink As DAO.TableDef) As Long
                     If targetField = "PERSONUID" Then hasUID = True
                     Exit For
                 ' ????????? ????-????????? ?????????? Excel (????, ????1, ????2)
-                ElseIf normHeader = "????" And Left$(normExcel, 4) = "????" Then
+                ElseIf IsFaceHeader(normHeader) And IsFaceHeader(normExcel) Then
                     matchCount = matchCount + 1
                     Exit For
                 End If
@@ -235,7 +269,7 @@ Private Function RunDynamicImport(ByRef outSkippedColumns As String, ByRef outEr
         ' ========================================================
         ' SMART ROUTING (?????? ??????????? ??? ?????????? "????")
         ' ========================================================
-        If Left$(NormalizeString(strExcelField), 4) = "????" Then
+        If IsFaceHeader(strExcelField) Then
             If IsColumnNumeric(strExcelField) Then
                 strAccessField = "SourceID"
             Else
@@ -298,7 +332,12 @@ NextColumn:
         Exit Function
     End If
 
+    Dim lngSourceRows As Long
     Dim strSQL As String
+
+    lngSourceRows = GetLinkedImportRowCount(strPersonUIDExcelName)
+    mod_UI_Helpers.SetStatus "Import: loading rows into buffer... " & lngSourceRows & " row(s) found."
+
     strSQL = "INSERT INTO tbl_Import_Buffer (" & strInsertPart & ") " & _
              "SELECT " & strSelectPart & " " & _
              "FROM [" & cstrLinkedTableName & "] " & _
@@ -312,6 +351,27 @@ ErrorHandler:
     outErrorMessage = "Import error: " & Err.Description
     Debug.Print "RunDynamicImport error: " & Err.Description & " (" & Err.Number & ")"
     RunDynamicImport = False
+End Function
+
+Private Function GetLinkedImportRowCount(ByVal strPersonUIDExcelName As String) As Long
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+
+    strSQL = "SELECT COUNT(*) AS Cnt FROM [" & cstrLinkedTableName & "] WHERE [" & strPersonUIDExcelName & "] IS NOT NULL;"
+    Set rs = CurrentDb.OpenRecordset(strSQL, dbOpenSnapshot)
+    If Not rs.EOF Then GetLinkedImportRowCount = CLng(Nz(rs!Cnt, 0))
+
+Cleanup:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Exit Function
+
+ErrorHandler:
+    GetLinkedImportRowCount = 0
+    Resume Cleanup
 End Function
 
 Private Function GetMappedFieldFromTable(strExcelField As String, lngProfileID As Long) As String
@@ -669,6 +729,72 @@ Private Function BuildImportActionRequest(ByVal lngProfileID As Long, ByVal strE
     End If
 
     Set BuildImportActionRequest = d
+End Function
+
+Public Function ResolveImportActionInteractive(ByVal result As Object, ByRef decisions As Object) As Boolean
+    Dim strActionType As String
+    Dim strExcelField As String
+    Dim lngProfileID As Long
+    Dim strSuggestedField As String
+    Dim strNewTarget As String
+    Dim strTypeSelection As String
+    Dim strSqlType As String
+
+    ResolveImportActionInteractive = False
+    strActionType = UCase$(Trim$(CStr(Nz(result("ActionType"), ""))))
+    strExcelField = CStr(Nz(result("ExcelField"), ""))
+    lngProfileID = CLng(Nz(result("ProfileID"), 0))
+    strSuggestedField = CStr(Nz(result("SuggestedFieldName"), ""))
+
+    Select Case strActionType
+        Case "RESTORE_MAPPING"
+            If mod_UI_Helpers.AskUserYesNo(CStr(Nz(result("ActionMessage"), "")), CStr(Nz(result("ActionTitle"), mod_UI_Helpers.GetLoc("TITLE_RESTORE_LINK")))) Then
+                SetRestoreImportDecision decisions, strExcelField, lngProfileID, strSuggestedField
+            Else
+                SetSkipImportDecision decisions, strExcelField
+            End If
+            ResolveImportActionInteractive = True
+        Case "MAP_NEW_COLUMN"
+            If Not mod_UI_Helpers.AskUserYesNo(CStr(Nz(result("ActionMessage"), "")), CStr(Nz(result("ActionTitle"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL")))) Then
+                SetSkipImportDecision decisions, strExcelField
+                ResolveImportActionInteractive = True
+                Exit Function
+            End If
+
+            strNewTarget = Trim$(InputBox(mod_UI_Helpers.GetLoc("PROMPT_ENTER_EN_NAME"), mod_UI_Helpers.GetLoc("TITLE_NEW_COL"), strSuggestedField))
+            If strNewTarget = "" Then
+                SetSkipImportDecision decisions, strExcelField
+                ResolveImportActionInteractive = True
+                Exit Function
+            End If
+
+            If mod_Schema_Manager.FieldExists("tbl_Personnel_Master", strNewTarget) Then
+                SetMapImportFieldDecision decisions, strExcelField, lngProfileID, strNewTarget
+                ResolveImportActionInteractive = True
+                Exit Function
+            End If
+
+            strTypeSelection = InputBox(mod_UI_Helpers.GetLoc("PROMPT_SELECT_DATA_TYPE"), mod_UI_Helpers.GetLoc("TITLE_SCHEMA_MANAGER"), "1")
+            strSqlType = GetSqlTypeFromSelection(strTypeSelection)
+
+            If strSqlType = "" Then
+                SetSkipImportDecision decisions, strExcelField
+            Else
+                SetMapImportFieldDecision decisions, strExcelField, lngProfileID, strNewTarget, strSqlType
+            End If
+            ResolveImportActionInteractive = True
+    End Select
+End Function
+
+Private Function GetSqlTypeFromSelection(ByVal strTypeSelection As String) As String
+    Select Case Trim$(strTypeSelection)
+        Case "2": GetSqlTypeFromSelection = "DATETIME"
+        Case "3": GetSqlTypeFromSelection = "LONG"
+        Case "4": GetSqlTypeFromSelection = "LONGTEXT"
+        Case "5": GetSqlTypeFromSelection = "BIT"
+        Case "": GetSqlTypeFromSelection = ""
+        Case Else: GetSqlTypeFromSelection = "VARCHAR(255)"
+    End Select
 End Function
 
 Private Sub CopyImportActionToResult(ByRef result As Object, ByVal actionRequest As Object)

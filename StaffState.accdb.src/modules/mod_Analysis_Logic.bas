@@ -1,4 +1,4 @@
-﻿Attribute VB_Name = "mod_Analysis_Logic"
+Attribute VB_Name = "mod_Analysis_Logic"
 Option Compare Database
 Option Explicit
 
@@ -18,12 +18,13 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
     Dim lTotal As Long
     Dim lRecNum As Long
     Dim strOrderDateContext As String
+    Dim strFinalProgressMessage As String
+    Dim blnFailed As Boolean
 
     ' --- PHASE 29: Batch Transaction Variables ---
     Dim lngTransCount As Long
     Const c_BatchSize As Long = 2000 ' Commit every 2000 records
 
-    ' Increase system lock limit to prevent RAM crashes on massive imports
     DAO.DBEngine.SetOption dbMaxLocksPerFile, 200000
 
     DoCmd.Close acTable, "tbl_Personnel_Master", acSaveYes
@@ -33,18 +34,19 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
 
     Set db = CurrentDb
     db.TableDefs.Refresh
-
     mod_Schema_Manager.CreateValidationLogTable
 
     dtChangeDate = GetExportFileDate()
     Debug.Print "Using ChangeDate: " & dtChangeDate
 
     lTotal = GetBufferRecordCount(db)
+    mod_UI_Helpers.InitProgress "Synchronization: preparing records...", lTotal
+    mod_UI_Helpers.UpdateProgress 0, "Synchronization: processed 0 / " & lTotal & " | New: 0 | Updated: 0"
     If lTotal = 0 Then
         outNew = 0
         outUpdated = 0
-        If Not blnSuppressMsgBox Then MsgBox "Synchronization completed! Buffer is empty.", vbInformation
-        Exit Sub
+        strFinalProgressMessage = "Synchronization completed: buffer is empty."
+        GoTo ExitHandler
     End If
 
     Set rsBuffer = db.OpenRecordset(GetOrderedBufferSQL(), dbOpenSnapshot)
@@ -54,8 +56,8 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
     outUpdated = 0
     lRecNum = 0
     lngTransCount = 0
+    blnFailed = False
 
-    ' Start the first transaction
     DBEngine.Workspaces(0).BeginTrans
 
     Do While Not rsBuffer.EOF
@@ -68,11 +70,9 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
             mod_Maintenance_Logic.LogValidationError 0, "tbl_Import_Buffer", "InvalidPersonUID", "Invalid PersonUID format: " & strUID
         Else
             strOrderDateContext = GetBufferOrderDateContext(rsBuffer)
-
             rsMaster.FindFirst "PersonUID = '" & Replace(strUID, "'", "''") & "'"
 
             If rsMaster.NoMatch Then
-                ' --- NEW EMPLOYEE ---
                 rsMaster.AddNew
                 rsMaster!PersonUID = strUID
                 rsMaster!LastUpdated = dtChangeDate
@@ -83,23 +83,22 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
                 LogChange strUID, "_System", "", "Added", dtChangeDate, ""
                 iNew = iNew + 1
             Else
-                ' --- EXISTING ---
                 Dim bChanged As Boolean
+                Dim sBufName As String
+                Dim sMasName As String
+                Dim vBuf As Variant
+                Dim vMas As Variant
+
                 bChanged = False
                 rsMaster.Edit
 
                 For Each fld In rsBuffer.Fields
-                    Dim sBufName As String
-                    Dim sMasName As String
-
                     sBufName = fld.Name
                     sMasName = BufferFieldToMasterName(sBufName)
 
                     If sMasName <> "" And FieldExistsInRS(rsMaster, sMasName) Then
                         If sMasName <> "PersonUID" And sMasName <> "LogID" And sMasName <> "LastUpdated" _
                            And sMasName <> "ID" And sMasName <> "IsActive" Then
-
-                            Dim vBuf As Variant, vMas As Variant
                             vBuf = fld.value
                             vMas = rsMaster.Fields(sMasName).value
 
@@ -120,45 +119,58 @@ Public Sub SyncBufferToMaster(ByRef outNew As Long, ByRef outUpdated As Long, Op
             End If
         End If
 
-        ' --- BATCH TRANSACTION & UI UNFREEZE ---
+        If lRecNum = 1 Or (lRecNum Mod 100) = 0 Or lRecNum = lTotal Then
+            mod_UI_Helpers.UpdateProgress lRecNum, "Synchronization: processed " & lRecNum & " / " & lTotal & _
+                " | New: " & iNew & " | Updated: " & iUpd
+            DoEvents
+        End If
+
         lngTransCount = lngTransCount + 1
         If lngTransCount >= c_BatchSize Then
-            DBEngine.Workspaces(0).CommitTrans  ' Save the batch
-            DoEvents                            ' Let Windows breathe and UI update
-            DBEngine.Workspaces(0).BeginTrans   ' Start new batch
+            DBEngine.Workspaces(0).CommitTrans
+            DoEvents
+            DBEngine.Workspaces(0).BeginTrans
             lngTransCount = 0
-
-            ' Optional debug to see progress in Immediate Window
             Debug.Print "Processed " & lRecNum & " of " & lTotal & " records..."
         End If
 
         rsBuffer.MoveNext
     Loop
 
-    ' Commit the final remaining batch
     DBEngine.Workspaces(0).CommitTrans
+    strFinalProgressMessage = "Synchronization completed: processed " & lRecNum & " / " & lTotal & " row(s)."
 
 ExitHandler:
+    If Len(strFinalProgressMessage) > 0 Then
+        mod_UI_Helpers.ClearProgress strFinalProgressMessage
+    Else
+        mod_UI_Helpers.ClearProgress
+    End If
+
     outNew = iNew
     outUpdated = iUpd
 
-    If Not blnSuppressMsgBox Then
+    If Not blnFailed And Not blnSuppressMsgBox Then
         MsgBox "Synchronization completed successfully!" & vbCrLf & _
                "New: " & iNew & vbCrLf & _
                "Updated: " & iUpd, vbInformation, "StaffState Import"
     End If
 
     On Error Resume Next
-    rsBuffer.Close
-    rsMaster.Close
+    If Not rsBuffer Is Nothing Then rsBuffer.Close
+    If Not rsMaster Is Nothing Then rsMaster.Close
     Set rsBuffer = Nothing
     Set rsMaster = Nothing
     Set db = Nothing
     Exit Sub
 
 ErrorHandler:
-    ' Rollback only the current uncommitted batch (max 2000 records)
+    blnFailed = True
+    strFinalProgressMessage = "Synchronization failed near row " & lRecNum & "."
+    On Error Resume Next
     DBEngine.Workspaces(0).Rollback
+    On Error GoTo 0
+
     If Not blnSuppressMsgBox Then
         MsgBox "Analysis error at record " & lRecNum & ": " & Err.Description, vbCritical
     Else
@@ -166,13 +178,13 @@ ErrorHandler:
     End If
     Resume ExitHandler
 End Sub
-
 ' =============================================
 ' @description Runs the full import -> sync -> index pipeline.
 ' =============================================
-Public Sub RunFullSyncProcess()
+Public Sub RunFullSyncProcess(Optional ByVal blnSuppressImportPrompts As Boolean = False)
     On Error GoTo ErrorHandler
 
+    Dim decisions As Object
     Dim importResult As Object
     Dim blnImported As Boolean
     Dim iNew As Long
@@ -181,23 +193,53 @@ Public Sub RunFullSyncProcess()
     Dim iIdxSkipped As Long
     Dim strSummary As String
     Dim strImportMessage As String
+    Dim strImportFilePath As String
+    Dim strSkippedColumns As String
+    Dim lngAttempts As Long
+
+    Set decisions = mod_Import_Logic.CreateImportDecisionStore()
+    mod_UI_Helpers.SetStatus "Full sync: waiting for import..."
 
     ' 1. Import
-    Set importResult = mod_Import_Logic.ImportExcelDataResult("", True)
+    Do
+        lngAttempts = lngAttempts + 1
+        Set importResult = mod_Import_Logic.ImportExcelDataResult(strImportFilePath, blnSuppressImportPrompts, decisions)
+        strImportFilePath = CStr(Nz(importResult("FilePath"), strImportFilePath))
+
+        If CBool(importResult("RequiresUserAction")) Then
+            If blnSuppressImportPrompts Then Exit Do
+            If Not mod_Import_Logic.ResolveImportActionInteractive(importResult, decisions) Then Exit Do
+            Set importResult = Nothing
+            DoEvents
+        Else
+            Exit Do
+        End If
+    Loop While lngAttempts < 100
+
+    If importResult Is Nothing Then GoTo ExitHandler
+
     blnImported = CBool(importResult("Success"))
     strImportMessage = Trim$(CStr(Nz(importResult("Message"), "")))
+    strSkippedColumns = Trim$(CStr(Nz(importResult("SkippedColumns"), "")))
 
     If blnImported Then
+        mod_UI_Helpers.SetStatus "Full sync: import completed. Starting synchronization..."
         ' 2. Sync
         SyncBufferToMaster iNew, iUpd, True
 
         ' 3. Rebuild Indexes
+        mod_UI_Helpers.SetStatus "Full sync: creating performance indexes..."
         mod_App_Init.CreatePerformanceIndexes iIdxCreated, iIdxSkipped, True
 
         strSummary = "Full Update Summary" & vbCrLf & _
                      "Import: OK" & vbCrLf & _
                      "Sync: New=" & iNew & ", Updated=" & iUpd & vbCrLf & _
                      "Indexes: Created=" & iIdxCreated & ", Skipped=" & iIdxSkipped
+
+        If Len(strSkippedColumns) > 0 Then
+            strSummary = strSummary & vbCrLf & vbCrLf & _
+                         "Skipped columns:" & vbCrLf & strSkippedColumns
+        End If
 
         ' 4. Auto Health Check
         If UCase(Trim$(CStr(Nz(mod_Maintenance_Logic.GetSetting("AutoCheckEnabled", "False"), "False")))) = "TRUE" Then
@@ -215,12 +257,18 @@ Public Sub RunFullSyncProcess()
         End If
     End If
 
+    mod_UI_Helpers.SetStatus "Full sync: completed."
     mod_UI_Helpers.ShowMessage strSummary, vbInformation
+
+ExitHandler:
     Set importResult = Nothing
+    Set decisions = Nothing
     Exit Sub
 
 ErrorHandler:
     Set importResult = Nothing
+    Set decisions = Nothing
+    mod_UI_Helpers.SetStatus "Full sync failed: " & Err.Description
     mod_UI_Helpers.ShowMessage "Full Update failed: " & Err.Description, vbCritical
 End Sub
 
