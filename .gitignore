@@ -1,25 +1,35 @@
-# Временные файлы Excel (мусор, который появляется при открытии книги)
+# Временные файлы Office
 ~$*
 *.tmp
 *.xlsx
 *.docx
+*.bak
 
 # Системные файлы
 thumbs.db
 desktop.ini
 .DS_Store
 
-# Игнорировать все бинарные файлы базы данных
+# Бинарные файлы баз данных Access
 *.accdb
 *.laccdb
-
-# Но если ты хочешь оставить основной файл (необязательно, но иногда удобно), 
-# то можно разрешить только его, заигнорив бэкапы:
 *_VCSBackup*.accdb
 
-# Папка с историей чатов Cursor (она может быть огромной, нам она в гите не нужна)
+# Локальные артефакты IDE/AI
 .cursor/
 CreateOrder.xlsm.modules
+mcp-*.json
+*.AInotes.md
+AI_TODO.md
 
-# Если ты не хочешь хранить архив в гите (так как файлы большие), можно раскомментировать строку ниже:
+# Локальные debug-логи
+*.log
+debug_search.log
+
+# Generated state из Access VCS: не source of truth
+StaffState.accdb.src/Build.log
+StaffState.accdb.src/Export.log
+StaffState.accdb.src/vcs-index.json
+
+# Если не нужно хранить архив в Git, можно игнорировать его целиком
 # _Archive/
